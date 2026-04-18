@@ -1,4 +1,4 @@
-import type { Risk } from "@/src/agents/analyzer/schema";
+import type { Risk } from "@/langchain/agents/analyzer/schema";
 
 interface RiskCardProps extends Pick<Risk, "type" | "description"> {}
 

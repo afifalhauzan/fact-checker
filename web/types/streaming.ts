@@ -5,7 +5,7 @@
 
 import type { UIMessage } from 'ai';
 import type { ChartEmbedData, DashboardEmbedData } from './chart';
-import type { AnalysisResult } from '@/src/agents/analyzer/schema';
+import type { AnalysisResult } from '@/langchain/agents/analyzer/schema';
 
 export interface ChartDataPart {
   id: string;

@@ -3,7 +3,7 @@ import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/stream
 import { Check, Copy } from "lucide-react";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
-import { AnalysisSchema, type AnalysisResult } from "@/src/agents/analyzer/schema";
+import { AnalysisSchema, type AnalysisResult } from "@/langchain/agents/analyzer/schema";
 import { SummaryCard } from "@/components/cards/SummaryCard";
 import { ClaimCard } from "@/components/cards/ClaimCard";
 import { RiskCard } from "@/components/cards/RiskCard";

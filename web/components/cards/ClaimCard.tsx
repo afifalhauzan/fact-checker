@@ -1,4 +1,4 @@
-import type { Claim } from "@/src/agents/analyzer/schema";
+import type { Claim } from "@/langchain/agents/analyzer/schema";
 
 interface ClaimCardProps extends Pick<Claim, "text" | "confidence"> {}
 

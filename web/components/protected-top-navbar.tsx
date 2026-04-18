@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import React from "react";
-import { useBackendHealth } from "@/hooks/useBackendHealth";
 import { getStatusConfig, statusStyle } from "@/utils/backend-status";
 import { AuthButton } from "@/components/auth/auth-button";
 
 export function ProtectedTopNavbar() {
-    const { isOnline, isLoading } = useBackendHealth();
     const [hasMounted, setHasMounted] = React.useState(false);
 
     // Use fallback state during SSR and initial hydration
-    const currentStatus = hasMounted ? (isLoading ? 'initializing' : (isOnline ? 'online' : 'offline')) : 'initializing';
+    const currentStatus = hasMounted ? 'online' : 'initializing';
     const statusConfig = getStatusConfig(currentStatus);
     const statusStyles = statusStyle(currentStatus);
 

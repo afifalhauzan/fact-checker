@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { analyzeContent } from "@/src/agents/analyzer/analyze";
+import { analyzeContent } from "@/langchain/agents/analyzer/analyze";
 
 function extractLatestUserText(body: any): string {
   const lastMessage = body?.messages?.[body.messages.length - 1];

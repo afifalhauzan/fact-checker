@@ -1,4 +1,4 @@
-import type { AnalysisResult } from "@/src/agents/analyzer/schema";
+import type { AnalysisResult } from "@/langchain/agents/analyzer/schema";
 
 interface SummaryCardProps {
   summary: AnalysisResult["summary"];

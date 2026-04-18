@@ -1,7 +1,7 @@
 "use client";
 
-import { ChatFooter } from "@/components/chat-footer";
-import { ChatStart } from "@/components/chat-start";
+import { ChatFooter } from "@/components/chat/chat-footer";
+import { ChatStart } from "@/components/chat/chat-start";
 import { ConfirmModal } from "@/components/ui/modal";
 import { UserMessage } from "@/components/chat/UserMessage";
 import { AssistantMessage } from "@/components/chat/AssistantMessage";
@@ -9,17 +9,11 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useChatInitialization } from "@/hooks/useChatInitialization";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
-import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useConversationStore } from "@/lib/conversation-store";
-import { useGraphHistoryStore } from "@/lib/graph-history-store";
-import { useInteractionStore } from "@/lib/interaction-store";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
 import { RotateCcw, ChevronDown } from "lucide-react";
-import { useConversationInit } from "@/hooks/useConversationInit";
-import { useAuth } from "@/hooks/useAuth";
 import toast, { Toaster } from 'react-hot-toast';
 import React from "react";
-import { Button } from "./ui/button";
 import { useStreaming } from "@/contexts/StreamingContext";
 
 export function Chat() {
