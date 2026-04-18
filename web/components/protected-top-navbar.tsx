@@ -1,0 +1,44 @@
+"use client";
+
+import Link from "next/link";
+import React from "react";
+import { useBackendHealth } from "@/hooks/useBackendHealth";
+import { getStatusConfig, statusStyle } from "@/utils/backend-status";
+import { AuthButton } from "@/components/auth/auth-button";
+
+export function ProtectedTopNavbar() {
+    const { isOnline, isLoading } = useBackendHealth();
+    const [hasMounted, setHasMounted] = React.useState(false);
+
+    // Use fallback state during SSR and initial hydration
+    const currentStatus = hasMounted ? (isLoading ? 'initializing' : (isOnline ? 'online' : 'offline')) : 'initializing';
+    const statusConfig = getStatusConfig(currentStatus);
+    const statusStyles = statusStyle(currentStatus);
+
+    React.useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    return (
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+                <Link href="/" className="flex min-w-0 items-center gap-2">
+                    <div className="flex min-w-0 leading-tight">
+                        <div className="truncate text-sm font-semibold tracking-tight text-foreground">
+                            META<span className="text-primary">BOT</span> AI
+                        </div>
+                        <div
+                            className="flex w-20 items-center gap-1.5 rounded-full ml-12 sm:ml-2 px-2.5 py-1 text-[11px] font-medium"
+                            style={statusStyle(currentStatus)}
+                        >
+                            {statusConfig.text}
+                        </div>
+                    </div>
+                </Link>
+                <div className="flex items-center">
+                    <AuthButton />
+                </div>
+            </div>
+        </header>
+    );
+}

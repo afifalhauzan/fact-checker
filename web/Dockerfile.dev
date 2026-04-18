@@ -1,0 +1,24 @@
+# Next.js Development Dockerfile
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files from root
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install
+
+# Copy the web application
+COPY web/ ./web/
+
+# Expose port
+EXPOSE 3000
+
+# Command to run the development server
+CMD ["pnpm", "run", "next-dev"]

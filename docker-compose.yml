@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  api:
+    image: ${CI_REGISTRY_IMAGE}/api:${CI_COMMIT_REF_SLUG}
+    ports:
+      - "8003:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:admin@postgres:5432/metabot_db
+      - REDIS_URL=redis://redis:6379
+      - PYTHONPATH=/app
+      - METABASE_URL=http://${SERVER_IP}:3100
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_APP_PASSWORD=${MAIL_APP_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - METABASE_USERNAME=${METABASE_USERNAME}
+      - METABASE_PASSWORD=${METABASE_PASSWORD}
+      - METABASE_SECRET_KEY=${METABASE_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    networks:
+      - infra-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    image: ${CI_REGISTRY_IMAGE}/web:${CI_COMMIT_REF_SLUG}
+    ports:
+      - "3003:3000"
+    environment:
+      - BACKEND_URL=http://${SERVER_IP}:8003/api
+      - NODE_ENV=production
+    # depends_on:
+    #   - api
+    networks:
+      - infra-network
+
+networks:
+  infra-network:
+    external: true # This tells Docker the network already exists on the VPS

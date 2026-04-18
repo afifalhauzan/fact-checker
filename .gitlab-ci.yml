@@ -1,0 +1,84 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  API_IMAGE: $CI_REGISTRY_IMAGE/api:$CI_COMMIT_REF_SLUG
+  WEB_IMAGE: $CI_REGISTRY_IMAGE/web:$CI_COMMIT_REF_SLUG
+  SERVER_IP: "172.17.1.101"
+  DEPLOY_PATH: "/var/projects/service-metabot"
+
+# -----------------------------------------
+# STAGE: BUILD
+# -----------------------------------------
+build:
+  stage: build
+  tags: [exec-docker]
+  image: docker:25
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build -t $API_IMAGE -f api/Dockerfile .
+    - docker push $API_IMAGE
+    - docker build -t $WEB_IMAGE -f web/Dockerfile .
+    - docker push $WEB_IMAGE
+  only:
+    - dev-integration
+    - fiki/feat-ai-logic
+
+# -----------------------------------------
+# STAGE: DEPLOY
+# -----------------------------------------
+deploy:
+  stage: deploy
+  tags: [exec-docker]
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+
+    - head -n 1 $SSH_PRIVATE_KEY
+    - ls -l $SSH_PRIVATE_KEY || echo "Variable is EMPTY or file not found!"
+    
+    # 1. Remove any potential Windows carriage returns (\r)
+    - tr -d '\r' < $SSH_PRIVATE_KEY > $SSH_PRIVATE_KEY.clean
+    
+    # 2. Force a trailing newline into the file
+    - echo "" >> $SSH_PRIVATE_KEY.clean
+    
+    # 3. Secure the file (SSH ignores keys with loose permissions)
+    - chmod 600 $SSH_PRIVATE_KEY.clean
+    
+    # 4. Add the file directly using its path
+    - ssh-add $SSH_PRIVATE_KEY.clean
+    
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "mkdir -p $DEPLOY_PATH"
+    - scp -o StrictHostKeyChecking=no docker-compose.yml $SERVER_USER@$SERVER_IP:$DEPLOY_PATH/
+
+    # Generate .env from GitLab CI/CD Variables, then send to server
+    - echo "CI_REGISTRY_IMAGE=$CI_REGISTRY_IMAGE" > .env.deploy
+    - echo "CI_COMMIT_REF_SLUG=$CI_COMMIT_REF_SLUG" >> .env.deploy
+    - echo "SERVER_IP=$SERVER_IP" >> .env.deploy
+    - echo "MAIL_USERNAME=$MAIL_USERNAME" >> .env.deploy
+    - echo "MAIL_APP_PASSWORD=$MAIL_APP_PASSWORD" >> .env.deploy
+    - echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env.deploy
+    - echo "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" >> .env.deploy
+    - echo "DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY" >> .env.deploy
+    - echo "METABASE_USERNAME=$METABASE_USERNAME" >> .env.deploy
+    - echo "METABASE_PASSWORD=$METABASE_PASSWORD" >> .env.deploy
+    - echo "METABASE_SECRET_KEY=$METABASE_SECRET_KEY" >> .env.deploy
+    - echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env.deploy
+    - scp -o StrictHostKeyChecking=no .env.deploy $SERVER_USER@$SERVER_IP:$DEPLOY_PATH/.env
+
+    - ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "
+        cd $DEPLOY_PATH &&
+        echo '$CI_REGISTRY_PASSWORD' | docker login -u '$CI_REGISTRY_USER' --password-stdin '$CI_REGISTRY' &&
+        docker compose pull &&
+        docker compose up -d
+      "
+  only:
+    - dev-integration
+    - fiki/feat-ai-logic
