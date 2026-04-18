@@ -5,6 +5,7 @@
 
 import type { UIMessage } from 'ai';
 import type { ChartEmbedData, DashboardEmbedData } from './chart';
+import type { AnalysisResult } from '@/src/agents/analyzer/schema';
 
 export interface ChartDataPart {
   id: string;
@@ -43,6 +44,7 @@ export type MetabotUIMessagePart =
   | { type: 'data-json'; data: ChartDataPart }
   | { type: 'data-chart'; data: ChartDataPart | string }
   | { type: 'data-dashboard'; data: DashboardEmbedData | string }
+  | { type: 'data-analysis'; data: AnalysisResult | string }
   | {
       type: 'data-notification';
       data: {

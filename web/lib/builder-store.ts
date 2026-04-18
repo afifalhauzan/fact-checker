@@ -1,11 +1,11 @@
 /**
  * Builder State Store
- * Manages builder UI state including view mode and flow completion
+ * Manages builder UI state including flow completion
  */
 
 import { create } from 'zustand';
 
-export type ViewMode = 'dashboard' | 'selection';
+export type ViewMode = 'dashboard';
 
 interface BuilderState {
   viewMode: ViewMode;
@@ -18,8 +18,7 @@ interface BuilderState {
 }
 
 /**
- * Global builder store for managing view mode and flow state
- * Enables automatic navigation from selection → dashboard after completion
+ * Global builder store for managing view state and flow completion.
  */
 export const useBuilderStore = create<BuilderState>((set) => ({
   viewMode: 'dashboard',

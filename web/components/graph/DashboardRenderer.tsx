@@ -6,7 +6,6 @@ import { Maximize2, Minimize2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartRenderer } from "./ChartRenderer"
 import { AIInsights } from "./AIInsights"
-import { KPIScorecards } from "./KPIScorecards"
 import type { DashboardEmbedData, ChartEmbedData } from "@/types/chart"
 
 interface DashboardRendererProps {
@@ -86,10 +85,6 @@ export function DashboardRenderer({ data, className }: DashboardRendererProps) {
           <p className="text-sm text-muted-foreground mt-1">{period_text}</p>
         </div>
 
-        {/* KPI Scorecards */}
-        {kpi_scorecards && kpi_scorecards.length > 0 && (
-          <KPIScorecards scorecards={kpi_scorecards} />
-        )}
 
         {/* Main Chart - Delegated to ChartRenderer */}
         {mainChartEmbedData && (

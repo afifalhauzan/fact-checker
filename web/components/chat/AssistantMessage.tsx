@@ -3,6 +3,10 @@ import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/stream
 import { Check, Copy } from "lucide-react";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
+import { AnalysisSchema, type AnalysisResult } from "@/src/agents/analyzer/schema";
+import { SummaryCard } from "@/components/cards/SummaryCard";
+import { ClaimCard } from "@/components/cards/ClaimCard";
+import { RiskCard } from "@/components/cards/RiskCard";
 
 interface AssistantMessageProps {
   message: MetabotUIMessage;
@@ -11,6 +15,25 @@ interface AssistantMessageProps {
   isLastMessage: boolean;
   completedStepSelections: Map<string, string>;
   onInteractiveChoice: (stepId: string, option: string) => void | Promise<void>;
+}
+
+function extractAnalysisFromParts(parts: MetabotUIMessagePart[]): AnalysisResult | null {
+  const analysisPart = parts.find((part) => part.type === 'data-analysis');
+
+  if (!analysisPart || analysisPart.type !== 'data-analysis' || !analysisPart.data) {
+    return null;
+  }
+
+  try {
+    const parsed = typeof analysisPart.data === 'string'
+      ? JSON.parse(analysisPart.data)
+      : analysisPart.data;
+
+    const validation = AnalysisSchema.safeParse(parsed);
+    return validation.success ? validation.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export function AssistantMessage({ 
@@ -42,6 +65,14 @@ export function AssistantMessage({
     return (message.parts as MetabotUIMessagePart[]).some(
       (part) => part.type === 'interactive-step'
     );
+  }, [message.parts]);
+
+  const analysisData = React.useMemo(() => {
+    if (!message.parts || !Array.isArray(message.parts)) {
+      return null;
+    }
+
+    return extractAnalysisFromParts(message.parts as MetabotUIMessagePart[]);
   }, [message.parts]);
 
   // Extract text content for copying
@@ -88,6 +119,38 @@ export function AssistantMessage({
             completedStepSelections={completedStepSelections}
             onInteractiveChoice={onInteractiveChoice}
           />
+
+          {analysisData && (
+            <div className="mt-3 space-y-3 animate-in fade-in-0 duration-300">
+              {analysisData.summary.trim().length > 0 && (
+                <SummaryCard summary={analysisData.summary} />
+              )}
+
+              {analysisData.claims.length > 0 && (
+                <section className="space-y-2">
+                  {analysisData.claims.map((claim, index) => (
+                    <ClaimCard
+                      key={`${message.id}-claim-${index}`}
+                      text={claim.text}
+                      confidence={claim.confidence}
+                    />
+                  ))}
+                </section>
+              )}
+
+              {analysisData.risks.length > 0 && (
+                <section className="space-y-2">
+                  {analysisData.risks.map((risk, index) => (
+                    <RiskCard
+                      key={`${message.id}-risk-${index}`}
+                      type={risk.type}
+                      description={risk.description}
+                    />
+                  ))}
+                </section>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Copy button - appears on hover only after streaming is complete, and disabled for interactive steps */}
