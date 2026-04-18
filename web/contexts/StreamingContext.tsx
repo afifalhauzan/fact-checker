@@ -10,7 +10,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import { type MetabotUIMessage, hasChartDataPart, extractChartDataFromMessage } from "@/types/streaming";
-import { isDashboardEmbedData, extractChartsFromNewMessages } from "@/utils/chart-processor";
+import { isDashboardEmbedData, extractChartsFromHistoryMessages } from "@/utils/chart-processor";
 
 interface StreamingContextType {
   // Chat state
@@ -35,7 +35,7 @@ interface StreamingProviderProps {
 
 export function StreamingProvider({ children, chatId }: StreamingProviderProps) {
   const { conversationId } = useConversationStore();
-  const { setCurrentChart, appendPaginatedCharts } = useGraphHistoryStore();
+  const { setCurrentChart, appendHistoryCharts } = useGraphHistoryStore();
   const { isAuthenticated } = useAuthStore();
 
   // Chat history fetching
@@ -126,9 +126,9 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
         setMessages(result.messages);
 
         // Extract charts from initial messages and populate graph history store
-        const chartsFromHistory = extractChartsFromNewMessages(result.messages);
+        const chartsFromHistory = extractChartsFromHistoryMessages(result.messages);
         if (chartsFromHistory.length > 0) {
-          appendPaginatedCharts(
+          appendHistoryCharts(
             chartsFromHistory.map(chart => ({
               id: chart.id,
               chartData: chart.chartData,
@@ -147,7 +147,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
       // Mark this conversation as fetched
       fetchedConversationRef.current = activeConversationId;
     });
-  }, [activeConversationId, fetchHistory, setMessages, appendPaginatedCharts]);
+  }, [activeConversationId, fetchHistory, setMessages, appendHistoryCharts]);
 
   // Process custom data parts from AI SDK v5 streaming  
   useEffect(() => {

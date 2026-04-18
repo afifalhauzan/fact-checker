@@ -250,18 +250,18 @@ export const extractHistoryChartItems = (messages: MetabotUIMessage[]): HistoryC
 };
 
 /**
- * Extract charts ONLY from newly fetched messages for pagination
- * Used when loading older messages to append charts to graph history store
+ * Extract charts from fetched history messages
+ * Used when loading chat history to append charts to graph history store
  * Avoids re-parsing entire message history
- * @param newMessages - Only the newly fetched messages (from pagination)
+ * @param historyMessages - Messages fetched from history API
  * @returns Charts ready to append to graph history store
  */
-export const extractChartsFromNewMessages = (
-  newMessages: MetabotUIMessage[]
+export const extractChartsFromHistoryMessages = (
+  historyMessages: MetabotUIMessage[]
 ): Array<{ id: string; chartData: ChartEmbedData; title: string; messageId: string }> => {
   const charts: Array<{ id: string; chartData: ChartEmbedData; title: string; messageId: string }> = []
 
-  for (const msg of newMessages) {
+  for (const msg of historyMessages) {
     if (!msg.parts || !Array.isArray(msg.parts)) continue
 
     const chartPart = msg.parts.find((part: any) => part.type === 'data-chart')
@@ -290,13 +290,13 @@ export const extractChartsFromNewMessages = (
         messageId: msg.id,
       })
 
-      console.log('[ChartProcessor] Found', isDashboard ? 'dashboard' : 'chart', 'in paginated message:', {
+      console.log('[ChartProcessor] Found', isDashboard ? 'dashboard' : 'chart', 'in history message:', {
         chartId: chartData.id,
         title,
         isDashboard,
       })
     } catch (err) {
-      console.warn('[ChartProcessor] Error parsing chart from paginated message:', err)
+      console.warn('[ChartProcessor] Error parsing chart from history message:', err)
       continue
     }
   }

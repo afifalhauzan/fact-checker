@@ -39,7 +39,7 @@ interface BackendHistoryResponse {
  * @returns Array of frontend-compatible MetabotUIMessage objects with parts array for charts
  */
 export function parseHistoryToMessages(rawData: unknown): MetabotUIMessage[] {
-  // Handle both paginated response format and raw array format
+  // Handle both wrapped response format and raw array format
   let messagesArray: BackendHistoryMessage[] = []
   
   if (!rawData) {
@@ -63,7 +63,7 @@ export function parseHistoryToMessages(rawData: unknown): MetabotUIMessage[] {
   } 
   // Invalid format
   else {
-    console.warn('[ChatParser] Expected array or paginated response, received:', typeof rawData)
+    console.warn('[ChatParser] Expected array or wrapped response, received:', typeof rawData)
     return []
   }
 

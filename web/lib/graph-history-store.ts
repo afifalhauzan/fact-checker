@@ -21,7 +21,7 @@ interface GraphHistoryState {
   
   // Unified actions
   addToHistory: (item: ChartItem) => void;
-  appendPaginatedCharts: (items: ChartItem[]) => void;
+  appendHistoryCharts: (items: ChartItem[]) => void;
   removeFromHistory: (itemId: string) => void;
   restoreFromHistory: (itemId: string) => void;
   clearHistory: () => void;
@@ -60,10 +60,9 @@ export const useGraphHistoryStore = create<GraphHistoryState>()((set, get) => ({
         chartHistory: pushToChartHistory(state.chartHistory, item)
       })),
 
-      // Append multiple charts from pagination, avoiding duplicates
-      // Used when loading older messages to add their charts to history
-      appendPaginatedCharts: (items) => set((state) => {
-        console.log('[GraphHistoryStore] appendPaginatedCharts called with items:', items.map(i => ({ id: i.id, messageId: i.messageId, title: i.title })));
+      // Append multiple charts from fetched history messages, avoiding duplicates.
+      appendHistoryCharts: (items) => set((state) => {
+        console.log('[GraphHistoryStore] appendHistoryCharts called with items:', items.map(i => ({ id: i.id, messageId: i.messageId, title: i.title })));
         
         // Create a map of existing charts for easy lookup and updates
         const chartMap = new Map(state.chartHistory.map(c => [c.id, c]));

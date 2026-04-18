@@ -5,7 +5,7 @@ import { useGraphHistoryStore, isChartItem } from "@/lib/graph-history-store";
 import { useInteractionStore } from "@/lib/interaction-store";
 import { useConversationStore } from "@/lib/conversation-store";
 import { useChatHistory } from "@/hooks/use-chat-history";
-import { extractChartsFromNewMessages, type HistoryChartItem } from "@/utils/chart-processor";
+import { extractChartsFromHistoryMessages, type HistoryChartItem } from "@/utils/chart-processor";
 import { Modal, ConfirmModal } from "@/components/ui/modal";
 import { History, RotateCcw, Trash2 } from "lucide-react";
 import { Riple } from "react-loading-indicators";
@@ -22,7 +22,7 @@ export function GraphHistoryModal() {
     setHistoryModalOpen,
     restoreFromHistory,
     removeFromHistory,
-    appendPaginatedCharts,
+    appendHistoryCharts,
   } = useGraphHistoryStore();
   
   // Subscribe directly to chartHistory from store
@@ -39,7 +39,7 @@ export function GraphHistoryModal() {
     setHasMounted(true);
   }, []);
 
-  // When modal opens: fetch ALL history at once (current + paginated)
+  // When modal opens: fetch full history once.
   useEffect(() => {
     if (!hasMounted || !conversationId || !isHistoryModalOpen) {
       return;
@@ -64,11 +64,11 @@ export function GraphHistoryModal() {
   useEffect(() => {
     if (!messages.length || !conversationId) return;
 
-    const chartsFromMessages = extractChartsFromNewMessages(messages);
+    const chartsFromMessages = extractChartsFromHistoryMessages(messages);
     if (chartsFromMessages.length > 0) {
       console.log('[GraphHistoryModal] Extracted charts:', chartsFromMessages.map(c => ({ id: c.id, messageId: c.messageId, title: c.title })));
       
-      appendPaginatedCharts(
+      appendHistoryCharts(
         chartsFromMessages.map(chart => ({
           id: chart.id,
           chartData: chart.chartData,
@@ -80,7 +80,7 @@ export function GraphHistoryModal() {
       );
       console.log('[GraphHistoryModal] Added', chartsFromMessages.length, 'charts to store');
     }
-  }, [messages, conversationId, appendPaginatedCharts]);
+  }, [messages, conversationId, appendHistoryCharts]);
 
   // Read directly from chartHistory state - automatically re-renders when store updates
   const historyItems = useMemo(() => {
