@@ -22,7 +22,7 @@
   --popover: oklch(100% 0 0);
   --popover-foreground: oklch(14.15% 0.006 264.05);
 
-  --primary: oklch(35.673% 0.19978 283.085);
+  --primary: oklch(63.408% 0.10626 194.846);
   --primary-foreground: oklch(100% 0 0);
 
   --secondary: oklch(96.27% 0.003 264.05);
@@ -451,5 +451,15 @@ body {
   .message-highlight-container {
     animation: none;
     background-color: transparent;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }

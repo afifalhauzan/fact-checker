@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut, Key } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,11 @@ interface AuthButtonProps {
 export function AuthButton({ onLogoutClick }: AuthButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { apiKey, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const dummyUser = {
+    username: "John Doe",
+    email: "john.doe@example.com",
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -26,16 +30,6 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (!apiKey) {
-    return null;
-  }
-
-  // Get truncated API key (first 4 and last 4 characters)
-  const getTruncatedApiKey = (key: string): string => {
-    if (key.length <= 8) return key;
-    return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
-  };
-
   const handleLogoutClick = () => {
     setIsOpen(false);
     if (onLogoutClick) {
@@ -45,28 +39,24 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
     }
   };
 
-  const truncatedKey = getTruncatedApiKey(apiKey);
-
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Auth Status Button */}
+      {/* User Profile Button */}
       <Button
         variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
         className="h-10 px-3 hover:bg-accent rounded-lg transition-colors flex items-center gap-2"
       >
-        {/* Key Icon with Badge */}
+        {/* User Icon + Basic Identity */}
         <div className="flex items-center gap-2">
-          <div className="relative">
+          <div className="relative shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Key size={16} className="text-primary" />
+              <User size={16} className="text-primary" />
             </div>
-            {/* <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-background" /> */}
           </div>
-          {/* Status Text */}
-          {/* <div className="hidden md:flex flex-col items-start text-left">
-            <span className="text-xs text-muted-foreground leading-none">Akses✅</span>
-          </div> */}
+          <div className="hidden md:flex flex-col items-start text-left">
+            <span className="text-sm font-medium leading-none text-foreground">{dummyUser.username}</span>
+          </div>
         </div>
       </Button>
 
@@ -78,13 +68,12 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <Key size={18} className="text-primary" />
+                  <User size={18} className="text-primary" />
                 </div>
-                {/* <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background" /> */}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">Terautentikasi</p>
-                {/* <p className="text-xs text-muted-foreground break-all font-mono">{apiKey}</p> */}
+                <p className="text-sm font-medium text-foreground">{dummyUser.username}</p>
+                <p className="text-xs text-muted-foreground break-all">{dummyUser.email}</p>
               </div>
             </div>
           </div>
