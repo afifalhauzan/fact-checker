@@ -1,3 +1,5 @@
+import { FaCircleQuestion } from "react-icons/fa6";
+
 interface SuggestionQuestionsProps {
   messageId: string;
   questions: string[];
@@ -17,7 +19,7 @@ export function SuggestionQuestions({ messageId, questions }: SuggestionQuestion
         <button
           key={`${messageId}-suggested-question-${index}`}
           type="button"
-          className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-left text-sm leading-relaxed text-foreground hover:bg-accent transition-colors"
+          className="rounded-xl bg-muted/40 px-3 py-2 text-left text-sm leading-relaxed text-foreground hover:bg-accent transition-colors"
         >
           {question}
         </button>

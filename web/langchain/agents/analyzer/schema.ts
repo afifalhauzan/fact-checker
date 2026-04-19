@@ -12,14 +12,23 @@ export const RiskSchema = z.object({
   description: z.string(),
 });
 
+export const SourceSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  link: z.string().url(),
+});
+
 export const AnalysisSchema = z.object({
+  conversationText: z.string(),
   claims: z.array(ClaimSchema),
   risks: z.array(RiskSchema),
   summary: z.string(),
   explanation: z.string().optional(),
   suggestedQuestions: z.array(z.string()).default([]),
+  sources: z.array(SourceSchema).default([]),
 });
 
 export type Claim = z.infer<typeof ClaimSchema>;
 export type Risk = z.infer<typeof RiskSchema>;
+export type Source = z.infer<typeof SourceSchema>;
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;

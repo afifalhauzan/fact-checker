@@ -18,50 +18,72 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
   const trimmed = input.trim();
 
   const mockResult: AnalysisResult = {
+    conversationText: trimmed
+      ? `Berikut penjelasan untuk diabetes:`
+      : "No input provided for analysis.",
     claims: trimmed
       ? [
-          {
-            text: trimmed,
-            confidence: scoreConfidence(trimmed),
-          },
-        ]
+        {
+          text: trimmed,
+          confidence: scoreConfidence(trimmed),
+        },
+      ]
       : [
-          {
-            text: "No clear claim detected from the input.",
-            confidence: 0.2,
-          },
-        ],
+        {
+          text: "No clear claim detected from the input.",
+          confidence: 0.2,
+        },
+      ],
 
     risks: trimmed
       ? [
-          {
-            type: "missing_context",
-            description:
-              "This statement might be too simplified. Important context or supporting details could be missing.",
-          },
-        ]
+        {
+          type: "missing_context",
+          description:
+            "This statement might be too simplified. Important context or supporting details could be missing.",
+        },
+      ]
       : [
-          {
-            type: "overclaim",
-            description:
-              "There’s no information to evaluate, so any conclusion would be unreliable.",
-          },
-        ],
+        {
+          type: "overclaim",
+          description:
+            "There’s no information to evaluate, so any conclusion would be unreliable.",
+        },
+      ],
 
     summary: trimmed
-      ? "Here’s a quick breakdown of the main idea and what might need a closer look."
+      ? "Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat memproduksi atau menggunakan insulin dengan efektif, yang menyebabkan kadar gula darah menjadi tinggi."
       : "We couldn’t find a clear idea to analyze. Try entering a statement or claim.",
 
     explanation: trimmed
-      ? `This statement appears to make a general claim: "${trimmed}". 
-It might sound convincing at first, but real-world issues are often more complex. 
-Before accepting it, it's worth asking: what evidence supports this, and what might be missing?`
+      ? `Dari pertanyaan ini: "${trimmed}". 
+Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat memproduksi atau menggunakan insulin dengan efektif, yang menyebabkan kadar gula darah menjadi tinggi.
+Penting untuk memahami bahwa diabetes bukan hanya tentang kadar gula darah, tetapi juga melibatkan faktor genetik, gaya hidup, dan lingkungan. 
+Jika Anda memiliki pertanyaan lebih lanjut atau ingin mendalami aspek tertentu, jangan ragu untuk bertanya!`
       : "Try entering a specific statement so we can break it down and explore it together.",
 
     suggestedQuestions: [
-      "Bagaimana cara kerja Transition Cost dalam manajemen energi harian?",
-      "Jelaskan lebih dalam tentang perbedaan Bottom-Up vs Top-Down influence.",
-      "Apa saja indikator awal saat sistem masuk ke stuck_mode?",
+      "Bagaimana cara kerja diabetes?",
+      "Jelaskan lebih dalam tentang perbedaan pengaruh gula dan kopi.",
+      "Apa saja gejala awal diabetes?",
+    ],
+
+    sources: [
+      {
+        id: "source-1",
+        title: "Cara kerja diabetes?",
+        link: "https://example.com/reports/transition-cost-daily-energy",
+      },
+      {
+        id: "source-2",
+        title: "Catatan riset: perbandingan pola pengaruh gula dan kopi.",
+        link: "https://example.com/research/bottom-up-vs-top-down-influence",
+      },
+      {
+        id: "source-3",
+        title: "Dokumentasi pemantauan: gejala awal diabetes",
+        link: "https://example.com/docs/system-monitoring/stuck-mode-indicators",
+      },
     ],
   };
 

@@ -60,7 +60,7 @@ export function ChatStart({ onSuggestionClick, isLoading }: ChatStartProps) {
       </section>
 
       {/* Suggestions Section */}
-      <div className="w-full max-w-2xl">
+      {/* <div className="w-full max-w-2xl">
         <div className="flex flex-wrap justify-center gap-2.5">
           {SUGGESTIONS.map((suggestion) => (
             <button
@@ -84,7 +84,7 @@ export function ChatStart({ onSuggestionClick, isLoading }: ChatStartProps) {
             </button>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

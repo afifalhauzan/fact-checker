@@ -17,6 +17,7 @@ import React from "react";
 import { useStreaming } from "@/contexts/StreamingContext";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
+import { AnalysisSchema } from "@/langchain/agents/analyzer/schema";
 
 export function Chat() {
   // Get streaming state from context
@@ -72,20 +73,35 @@ export function Chat() {
     }
   }, []);
 
-  const sidebarSources: SidebarSourceItem[] = [
-    {
-      id: "source-1",
-      title: "Laporan transisi energi harian: dampak biaya perpindahan sistem pada operasional.",
-    },
-    {
-      id: "source-2",
-      title: "Catatan riset: perbandingan pola Bottom-Up vs Top-Down influence di pengambilan keputusan.",
-    },
-    {
-      id: "source-3",
-      title: "Dokumentasi pemantauan: indikator awal ketika sistem mulai masuk kondisi stuck_mode.",
-    },
-  ];
+  const sidebarSources = React.useMemo<SidebarSourceItem[]>(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const parts = (messages[i].parts || []) as MetabotUIMessagePart[];
+      const analysisPart = parts.find((part) => part.type === 'data-analysis');
+
+      if (!analysisPart || analysisPart.type !== 'data-analysis' || !analysisPart.data) {
+        continue;
+      }
+
+      try {
+        const parsed = typeof analysisPart.data === 'string'
+          ? JSON.parse(analysisPart.data)
+          : analysisPart.data;
+
+        const validation = AnalysisSchema.safeParse(parsed);
+        if (validation.success && validation.data.sources?.length > 0) {
+          return validation.data.sources.map((source) => ({
+            id: source.id,
+            title: source.title,
+            link: source.link,
+          }));
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return [];
+  }, [messages]);
 
   const completedStepSelections = React.useMemo(() => {
     const completed = new Map<string, string>();

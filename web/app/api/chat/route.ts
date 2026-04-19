@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
         const textId = `analysis-${Date.now()}`;
         writer.write({ type: "text-start", id: textId });
 
-        const summaryText = `Summary: ${analysis.summary}`;
-        for (const delta of chunkByWords(summaryText)) {
+        const conversationText = `${analysis.conversationText}`;
+        for (const delta of chunkByWords(conversationText)) {
           writer.write({ type: "text-delta", id: textId, delta });
           await Promise.resolve();
         }

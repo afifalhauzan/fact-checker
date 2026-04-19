@@ -7,13 +7,13 @@ export function ClaimCard({ text, confidence }: ClaimCardProps) {
   const confidencePercent = Math.round(boundedConfidence * 100);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <p className="text-sm leading-relaxed text-foreground">{text}</p>
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/20">
+      <p className="text-base font-semibold leading-relaxed text-foreground">{text}</p>
 
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Confidence</span>
-          <span className="font-medium text-foreground">{confidencePercent}%</span>
+          <span className="font-medium text-muted-foreground">{confidencePercent}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div

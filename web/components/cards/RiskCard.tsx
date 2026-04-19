@@ -24,7 +24,7 @@ export function RiskCard({ type, description }: RiskCardProps) {
   const style = riskStyleMap[type];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border border-amber-200/70 border-l-5 border-l-amber-400 bg-slate p-4 shadow-sm transition-colors hover:bg-primary/10">
       <div className="flex items-start gap-3">
         <span className={`mt-1 inline-block h-2.5 w-2.5 rounded-full ${style.indicator}`} />
 

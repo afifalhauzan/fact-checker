@@ -6,9 +6,9 @@ interface SummaryCardProps {
 
 export function SummaryCard({ summary }: SummaryCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Summary</p>
-      <p className="mt-1.5 text-sm leading-relaxed text-foreground">{summary}</p>
+    <div className="rounded-xl border border-primary/20 p-4 shadow-sm transition-colors hover:bg-primary/10">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Ringkasan</p>
+      <p className="mt-2 text-sm leading-relaxed text-foreground">{summary}</p>
     </div>
   );
 }
