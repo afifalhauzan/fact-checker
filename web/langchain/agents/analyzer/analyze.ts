@@ -27,26 +27,36 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
         ]
       : [
           {
-            text: "No explicit claim was provided.",
+            text: "No clear claim detected from the input.",
             confidence: 0.2,
           },
         ],
+
     risks: trimmed
       ? [
           {
             type: "missing_context",
-            description: "The input may require additional background context for a robust conclusion.",
+            description:
+              "This statement might be too simplified. Important context or supporting details could be missing.",
           },
         ]
       : [
           {
             type: "overclaim",
-            description: "Empty input cannot support a factual conclusion.",
+            description:
+              "There’s no information to evaluate, so any conclusion would be unreliable.",
           },
         ],
+
     summary: trimmed
-      ? "Initial structured analysis generated from user input."
-      : "Structured analysis generated with fallback defaults due to empty input.",
+      ? "Here’s a quick breakdown of the main idea and what might need a closer look."
+      : "We couldn’t find a clear idea to analyze. Try entering a statement or claim.",
+
+    explanation: trimmed
+      ? `This statement appears to make a general claim: "${trimmed}". 
+It might sound convincing at first, but real-world issues are often more complex. 
+Before accepting it, it's worth asking: what evidence supports this, and what might be missing?`
+      : "Try entering a specific statement so we can break it down and explore it together.",
   };
 
   return AnalysisSchema.parse(mockResult);

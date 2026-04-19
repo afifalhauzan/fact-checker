@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "METABOT AI - Analytics Dashboard",
+  title: "FactChecker AI - Analyze Facts with AI-Powered Insights",
   description:
-    "Professional analytics dashboard with AI-powered insights and data visualization capabilities.",
+    "An AI-powered fact-checking tool with insights and data searching capabilities.",
 };
 
 export default function RootLayout({

@@ -4,7 +4,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ApiKeyLoginFormData } from './auth-schemas'
 import { useConversationStore } from './conversation-store'
-import { useGraphHistoryStore } from './graph-history-store'
 
 export interface AuthState {
   apiKey: string | null
@@ -90,7 +89,6 @@ export const useAuthStore = create<AuthState>()(
         
         // Reset all related Zustand stores
         useConversationStore.getState().reset()
-        useGraphHistoryStore.getState().clearHistory()
         
         // Clear X-API-Key cookie
         if (typeof window !== 'undefined') {

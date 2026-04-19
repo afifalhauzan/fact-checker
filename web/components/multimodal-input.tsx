@@ -29,7 +29,7 @@ const suggestedActions = [
     action: "Tren Transaksi",
   },
   {
-    title: "Volume MDR", 
+    title: "Volume MDR",
     action: "Volume MDR",
   },
 ];
@@ -159,7 +159,7 @@ export function MultimodalInput({
               }
             }}
           />
-          
+
           {isLoading ? (
             <button
               type="button"
@@ -185,7 +185,7 @@ export function MultimodalInput({
           )}
         </form>
         <p className="mt-2 text-center text-[10px] tracking-wide text-muted-foreground">
-          METABOT AI bisa salah. Selalu verifikasi hasil analitik.
+          AI bisa membantu memahami, tapi bukan selalu benar. Gunakan ini sebagai titik awal, lalu verifikasi sendiri ya.
         </p>
       </div>
     </div>

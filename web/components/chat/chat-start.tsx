@@ -3,60 +3,87 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
 
+// Tipografi/Interface (Jika menggunakan TypeScript)
 interface Suggestion {
   id: number;
   text: string;
 }
 
-const SUGGESTIONS: Suggestion[] = [
-  {
-    id: 1,
-    text: "Grafik Tren Transaksi"
-  },
-  {
-    id: 2,
-    text: "Analisis Tren Karyawan"
-  },
-  {
-    id: 3,
-    text: "Penjualan 1 Tahun Terakhir"
-  }
-];
-
 interface ChatStartProps {
-  onSuggestionClick: (suggestion: string) => void;
+  onSuggestionClick: (text: string) => void;
   isLoading: boolean;
 }
 
+const SUGGESTIONS = [
+  { id: 1, text: "“Makan gula menyebabkan diabetes” — apakah ini benar?" },
+  { id: 2, text: "Ringkas dan jelaskan klaim utama dari artikel ini: [paste teks]" },
+  { id: 3, text: "Analisis opini ini: apa bias atau asumsi yang digunakan?" },
+];
+
 export function ChatStart({ onSuggestionClick, isLoading }: ChatStartProps) {
   return (
-    <div className="flex flex-col items-center justify-center my-auto px-4">
-      {/* Welcome Avatar/Icon */}
-      <div className="mb-6 p-4 rounded-full bg-primary/10 text-primary">
-        <Sparkles size={40} className="animate-pulse" />
-      </div>
-
-      {/* Welcome Message */}
-      <div className="flex flex-col items-center gap-4 mb-8 w-full max-w-2xl">
-        <div className="flex gap-2 items-end justify-center">
-          <div className="max-w-full md:max-w-[90%] rounded-2xl rounded-bl-sm backdrop-blur-sm p-4 text-base leading-relaxed text-secondary-foreground shadow-sm">
-            <span className="font-semibold text-primary">Halo! Saya METABOT.</span> Ada yang bisa saya bantu hari ini dalam menganalisis data?
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 py-12 antialiased">
+      
+      {/* Container Pesan Utama */}
+      <section className="relative flex flex-col items-start w-full max-w-xl mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Chat Bubble Wrapper */}
+        <div className="relative">
+          <div className="
+            relative z-10 
+            bg-card text-card-foreground 
+            p-5 md:p-6 
+            rounded-2xl rounded-bl-none 
+            shadow-[0_8px_30px_rgb(0,0,0,0.04)] 
+            border border-border/40 
+            backdrop-blur-sm
+          ">
+            <p className="text-md md:text-base leading-relaxed">
+              <span className="text-xl font-semibold text-primary block mb-1">
+                Halo! 👋
+              </span>
+              <span className="text-muted-foreground">
+                Punya informasi yang bikin ragu atau bingung? 
+                Tempel artikel, klaim, atau opini—kita akan pecah dan pahami bersama.
+              </span>
+            </p>
           </div>
-        </div>
-      </div>
 
-      {/* Suggestions */}
-      <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-md">
-        {SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion.id}
-            onClick={() => onSuggestionClick(suggestion.text)}
-            disabled={isLoading}
-            className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-all hover:bg-accent hover:text-accent-foreground hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {suggestion.text}
-          </button>
-        ))}
+          {/* Ekor Chat Bubble (Tail) */}
+          <div className="absolute -left-1 bottom-0 w-4 h-4 bg-card border-l border-b border-border/40 transform rotate-[-15deg] -z-0 rounded-sm shadow-sm" />
+        </div>
+
+        {/* Sub-label di bawah bubble */}
+        {/* <p className="mt-4 ml-2 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60">
+          Sistem Analisis Berbasis Konteks
+        </p> */}
+      </section>
+
+      {/* Suggestions Section */}
+      <div className="w-full max-w-2xl">
+        <div className="flex flex-wrap justify-center gap-2.5">
+          {SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion.id}
+              onClick={() => onSuggestionClick(suggestion.text)}
+              disabled={isLoading}
+              className="
+                group relative
+                inline-flex items-center text-left
+                rounded-2xl border border-border/60 
+                bg-muted/30 px-5 py-3 
+                text-sm font-medium text-secondary-foreground
+                transition-all duration-300
+                hover:bg-background hover:border-primary/30 hover:shadow-md hover:-translate-y-1
+                active:scale-95
+                disabled:opacity-50 disabled:cursor-not-allowed
+                max-w-[100%] md:max-w-[45%]
+              "
+            >
+              <span className="line-clamp-2">{suggestion.text}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

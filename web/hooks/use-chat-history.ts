@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react'
 import { parseHistoryToMessages } from '@/lib/chat-parser'
 import type { MetabotUIMessage } from '@/types/streaming'
-import type { ChartEmbedData } from '@/types/chart'
 
 interface UseChatHistoryState {
   messages: MetabotUIMessage[]

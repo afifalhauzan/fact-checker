@@ -148,21 +148,6 @@ export function Chat() {
 
       <Toaster />
 
-      {/* Header */}
-      <header className="flex h-12 shrink-0 items-center border-b border-border px-2 gap-2.5">
-        <div className="flex-1 px-4 pl-16 lg:pl-3">
-          <div className="text-sm font-semibold leading-none text-foreground">Chatbot Data</div>
-        </div>
-        {/* <Button
-          variant="ghost"
-          onClick={handleResetClick}
-          title="Reset Chat"
-        >
-          <RotateCcw className="w-3 h-3 mr-1" />
-          Reset
-        </Button> */}
-      </header>
-
       {/* Chat Box */}
       <div
         ref={messagesContainerRef}

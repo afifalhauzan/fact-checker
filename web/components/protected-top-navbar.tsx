@@ -23,7 +23,7 @@ export function ProtectedTopNavbar() {
                 <Link href="/" className="flex min-w-0 items-center gap-2">
                     <div className="flex min-w-0 leading-tight">
                         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
-                            META<span className="text-primary">BOT</span> AI
+                            Fact<span className="text-primary">Checker</span> AI
                         </div>
                         <div
                             className="flex w-20 items-center gap-1.5 rounded-full ml-12 sm:ml-2 px-2.5 py-1 text-[11px] font-medium"

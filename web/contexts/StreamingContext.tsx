@@ -5,12 +5,10 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import toast from "react-hot-toast";
 import { useConversationStore } from "@/lib/conversation-store";
-import { useGraphHistoryStore } from "@/lib/graph-history-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
-import { type MetabotUIMessage, hasChartDataPart, extractChartDataFromMessage } from "@/types/streaming";
-import { isDashboardEmbedData, extractChartsFromHistoryMessages } from "@/utils/chart-processor";
+import { type MetabotUIMessage } from "@/types/streaming";
 
 interface StreamingContextType {
   // Chat state
@@ -35,7 +33,6 @@ interface StreamingProviderProps {
 
 export function StreamingProvider({ children, chatId }: StreamingProviderProps) {
   const { conversationId } = useConversationStore();
-  const { setCurrentChart, appendHistoryCharts } = useGraphHistoryStore();
   const { isAuthenticated } = useAuthStore();
 
   // Chat history fetching
@@ -49,9 +46,6 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
 
   // Local loading state to start immediately when message is sent
   const [isUserSending, setIsUserSending] = useState(false);
-
-  // Track processed charts to prevent duplicates
-  const [processedCharts, setProcessedCharts] = useState<Set<string>>(new Set());
 
   // Get conversationId from URL if available (for page refreshes/shared URLs)
   const urlConversationId = typeof window !== 'undefined'
@@ -125,21 +119,6 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
         // Set the fetched messages as initial state
         setMessages(result.messages);
 
-        // Extract charts from initial messages and populate graph history store
-        const chartsFromHistory = extractChartsFromHistoryMessages(result.messages);
-        if (chartsFromHistory.length > 0) {
-          appendHistoryCharts(
-            chartsFromHistory.map(chart => ({
-              id: chart.id,
-              chartData: chart.chartData,
-              title: chart.title,
-              conversationId: activeConversationId,
-              timestamp: Date.now(),
-            }))
-          );
-          console.log('[StreamingContext] Added', chartsFromHistory.length, 'charts to history store from initial load');
-        }
-
       } else {
         console.log('[StreamingContext] No initial historical messages found');
       }
@@ -147,45 +126,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
       // Mark this conversation as fetched
       fetchedConversationRef.current = activeConversationId;
     });
-  }, [activeConversationId, fetchHistory, setMessages, appendHistoryCharts]);
-
-  // Process custom data parts from AI SDK v5 streaming  
-  useEffect(() => {
-    if (!messages.length) return;
-
-    const lastMessage = messages[messages.length - 1];
-
-    if (lastMessage?.role === 'assistant') {
-      // console.log('[STREAMING] Processing assistant message for custom data parts:', lastMessage);
-
-      // Check for chart or dashboard data in message parts (AI SDK v5 format)
-      if (hasChartDataPart(lastMessage)) {
-        const data = extractChartDataFromMessage(lastMessage);
-
-        if (data && !processedCharts.has(data.id)) {
-          // Check if this is dashboard or chart data
-          const isDashboard = isDashboardEmbedData(data);
-
-          // Create item for graph history store with message ID for scroll-to-context
-          const chartItem = {
-            id: data.id,
-            messageId: lastMessage.id, // Link to the message that generated this chart
-            chartData: data,
-            title: isDashboard
-              ? (data as any).chart_data?.dashboard_title || 'Dashboard'
-              : (data as any).visual_config?.title || 'Chart',
-            conversationId: activeConversationId || ''
-          };
-
-          // Set as current chart - setCurrentChart handles history automatically
-          setCurrentChart(chartItem);
-
-          // Mark as processed
-          setProcessedCharts(prev => new Set([...prev, data.id]));
-        }
-      }
-    }
-  }, [messages, setCurrentChart, activeConversationId, processedCharts]);
+  }, [activeConversationId, fetchHistory, setMessages]);
 
   // Wrapped sendMessage to control immediate loading and check auth
   const sendMessage = useCallback((message: any, options?: { action_type?: string; action_payload?: any }) => {
@@ -223,7 +164,6 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
 
   const handleRefresh = useCallback(() => {
     setMessages([]);
-    setProcessedCharts(new Set()); // Clear processed tracking
   }, [setMessages]);
 
   const renderMessageContent = useCallback((message: MetabotUIMessage) => {
