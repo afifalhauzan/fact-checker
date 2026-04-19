@@ -1,12 +1,14 @@
 import React from 'react';
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { Check, ChevronDown, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
 import { AnalysisSchema, type AnalysisResult } from "@/langchain/agents/analyzer/schema";
 import { SummaryCard } from "@/components/cards/SummaryCard";
 import { ClaimCard } from "@/components/cards/ClaimCard";
 import { RiskCard } from "@/components/cards/RiskCard";
+import { SuggestionQuestions } from "@/components/cards/SuggestionQuestions";
+import { ExplanationCard } from "@/components/cards/ExplanationCard";
 
 interface AssistantMessageProps {
   message: MetabotUIMessage;
@@ -108,7 +110,7 @@ export function AssistantMessage({
     } ${
       isHighlighted ? 'message-highlight-container' : ''
     }`}>
-      <div className="w-full md:max-w-[82%] relative">
+      <div className="w-full md:max-w-full relative">
         <div className={`min-w-20 rounded-xl rounded-bl-sm pl-0 py-0 text-sm leading-relaxed text-foreground ${
           isHighlighted ? 'message-highlight' : ''
         }`}>
@@ -122,11 +124,11 @@ export function AssistantMessage({
 
           {analysisData && (
             <div className="mt-3 space-y-3 animate-in fade-in-0 duration-300">
-              {analysisData.summary.trim().length > 0 && (
+              {analysisData.summary?.trim().length > 0 && (
                 <SummaryCard summary={analysisData.summary} />
               )}
 
-              {analysisData.claims.length > 0 && (
+              {analysisData.claims?.length > 0 && (
                 <section className="space-y-2">
                   {analysisData.claims.map((claim, index) => (
                     <ClaimCard
@@ -138,7 +140,7 @@ export function AssistantMessage({
                 </section>
               )}
 
-              {analysisData.risks.length > 0 && (
+              {analysisData.risks?.length > 0 && (
                 <section className="space-y-2">
                   {analysisData.risks.map((risk, index) => (
                     <RiskCard
@@ -150,17 +152,16 @@ export function AssistantMessage({
                 </section>
               )}
 
-              {analysisData.explanation?.trim().length ? (
-                <details className="rounded-xl border border-border bg-card p-3 group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-foreground">
-                    <span>What does this mean?</span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-                  </summary>
-                  <div className="mt-2 border-t border-border pt-2 text-sm leading-relaxed text-muted-foreground">
-                    {analysisData.explanation}
-                  </div>
-                </details>
-              ) : null}
+              {analysisData.explanation?.trim().length > 0 && (
+                <ExplanationCard explanation={analysisData.explanation} />
+              )}
+
+              {analysisData.suggestedQuestions?.length > 0 && (
+                <SuggestionQuestions
+                  messageId={message.id}
+                  questions={analysisData.suggestedQuestions}
+                />
+              )}
             </div>
           )}
         </div>

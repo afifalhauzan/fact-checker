@@ -11,10 +11,12 @@ import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useConversationStore } from "@/lib/conversation-store";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, Star } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import toast, { Toaster } from 'react-hot-toast';
 import React from "react";
 import { useStreaming } from "@/contexts/StreamingContext";
+import { Sidebar } from "@/components/sidebar/sidebar";
+import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
 
 export function Chat() {
   // Get streaming state from context
@@ -69,6 +71,21 @@ export function Chat() {
       setIsSidebarOpen(false);
     }
   }, []);
+
+  const sidebarSources: SidebarSourceItem[] = [
+    {
+      id: "source-1",
+      title: "Laporan transisi energi harian: dampak biaya perpindahan sistem pada operasional.",
+    },
+    {
+      id: "source-2",
+      title: "Catatan riset: perbandingan pola Bottom-Up vs Top-Down influence di pengambilan keputusan.",
+    },
+    {
+      id: "source-3",
+      title: "Dokumentasi pemantauan: indikator awal ketika sistem mulai masuk kondisi stuck_mode.",
+    },
+  ];
 
   const completedStepSelections = React.useMemo(() => {
     const completed = new Map<string, string>();
@@ -153,31 +170,10 @@ export function Chat() {
   return (
     <div className="flex h-full w-full">
       {isSidebarOpen && (
-        <aside className="flex h-full w-[280px] shrink-0 flex-col bg-muted/50 p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Context</h2>
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(false)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Sources and saved insights will appear here.
-          </p>
-
-          <button
-            type="button"
-            className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            title="Favorite"
-          >
-            <Star className="h-4 w-4" />
-            <span>Favorite</span>
-          </button>
-        </aside>
+        <Sidebar
+          sources={sidebarSources}
+          onClose={() => setIsSidebarOpen(false)}
+        />
       )}
 
       <div className="flex w-full justify-center items-center">

@@ -17,6 +17,7 @@ export const AnalysisSchema = z.object({
   risks: z.array(RiskSchema),
   summary: z.string(),
   explanation: z.string().optional(),
+  suggestedQuestions: z.array(z.string()).default([]),
 });
 
 export type Claim = z.infer<typeof ClaimSchema>;

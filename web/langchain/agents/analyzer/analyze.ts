@@ -57,6 +57,12 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
 It might sound convincing at first, but real-world issues are often more complex. 
 Before accepting it, it's worth asking: what evidence supports this, and what might be missing?`
       : "Try entering a specific statement so we can break it down and explore it together.",
+
+    suggestedQuestions: [
+      "Bagaimana cara kerja Transition Cost dalam manajemen energi harian?",
+      "Jelaskan lebih dalam tentang perbedaan Bottom-Up vs Top-Down influence.",
+      "Apa saja indikator awal saat sistem masuk ke stuck_mode?",
+    ],
   };
 
   return AnalysisSchema.parse(mockResult);
