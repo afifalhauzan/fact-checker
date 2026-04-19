@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import React from "react";
-import { getStatusConfig, statusStyle } from "@/utils/backend-status";
 import { AuthButton } from "@/components/auth/auth-button";
 
 export function ProtectedTopNavbar() {
@@ -10,8 +9,6 @@ export function ProtectedTopNavbar() {
 
     // Use fallback state during SSR and initial hydration
     const currentStatus = hasMounted ? 'online' : 'initializing';
-    const statusConfig = getStatusConfig(currentStatus);
-    const statusStyles = statusStyle(currentStatus);
 
     React.useEffect(() => {
         setHasMounted(true);
@@ -24,12 +21,6 @@ export function ProtectedTopNavbar() {
                     <div className="flex min-w-0 leading-tight">
                         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
                             Fact<span className="text-primary">Checker</span> AI
-                        </div>
-                        <div
-                            className="flex w-20 items-center gap-1.5 rounded-full ml-12 sm:ml-2 px-2.5 py-1 text-[11px] font-medium"
-                            style={statusStyle(currentStatus)}
-                        >
-                            {statusConfig.text}
                         </div>
                     </div>
                 </Link>
