@@ -19,7 +19,7 @@ export function ChatFooter({
 }: ChatFooterProps) {
   return (
     <footer className="sticky bottom-0 left-0 right-0 w-full md:relative md:shrink-0 p-4 pt-2 bg-background border-t border-border md:border-t-0">
-      <div className="md:border-t md:border-border pt-3">
+      <div className="pt-3">
         <form
           onSubmit={onSubmit}
           className="flex items-center gap-2 rounded-xl border-2 border-input bg-muted p-1.5 pl-3.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/100 transition-all"
