@@ -54,16 +54,16 @@ export function PreviewSection() {
 
       <div className="md:col-span-5 motion-safe:animate-[fadeUp_1000ms_cubic-bezier(0.34,1.2,0.64,1)_both]">
         <h2 className="mb-5 font-['Newsreader',serif] text-[2.25rem] leading-tight text-[#2c3437] sm:mb-6 sm:text-5xl">
-          Clarity through
+          Memahami informasi,
           <br />
-          deep deconstruction.
+          hingga ke akarnya.
         </h2>
         <p className="mb-7 text-base leading-relaxed text-[#596064] sm:mb-8 sm:text-lg">
-          Our AI doesn&apos;t just give you a "True" or "False." It maps out the bias, logic, and sources so
-          you can decide for yourself.
+          AI kami tidak hanya memberi jawaban “benar” atau “salah”.
+          Ia memetakan klaim, bias, dan sumber—agar kamu bisa menilai sendiri.
         </p>
         <button className="group inline-flex items-center gap-3 text-sm font-medium text-[#4e45e4] transition-colors hover:text-[#4135d8] sm:text-base">
-          Explore the Source Engine
+          Jelajahi cara kerjanya
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </button>
       </div>

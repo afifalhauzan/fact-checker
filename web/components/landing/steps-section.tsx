@@ -1,21 +1,21 @@
 const steps = [
   {
     number: "1",
-    title: "Paste & Input",
+    title: "Bagikan Informasi",
     description:
       "Bring any confusing headline, tweet, or WhatsApp forward. No matter how complex, we handle it.",
   },
   {
     number: "2",
-    title: "AI Deconstructs",
+    title: "AI Analisis",
     description:
       "Our models parse the logic, cross-reference data points, and identify emotional triggers or fallacies.",
   },
   {
     number: "3",
-    title: "Explore & Verify",
+    title: "Eksplor & Verifikasi",
     description:
-      "Interact with the results. Ask follow-up questions, check cited research, and gain total intellectual clarity.",
+      "Telusuri hasilnya, bandingkan perspektif, dan pahami konteks secara lebih utuh.",
   },
 ];
 
