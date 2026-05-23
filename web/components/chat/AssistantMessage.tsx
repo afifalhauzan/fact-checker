@@ -1,6 +1,7 @@
 import React from 'react';
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
 import { Check, Copy, ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
 import {
@@ -24,6 +25,7 @@ interface AssistantMessageProps {
   isLastMessage: boolean;
   completedStepSelections: Map<string, string>;
   onInteractiveChoice: (stepId: string, option: string) => void | Promise<void>;
+  onSuggestionClick: (suggestion: string) => void;
 }
 
 interface SectionalAnalysisData {
@@ -86,7 +88,14 @@ export function AssistantMessage({
   isLastMessage,
   completedStepSelections,
   onInteractiveChoice,
+  onSuggestionClick,
 }: AssistantMessageProps) {
+  const fadeUp = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.24, ease: "easeOut" as const },
+  };
+
   const isCurrentlyStreaming = isStreaming && isLastMessage;
   const { targetMessageId } = useInteractionStore();
   const isHighlighted = targetMessageId === message.id;
@@ -205,26 +214,28 @@ export function AssistantMessage({
           }`}>
 
           {resolvedReasoning && resolvedReasoning.length > 0 && (
-            <details className="rounded-lg bg-card py-2 group max-w-md" open={shouldOpenReasoning}>
-              <summary className="flex cursor-pointer list-none items-center justify-start gap-2 text-xs font-medium text-foreground px-1">
-                <span>{isCurrentlyStreaming ? "Sedang berpikir..." : "Tampilkan alur berpikir"}</span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-              </summary>
-              <div className="mt-3 ml-1 pl-3 border-l border-gray-300 space-y-1.5 text-xs">
-                <p className="pl-2 text-muted-foreground italic">{resolvedReasoning[0].intent}</p>
-                <ul className="space-y-1 pl-4">
-                  {resolvedReasoning[0].steps.map((step, index) => (
-                    <li key={`${message.id}-reasoning-step-${index}`} className="text-muted-foreground flex gap-1.5">
-                      <span className="text-primary font-semibold flex-shrink-0">-&gt;</span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
-                {isCurrentlyStreaming && (
-                  <div className="pt-1 pl-2 text-[11px] text-muted-foreground animate-pulse">Thinking...</div>
-                )}
-              </div>
-            </details>
+            <motion.div {...fadeUp}>
+              <details className="rounded-lg bg-background py-2 group max-w-md" open={shouldOpenReasoning}>
+                <summary className="flex cursor-pointer list-none items-center justify-start gap-2 text-xs font-medium text-foreground px-1">
+                  <span>{isCurrentlyStreaming ? "Sedang berpikir..." : "Tampilkan alur berpikir"}</span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+                </summary>
+                <div className="mt-3 ml-1 pl-3 border-l border-gray-300 space-y-1.5 text-xs">
+                  <p className="pl-2 text-muted-foreground italic">{resolvedReasoning[0].intent}</p>
+                  <ul className="space-y-1 pl-4">
+                    {resolvedReasoning[0].steps.map((step, index) => (
+                      <li key={`${message.id}-reasoning-step-${index}`} className="text-muted-foreground flex gap-1.5">
+                        <span className="text-primary font-semibold flex-shrink-0">-&gt;</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrentlyStreaming && (
+                    <div className="pt-1 pl-2 text-[11px] text-muted-foreground animate-pulse">Thinking...</div>
+                  )}
+                </div>
+              </details>
+            </motion.div>
           )}
 
           <PreviewMessage
@@ -238,11 +249,13 @@ export function AssistantMessage({
           {hasAnyAnalysisSection && (
             <div className="mt-3 space-y-3 animate-in fade-in-0 duration-300">
               {resolvedSummary?.trim().length > 0 && (
-                <SummaryCard summary={resolvedSummary} />
+                <motion.div {...fadeUp}>
+                  <SummaryCard summary={resolvedSummary} />
+                </motion.div>
               )}
 
               {resolvedClaims?.length > 0 && (
-                <section className="space-y-2">
+                <motion.section {...fadeUp} className="space-y-2">
                   {resolvedClaims.map((claim, index) => (
                     <ClaimCard
                       key={`${message.id}-claim-${index}`}
@@ -250,11 +263,11 @@ export function AssistantMessage({
                       confidence={claim.confidence}
                     />
                   ))}
-                </section>
+                </motion.section>
               )}
 
               {resolvedRisks?.length > 0 && (
-                <section className="space-y-2">
+                <motion.section {...fadeUp} className="space-y-2">
                   {resolvedRisks.map((risk, index) => (
                     <RiskCard
                       key={`${message.id}-risk-${index}`}
@@ -262,47 +275,54 @@ export function AssistantMessage({
                       description={risk.description}
                     />
                   ))}
-                </section>
+                </motion.section>
               )}
 
               {resolvedExplanation?.trim().length > 0 && (
-                <ExplanationCard explanation={resolvedExplanation} />
+                <motion.div {...fadeUp}>
+                  <ExplanationCard explanation={resolvedExplanation} />
+                </motion.div>
               )}
 
               {resolvedReferences?.length > 0 && (
-                <details className="rounded-xl border border-border bg-card p-3 group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-foreground">
-                    <span>Referensi</span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-                  </summary>
-                  <div className="mt-3 border-t border-border pt-3 space-y-2">
-                    {resolvedReferences.map((ref, index) => (
-                      <div key={`${message.id}-reference-${index}`} className="text-xs">
-                        <p className="font-semibold text-foreground">{ref.title}</p>
-                        {ref.snippet && (
-                          <p className="mt-1 leading-relaxed text-muted-foreground italic">{ref.snippet}</p>
-                        )}
-                        {ref.url && (
-                          <a
-                            href={ref.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 inline-flex text-primary hover:underline"
-                          >
-                            View source -&gt;
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                <motion.div {...fadeUp}>
+                  <details className="rounded-xl border border-border bg-card p-3 group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-foreground">
+                      <span>Referensi</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-3 border-t border-border pt-3 space-y-2">
+                      {resolvedReferences.map((ref, index) => (
+                        <div key={`${message.id}-reference-${index}`} className="text-xs">
+                          <p className="font-semibold text-foreground">{ref.title}</p>
+                          {ref.snippet && (
+                            <p className="mt-1 leading-relaxed text-muted-foreground italic">{ref.snippet}</p>
+                          )}
+                          {ref.url && (
+                            <a
+                              href={ref.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-1 inline-flex text-primary hover:underline"
+                            >
+                              View source -&gt;
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </motion.div>
               )}
 
               {resolvedSuggestedQuestions?.length > 0 && (
-                <SuggestionQuestions
-                  messageId={message.id}
-                  questions={resolvedSuggestedQuestions}
-                />
+                <motion.div {...fadeUp}>
+                  <SuggestionQuestions
+                    messageId={message.id}
+                    questions={resolvedSuggestedQuestions}
+                    onQuestionClick={onSuggestionClick}
+                  />
+                </motion.div>
               )}
             </div>
           )}

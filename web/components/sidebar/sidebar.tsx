@@ -5,13 +5,14 @@ interface SidebarProps {
   sources: SidebarSourceItem[];
   onClose: () => void;
   onOpenSource?: (item: SidebarSourceItem) => void;
+  className?: string;
 }
 
-export function Sidebar({ sources, onClose, onOpenSource }: SidebarProps) {
+export function Sidebar({ sources, onClose, onOpenSource, className = "" }: SidebarProps) {
   return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col bg-muted/50 p-4">
+    <aside className={`flex min-h-0 w-full shrink-0 flex-col border-b border-border bg-muted/50 p-4 md:h-full md:w-[280px] md:border-b-0 ${className}`}>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Context</h2>
+        <h2 className="text-sm font-semibold text-foreground">Konteks</h2>
         <button
           type="button"
           onClick={onClose}
@@ -26,7 +27,7 @@ export function Sidebar({ sources, onClose, onOpenSource }: SidebarProps) {
         Klik bagian analisis untuk melihat sumber terkait
       </p>
 
-      <div className="space-y-2 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {sources.map((source) => (
           <SourceItem key={source.id} item={source} onOpen={onOpenSource} />
         ))}
@@ -35,10 +36,10 @@ export function Sidebar({ sources, onClose, onOpenSource }: SidebarProps) {
       <button
         type="button"
         className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        title="Favorite"
+        title="Favorit"
       >
         <Star className="h-4 w-4" />
-        <span>Favorite</span>
+        <span>Favorit</span>
       </button>
     </aside>
   );

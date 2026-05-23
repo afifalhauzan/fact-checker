@@ -29,7 +29,7 @@ export function SourceItem({ item, onOpen }: SourceItemProps) {
         title="Open source"
       >
         <ExternalLink className="h-3.5 w-3.5" />
-        Open
+        Buka
       </a>
     </div>
   );

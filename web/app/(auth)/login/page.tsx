@@ -16,7 +16,7 @@ function LoginPageContent() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/")
+      router.push("/chat")
     }
   }, [isAuthenticated, router])
 
@@ -38,9 +38,9 @@ function LoginPageContent() {
       
       // Redirect with conversation_id if available
       if (conversationId) {
-        router.push(`/?conversation_id=${conversationId}`)
+        router.push(`/chat?conversation_id=${conversationId}`)
       } else {
-        router.push("/")
+        router.push("/chat")
       }
     } catch (error) {
       // Error is already handled by AuthContext and shown via useEffect

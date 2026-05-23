@@ -1,10 +1,10 @@
 ﻿import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicRoutes = ["/login"];
-const protectedRoutes = ["/", "/selection"];
+const publicRoutes = ["/", "/login"];
+const protectedRoutes = ["/chat", "/selection"];
 const legacyRouteRedirects: Record<string, string> = {
-  "/chat": "/",
+  "/landing": "/",
   "/dashboard": "/selection",
 };
 
@@ -50,8 +50,8 @@ export function proxy(request: NextRequest) {
 
   // 1. Handle Public Routes & Logged-in Redirection
   if (publicRoutes.includes(pathname)) {
-    if (isAuthenticated) {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (pathname === "/login" && isAuthenticated) {
+      return NextResponse.redirect(new URL("/chat", request.url));
     }
     return NextResponse.next();
   }

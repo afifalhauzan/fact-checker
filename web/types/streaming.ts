@@ -26,6 +26,13 @@ export interface ChoiceSummaryPart {
 
 export type MetabotUIMessagePart =
   | { type: 'text'; text: string }
+  | {
+      type: 'file';
+      mediaType: string;
+      filename?: string;
+      url: string;
+      providerMetadata?: Record<string, any>;
+    }
   | { type: 'data-analysis'; data: AnalysisResult | string }
   | { type: 'data-summary'; data: string }
   | { type: 'data-claims'; data: Claim[] }

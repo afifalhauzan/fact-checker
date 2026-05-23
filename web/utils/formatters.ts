@@ -23,3 +23,16 @@ export const formatNumber = (value: number, format?: string): string => {
       return new Intl.NumberFormat('id-ID').format(value);
   }
 };
+
+export function formatMediaTypeLabel(mediaType: string): string {
+  const normalized = mediaType.toLowerCase();
+  if (normalized === "application/pdf") {
+    return "PDF";
+  }
+
+  if (normalized === "text/markdown" || normalized === "text/md") {
+    return "Markdown";
+  }
+
+  return mediaType;
+}

@@ -6,7 +6,7 @@ export function LandingNavbar() {
   return (
     <nav className="fixed inset-x-0 top-0 z-50 bg-[#f7f9fb]/80 backdrop-blur-3xl">
       <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
-        <Link href="/landing" className="font-['Newsreader',serif] text-3xl font-medium tracking-tight text-[#2c3437]">
+        <Link href="/" className="font-['Newsreader',serif] text-3xl font-medium tracking-tight text-[#2c3437]">
           FactChecker AI
         </Link>
 

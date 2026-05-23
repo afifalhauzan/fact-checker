@@ -30,7 +30,7 @@ export function PreviewSection() {
         <div className="absolute -bottom-12 left-0 z-20 w-64 rounded-2xl border border-white/50 bg-white/65 p-4 shadow-[0_20px_40px_rgba(44,52,55,0.08)] backdrop-blur-xl sm:-left-4 sm:w-72 sm:p-6">
           <div className="mb-4 flex items-center gap-3 text-[#2c3437]">
             <BookOpen className="size-4 text-[#4e45e4]" />
-            <span className="text-sm font-semibold">Verified Sources</span>
+            <span className="text-sm font-semibold">Sumber</span>
           </div>
           <ul className="space-y-3 sm:space-y-4">
             {[

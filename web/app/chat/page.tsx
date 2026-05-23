@@ -9,7 +9,7 @@ import { generateUUID } from "@/utils/browser-uuid";
 
 export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default function ChatPage() {
   const [chatId] = React.useState(() => generateUUID());
 
   return (
@@ -19,7 +19,7 @@ export default function Page() {
           <ProtectedTopNavbar />
 
           <main className="relative flex min-h-0 flex-1">
-            <div className="flex min-w-0 flex-1 flex-col justify-center items-center max-h-[calc(100vh-4rem)]">
+            <div className="flex min-w-0 flex-1 flex-col items-center justify-center max-h-[calc(100vh-4rem)]">
               <Chat />
             </div>
           </main>

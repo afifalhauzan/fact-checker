@@ -1,11 +1,10 @@
-import { FaCircleQuestion } from "react-icons/fa6";
-
 interface SuggestionQuestionsProps {
   messageId: string;
   questions: string[];
+  onQuestionClick: (question: string) => void;
 }
 
-export function SuggestionQuestions({ messageId, questions }: SuggestionQuestionsProps) {
+export function SuggestionQuestions({ messageId, questions, onQuestionClick }: SuggestionQuestionsProps) {
   if (questions.length === 0) {
     return null;
   }
@@ -19,6 +18,7 @@ export function SuggestionQuestions({ messageId, questions }: SuggestionQuestion
         <button
           key={`${messageId}-suggested-question-${index}`}
           type="button"
+          onClick={() => onQuestionClick(question)}
           className="rounded-xl bg-muted/40 px-3 py-2 text-left text-sm leading-relaxed text-foreground hover:bg-accent transition-colors"
         >
           {question}

@@ -28,17 +28,9 @@ function extractLatestUserText(body: any): string {
   return "";
 }
 
-function buildStreamText(analysis: { conversationText?: string; explanation?: string; summary?: string }): string {
+function buildStreamText(analysis: { conversationText?: string }): string {
   const conversationText = analysis.conversationText?.trim() ?? "";
-
-  // If the leading text is too short, append explanation so users can see progressive streaming.
-  if (conversationText.length < 80) {
-    return [conversationText, analysis.explanation?.trim(), analysis.summary?.trim()]
-      .filter((section): section is string => Boolean(section && section.length > 0))
-      .join("\n\n");
-  }
-
-  return conversationText;
+  return conversationText.length > 0 ? conversationText : "I am ready. Please share what you want to analyze.";
 }
 
 function chunkByWords(text: string): string[] {

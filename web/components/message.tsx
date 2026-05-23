@@ -72,7 +72,7 @@ export const PreviewMessage = ({
                           >
                             <div className="flex items-end gap-1">
                               <Streamdown>{part.text}</Streamdown>
-                              <span className="mb-0.5 inline-block h-4 w-[2px] animate-pulse bg-foreground/60" />
+                              {/* <span className="mb-0.5 inline-block h-4 w-[2px] animate-pulse bg-foreground/60" /> */}
                             </div>
                           </motion.div>
                         ) : (

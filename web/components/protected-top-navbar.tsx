@@ -17,7 +17,7 @@ export function ProtectedTopNavbar() {
     return (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-                <Link href="/" className="flex min-w-0 items-center gap-2">
+                <Link href="/chat" className="flex min-w-0 items-center gap-2">
                     <div className="flex min-w-0 leading-tight">
                         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
                             Fact<span className="text-primary">Checker</span> AI

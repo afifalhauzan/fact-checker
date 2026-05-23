@@ -13,7 +13,7 @@
 
 :root {
   /* Custom Design System Overrides */
-  --background: oklch(100% 0 0);
+  --background: oklch(97.995% 0.00595 240.383);
   --foreground: oklch(14.15% 0.006 264.05);
 
   --card: oklch(100% 0 0);
