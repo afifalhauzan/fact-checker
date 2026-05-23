@@ -10,6 +10,11 @@ import { useChatInitialization } from "@/hooks/useChatInitialization";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useConversationStore } from "@/lib/conversation-store";
+import {
+  clearLandingChatDraft,
+  readLandingChatDraft,
+  type LandingChatDraft,
+} from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import toast, { Toaster } from 'react-hot-toast';
@@ -83,9 +88,12 @@ export function Chat() {
   // UI State
   const [input, setInput] = React.useState("");
   const [attachments, setAttachments] = React.useState<ComposerAttachment[]>([]);
+  const [pendingLandingDraft, setPendingLandingDraft] = React.useState<LandingChatDraft | null>(null);
   const [showResetModal, setShowResetModal] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isMobile, setIsMobile] = React.useState(false);
+  const hasHydratedLandingDraftRef = React.useRef(false);
+  const hasAutoSentLandingDraftRef = React.useRef(false);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -108,6 +116,75 @@ export function Chat() {
     mediaQuery.addListener(handleViewportChange);
     return () => mediaQuery.removeListener(handleViewportChange);
   }, []);
+
+  React.useEffect(() => {
+    if (hasHydratedLandingDraftRef.current) return;
+
+    const draft = readLandingChatDraft();
+    hasHydratedLandingDraftRef.current = true;
+
+    if (!draft) return;
+
+    setPendingLandingDraft(draft);
+    setInput(draft.text);
+    setAttachments(
+      draft.attachments.map((attachment) => ({
+        type: "file",
+        id: attachment.id,
+        filename: attachment.filename,
+        mediaType: attachment.mediaType,
+        url: attachment.url,
+        size: attachment.size,
+      }))
+    );
+  }, []);
+
+  React.useEffect(() => {
+    if (!pendingLandingDraft || hasAutoSentLandingDraftRef.current) return;
+    if (!conversationId || isInitializing || !isAuthReady || isLoading) return;
+
+    const hasText = pendingLandingDraft.text.trim().length > 0;
+    const fileParts: FileUIPart[] = pendingLandingDraft.attachments.map(({ id, size, ...filePart }) => ({
+      type: "file",
+      ...filePart,
+    }));
+
+    if (!hasText && fileParts.length === 0) {
+      clearLandingChatDraft();
+      setPendingLandingDraft(null);
+      return;
+    }
+
+    hasAutoSentLandingDraftRef.current = true;
+
+    if (hasText) {
+      sendMessage({
+        text: pendingLandingDraft.text.trim(),
+        files: fileParts.length > 0 ? fileParts : undefined,
+      });
+    } else {
+      sendMessage({ files: fileParts });
+    }
+
+    clearLandingChatDraft();
+    setPendingLandingDraft(null);
+    setInput("");
+    setAttachments([]);
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 120);
+    });
+  }, [
+    conversationId,
+    isAuthReady,
+    isInitializing,
+    isLoading,
+    pendingLandingDraft,
+    scrollToBottom,
+    sendMessage,
+  ]);
 
   const sidebarSources = React.useMemo<SidebarSourceItem[]>(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
