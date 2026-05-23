@@ -6,12 +6,13 @@
 import type { UIMessage } from 'ai';
 import type {
   AnalysisResult,
+  Citation,
   Claim,
   Reference,
   Reasoning,
   Risk,
-  Source,
 } from '@/langchain/agents/analyzer/schema';
+import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 
 export interface InteractiveStepPart {
   stepId: string;
@@ -24,6 +25,21 @@ export interface ChoiceSummaryPart {
   selection: string;
 }
 
+export interface SummaryPartData {
+  text: string;
+  citations?: Citation[];
+}
+
+export interface ActionsPartData {
+  actions: AnalysisAction[];
+}
+
+export interface ActionInsightPartData {
+  actionId: UIActionId;
+  title: string;
+  points: string[];
+}
+
 export type MetabotUIMessagePart =
   | { type: 'text'; text: string }
   | {
@@ -34,13 +50,14 @@ export type MetabotUIMessagePart =
       providerMetadata?: Record<string, any>;
     }
   | { type: 'data-analysis'; data: AnalysisResult | string }
-  | { type: 'data-summary'; data: string }
+  | { type: 'data-summary'; data: string | SummaryPartData }
   | { type: 'data-claims'; data: Claim[] }
   | { type: 'data-risks'; data: Risk[] }
   | { type: 'data-explanation'; data: string }
   | { type: 'data-references'; data: Reference[] }
+  | { type: "data-actions"; data: ActionsPartData }
+  | { type: "data-action-insight"; data: ActionInsightPartData }
   | { type: 'data-suggested-questions'; data: string[] }
-  | { type: 'data-sources'; data: Source[] }
   | { type: 'data-reasoning'; data: Reasoning[] }
   | {
       type: 'data-notification';

@@ -24,6 +24,95 @@ import { Sidebar } from "@/components/sidebar/sidebar";
 import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
 import { AnalysisSchema } from "@/langchain/agents/analyzer/schema";
 import type { FileUIPart } from "ai";
+import type { AnalysisAction, UIActionId, UIActionPayload } from "@/types/ui-actions";
+
+function mapReferencesToSidebarSources(
+  references: Array<{ title?: string; url?: string; citations?: Array<{ id?: string }> }>
+): SidebarSourceItem[] {
+  return references
+    .filter(
+      (reference) =>
+        typeof reference.title === "string" &&
+        reference.title.trim().length > 0 &&
+        typeof reference.url === "string" &&
+        reference.url.trim().length > 0
+    )
+    .map((reference, index) => ({
+      id: reference.citations?.[0]?.id ?? `reference-${index + 1}`,
+      title: reference.title as string,
+      link: reference.url as string,
+    }));
+}
+
+function extractActionContextFromMessage(message?: MetabotUIMessage): { claim?: string; context?: string } {
+  if (!message) {
+    return {};
+  }
+
+  const parts = (message.parts || []) as MetabotUIMessagePart[];
+
+  const claimPart = parts.find((part) => part.type === "data-claims");
+  const summaryPart = parts.find((part) => part.type === "data-summary");
+  const explanationPart = parts.find((part) => part.type === "data-explanation");
+
+  const claim =
+    claimPart && claimPart.type === "data-claims" && claimPart.data.length > 0
+      ? claimPart.data[0].text
+      : undefined;
+
+  const summaryContext =
+    summaryPart && summaryPart.type === "data-summary"
+      ? typeof summaryPart.data === "string"
+        ? summaryPart.data
+        : summaryPart.data.text
+      : undefined;
+
+  const context = summaryContext ?? (explanationPart?.type === "data-explanation" ? explanationPart.data : undefined);
+
+  if (claim || context) {
+    return { claim, context };
+  }
+
+  const analysisPart = parts.find((part) => part.type === "data-analysis");
+  if (!analysisPart || analysisPart.type !== "data-analysis" || !analysisPart.data) {
+    return {};
+  }
+
+  try {
+    const parsed = typeof analysisPart.data === "string" ? JSON.parse(analysisPart.data) : analysisPart.data;
+    const validation = AnalysisSchema.safeParse(parsed);
+    if (!validation.success) {
+      return {};
+    }
+
+    return {
+      claim: validation.data.claims[0]?.text,
+      context: validation.data.summary || validation.data.explanation,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function extractLatestAttachmentMetadata(messages: MetabotUIMessage[]): UIActionPayload["attachment"] | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].role !== "user") {
+      continue;
+    }
+
+    const filePart = ((messages[i].parts || []) as MetabotUIMessagePart[]).find((part) => part.type === "file");
+    if (filePart && filePart.type === "file") {
+      return {
+        name: filePart.filename,
+        type: filePart.mediaType,
+        size: (filePart as any).size ?? filePart.providerMetadata?.size,
+        previewUrl: filePart.url,
+      };
+    }
+  }
+
+  return undefined;
+}
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -92,6 +181,7 @@ export function Chat() {
   const [showResetModal, setShowResetModal] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isMobile, setIsMobile] = React.useState(false);
+  const [pendingActionId, setPendingActionId] = React.useState<UIActionId | null>(null);
   const hasHydratedLandingDraftRef = React.useRef(false);
   const hasAutoSentLandingDraftRef = React.useRef(false);
 
@@ -189,14 +279,18 @@ export function Chat() {
   const sidebarSources = React.useMemo<SidebarSourceItem[]>(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const parts = (messages[i].parts || []) as MetabotUIMessagePart[];
-      const sourcesPart = parts.find((part) => part.type === 'data-sources');
+      const referencesPart = parts.find((part) => part.type === 'data-references');
 
-      if (sourcesPart && sourcesPart.type === 'data-sources' && Array.isArray(sourcesPart.data) && sourcesPart.data.length > 0) {
-        return sourcesPart.data.map((source) => ({
-          id: source.id,
-          title: source.title,
-          link: source.link,
-        }));
+      if (
+        referencesPart &&
+        referencesPart.type === "data-references" &&
+        Array.isArray(referencesPart.data) &&
+        referencesPart.data.length > 0
+      ) {
+        const mappedFromReferences = mapReferencesToSidebarSources(referencesPart.data);
+        if (mappedFromReferences.length > 0) {
+          return mappedFromReferences;
+        }
       }
 
       const analysisPart = parts.find((part) => part.type === 'data-analysis');
@@ -211,12 +305,26 @@ export function Chat() {
           : analysisPart.data;
 
         const validation = AnalysisSchema.safeParse(parsed);
-        if (validation.success && validation.data.sources?.length > 0) {
-          return validation.data.sources.map((source) => ({
-            id: source.id,
-            title: source.title,
-            link: source.link,
-          }));
+        if (validation.success && validation.data.references?.length > 0) {
+          const mappedFromReferences = mapReferencesToSidebarSources(validation.data.references);
+          if (mappedFromReferences.length > 0) {
+            return mappedFromReferences;
+          }
+        }
+
+        // Backward compatibility for historical stored analysis data that still used `sources`.
+        if (parsed && typeof parsed === "object" && Array.isArray((parsed as any).sources)) {
+          const legacySources = (parsed as any).sources
+            .filter((item: any) => typeof item?.title === "string" && typeof item?.link === "string")
+            .map((source: any, sourceIndex: number) => ({
+              id: typeof source.id === "string" ? source.id : `legacy-source-${sourceIndex + 1}`,
+              title: source.title,
+              link: source.link,
+            }));
+
+          if (legacySources.length > 0) {
+            return legacySources;
+          }
         }
       } catch {
         continue;
@@ -244,6 +352,12 @@ export function Chat() {
   React.useEffect(() => {
     setHasMessages(messages.length > 0);
   }, [messages.length, setHasMessages]);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setPendingActionId(null);
+    }
+  }, [isLoading]);
 
   const handleSubmit = (event?: { preventDefault?: () => void }) => {
     event?.preventDefault?.();
@@ -315,6 +429,41 @@ export function Chat() {
     }
   };
 
+  const handleActionClick = (action: AnalysisAction, sourceMessageId?: string) => {
+    if (!conversationId || isInitializing || isLoading) {
+      return;
+    }
+
+    const sourceMessage = sourceMessageId ? messages.find((message) => message.id === sourceMessageId) : undefined;
+    const { claim, context } = extractActionContextFromMessage(sourceMessage);
+    const attachment = extractLatestAttachmentMetadata(messages);
+
+    const payload: UIActionPayload = {
+      type: "UI_ACTION",
+      actionId: action.id,
+      actionLabel: action.label,
+      sourceMessageId,
+      claim,
+      context,
+      attachment,
+    };
+
+    setPendingActionId(action.id);
+    sendMessage(
+      { text: action.label },
+      {
+        action_type: "UI_ACTION",
+        action_payload: payload,
+      }
+    );
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 120);
+    });
+  };
+
   const handleResetClick = () => {
     setShowResetModal(true);
   };
@@ -352,6 +501,9 @@ export function Chat() {
         completedStepSelections={completedStepSelections}
         onInteractiveChoice={handleInteractiveChoice}
         onSuggestionClick={handleSuggestionClick}
+        onActionClick={handleActionClick}
+        pendingActionId={pendingActionId}
+        isActionLoading={isLoading}
       />
     );
   };

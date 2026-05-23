@@ -12,21 +12,23 @@ export const RiskSchema = z.object({
   description: z.string(),
 });
 
-export const SourceSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  link: z.string().url(),
-});
-
 export const ReasoningSchema = z.object({
   intent: z.string(),
   steps: z.array(z.string()),
+});
+
+export const CitationSchema = z.object({
+  id: z.string(),
+  label: z.string().optional(),
+  title: z.string(),
+  link: z.string().url(),
 });
 
 export const ReferenceSchema = z.object({
   title: z.string(),
   snippet: z.string().optional(),
   url: z.string().url().optional(),
+  citations: z.array(CitationSchema).default([]),
 });
 
 export const AnalysisSchema = z.object({
@@ -34,16 +36,16 @@ export const AnalysisSchema = z.object({
   claims: z.array(ClaimSchema),
   risks: z.array(RiskSchema),
   summary: z.string(),
+  summaryCitations: z.array(CitationSchema).default([]),
   explanation: z.string().optional(),
   suggestedQuestions: z.array(z.string()).default([]),
-  sources: z.array(SourceSchema).default([]),
   reasoning: z.array(ReasoningSchema).optional(),
   references: z.array(ReferenceSchema).default([]),
 });
 
 export type Claim = z.infer<typeof ClaimSchema>;
 export type Risk = z.infer<typeof RiskSchema>;
-export type Source = z.infer<typeof SourceSchema>;
 export type Reasoning = z.infer<typeof ReasoningSchema>;
+export type Citation = z.infer<typeof CitationSchema>;
 export type Reference = z.infer<typeof ReferenceSchema>;
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;

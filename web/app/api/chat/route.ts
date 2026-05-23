@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { analyzeContent } from "@/langchain/agents/analyzer/analyze";
+import { analyzeContent, handleMockUIAction } from "@/langchain/agents/analyzer/analyze";
+import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const REASONING_STEP_MIN_DELAY_MS = 1000;
@@ -26,6 +27,23 @@ function extractLatestUserText(body: any): string {
   }
 
   return "";
+}
+
+function extractUIActionPayload(body: any): UIActionPayload | null {
+  const rawPayload =
+    body?.action_payload ??
+    body?.ui_action_payload ??
+    body?.uiActionPayload ??
+    null;
+
+  const isActionRequest = body?.action_type === "UI_ACTION" || rawPayload?.type === "UI_ACTION";
+
+  if (!isActionRequest || !rawPayload) {
+    return null;
+  }
+
+  const parsed = UIActionPayloadSchema.safeParse(rawPayload);
+  return parsed.success ? parsed.data : null;
 }
 
 function buildStreamText(analysis: { conversationText?: string }): string {
@@ -93,17 +111,83 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function streamTextBlock({
+  writer,
+  text,
+  id,
+}: {
+  writer: any;
+  text: string;
+  id: string;
+}) {
+  if (!text.trim().length) {
+    return;
+  }
+
+  writer.write({ type: "text-start", id });
+  for (const delta of chunkByWords(text)) {
+    writer.write({ type: "text-delta", id, delta });
+    await sleep(STREAM_CHUNK_DELAY_MS);
+  }
+  writer.write({ type: "text-end", id });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const actionPayload = extractUIActionPayload(body);
     const input = extractLatestUserText(body);
-    const analysis = await analyzeContent({ input });
-
-    console.log("Generated analysis:", analysis);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
-        const textId = `analysis-${Date.now()}`;
+        if (actionPayload) {
+          const openingTextId = `action-opening-${Date.now()}`;
+          const closingTextId = `action-closing-${Date.now()}`;
+          const result = handleMockUIAction(actionPayload);
+
+          await streamTextBlock({
+            writer,
+            text: result.openingText,
+            id: openingTextId,
+          });
+          await sleep(SECTION_STEP_DELAY_MS);
+
+          writer.write({
+            type: "data-action-insight",
+            data: {
+              actionId: actionPayload.actionId,
+              title: result.title,
+              points: result.points,
+            },
+          });
+          await sleep(SECTION_STEP_DELAY_MS);
+
+          if (result.references?.length) {
+            writer.write({ type: "data-references", data: result.references });
+            await sleep(SECTION_STEP_DELAY_MS);
+          }
+
+          await streamTextBlock({
+            writer,
+            text: result.closingText,
+            id: closingTextId,
+          });
+          await sleep(SECTION_STEP_DELAY_MS);
+
+          writer.write({
+            type: "data-actions",
+            data: { actions: DEFAULT_ANALYSIS_ACTIONS },
+          });
+
+          return;
+        }
+
+        const analysis = await analyzeContent({ input });
+        console.log("Generated analysis:", analysis);
+
+        const openingTextId = `analysis-opening-${Date.now()}`;
+        const followupTextId = `analysis-followup-${Date.now()}`;
+        const closingTextId = `analysis-closing-${Date.now()}`;
         const reasoningPartId = `analysis-reasoning-${Date.now()}`;
 
         // Stream reasoning first, step-by-step, to mimic a "thinking" phase.
@@ -113,25 +197,39 @@ export async function POST(req: NextRequest) {
           await sleep(randomInt(REASONING_STEP_MIN_DELAY_MS, REASONING_STEP_MAX_DELAY_MS));
         }
 
-        writer.write({ type: "text-start", id: textId });
-
-        const conversationText = buildStreamText(analysis);
-        for (const delta of chunkByWords(conversationText)) {
-          writer.write({ type: "text-delta", id: textId, delta });
-          await sleep(STREAM_CHUNK_DELAY_MS);
-        }
-
-        writer.write({ type: "text-end", id: textId });
+        const openingText = buildStreamText(analysis);
+        await streamTextBlock({
+          writer,
+          text: openingText,
+          id: openingTextId,
+        });
+        await sleep(SECTION_STEP_DELAY_MS);
 
         if (analysis.reasoning?.length) {
-          writer.write({ type: "data-reasoning", data: analysis.reasoning });
+          writer.write({ type: "data-reasoning", id: reasoningPartId, data: analysis.reasoning });
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
         if (analysis.summary?.trim().length) {
-          writer.write({ type: "data-summary", data: analysis.summary });
+          writer.write({
+            type: "data-summary",
+            data: {
+              text: analysis.summary,
+              citations: analysis.summaryCitations ?? [],
+            },
+          });
           await sleep(SECTION_STEP_DELAY_MS);
         }
+
+        const followupText = analysis.claims?.length
+          ? `Klaim utama yang saya tangkap: "${analysis.claims[0].text}".`
+          : "Mari lanjut ke konteks dan detail pendukung.";
+        await streamTextBlock({
+          writer,
+          text: followupText,
+          id: followupTextId,
+        });
+        await sleep(SECTION_STEP_DELAY_MS);
 
         if (analysis.claims?.length) {
           writer.write({ type: "data-claims", data: analysis.claims });
@@ -153,13 +251,25 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
+        writer.write({
+          type: "data-actions",
+          data: { actions: DEFAULT_ANALYSIS_ACTIONS },
+        });
+        await sleep(SECTION_STEP_DELAY_MS);
+
+        const closingText = analysis.suggestedQuestions?.length
+          ? "Kalau kamu mau, saya bisa lanjutkan ke pertanyaan lanjutan berikut."
+          : "Jika ada bagian yang ingin didalami, beri tahu saya.";
+        await streamTextBlock({
+          writer,
+          text: closingText,
+          id: closingTextId,
+        });
+        await sleep(SECTION_STEP_DELAY_MS);
+
         if (analysis.suggestedQuestions?.length) {
           writer.write({ type: "data-suggested-questions", data: analysis.suggestedQuestions });
           await sleep(SECTION_STEP_DELAY_MS);
-        }
-
-        if (analysis.sources?.length) {
-          writer.write({ type: "data-sources", data: analysis.sources });
         }
 
         // Keep compatibility for existing consumers and historical parsing paths.
@@ -168,7 +278,7 @@ export async function POST(req: NextRequest) {
 
       onError: (error) => (error instanceof Error ? error.message : "Unknown stream error"),
     });
-    
+
 
     return createUIMessageStreamResponse({ stream });
   } catch (error) {

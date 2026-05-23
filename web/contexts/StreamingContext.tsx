@@ -9,11 +9,17 @@ import { useAuthStore } from "@/lib/auth-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import { type MetabotUIMessage } from "@/types/streaming";
+import type { UIActionPayload } from "@/types/ui-actions";
+
+interface SendMessageOptions {
+  action_type?: "UI_ACTION";
+  action_payload?: UIActionPayload;
+}
 
 interface StreamingContextType {
   // Chat state
   messages: MetabotUIMessage[];
-  sendMessage: (message: any, options?: { action_type?: string; action_payload?: any }) => void;
+  sendMessage: (message: any, options?: SendMessageOptions) => void;
   status: string;
   stop: () => void;
   isLoading: boolean;
@@ -129,7 +135,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
   }, [activeConversationId, fetchHistory, setMessages]);
 
   // Wrapped sendMessage to control immediate loading and check auth
-  const sendMessage = useCallback((message: any, options?: { action_type?: string; action_payload?: any }) => {
+  const sendMessage = useCallback((message: any, options?: SendMessageOptions) => {
     if (!isAuthenticated) {
       toast.error('Anda harus login untuk mengirim pesan');
       return;

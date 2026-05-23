@@ -1,22 +1,28 @@
-import React from 'react';
-import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { Check, Copy, ChevronDown } from "lucide-react";
+import React from "react";
+import { type MetabotUIMessage, type MetabotUIMessagePart, type SummaryPartData } from "@/types/streaming";
+import { Check, ChevronDown, Copy } from "lucide-react";
 import { motion } from "framer-motion";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
 import {
   AnalysisSchema,
   type AnalysisResult,
+  type Citation,
   type Claim,
-  type Risk,
   type Reference,
   type Reasoning,
+  type Risk,
 } from "@/langchain/agents/analyzer/schema";
 import { SummaryCard } from "@/components/cards/SummaryCard";
 import { ClaimCard } from "@/components/cards/ClaimCard";
 import { RiskCard } from "@/components/cards/RiskCard";
 import { SuggestionQuestions } from "@/components/cards/SuggestionQuestions";
 import { ExplanationCard } from "@/components/cards/ExplanationCard";
+import { ReferenceCard } from "@/components/cards/ReferenceCard";
+import { ReasoningComponent } from "@/components/cards/ReasoningComponent";
+import { AnalysisActions } from "@/components/cards/AnalysisActions";
+import { ActionInsightCard } from "@/components/cards/ActionInsightCard";
+import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 
 interface AssistantMessageProps {
   message: MetabotUIMessage;
@@ -26,30 +32,57 @@ interface AssistantMessageProps {
   completedStepSelections: Map<string, string>;
   onInteractiveChoice: (stepId: string, option: string) => void | Promise<void>;
   onSuggestionClick: (suggestion: string) => void;
+  onActionClick: (action: AnalysisAction, sourceMessageId?: string) => void;
+  pendingActionId?: UIActionId | null;
+  isActionLoading?: boolean;
 }
 
 interface SectionalAnalysisData {
-  summary?: string;
+  summary?: SummaryPartData;
   claims?: Claim[];
   risks?: Risk[];
   explanation?: string;
   references?: Reference[];
+  actions?: AnalysisAction[];
+  actionInsight?: {
+    actionId: UIActionId;
+    title: string;
+    points: string[];
+  };
   suggestedQuestions?: string[];
   reasoning?: Reasoning[];
 }
 
-function extractAnalysisFromParts(parts: MetabotUIMessagePart[]): AnalysisResult | null {
-  const analysisPart = parts.find((part) => part.type === 'data-analysis');
+type RenderItem =
+  | { kind: "preview-full"; key: string }
+  | { kind: "preview-part"; key: string; part: MetabotUIMessagePart; partIndex: number }
+  | { kind: "reasoning"; key: string; reasoning: Reasoning[] }
+  | { kind: "summary"; key: string; summary: string; citations: Citation[] }
+  | { kind: "claims"; key: string; claims: Claim[] }
+  | { kind: "risks"; key: string; risks: Risk[] }
+  | { kind: "explanation"; key: string; explanation: string }
+  | { kind: "references"; key: string; references: Reference[] }
+  | { kind: "actions"; key: string; actions: AnalysisAction[] }
+  | {
+      kind: "action-insight";
+      key: string;
+      actionInsight: {
+        actionId: UIActionId;
+        title: string;
+        points: string[];
+      };
+    }
+  | { kind: "suggested-questions"; key: string; questions: string[] };
 
-  if (!analysisPart || analysisPart.type !== 'data-analysis' || !analysisPart.data) {
+function extractAnalysisFromParts(parts: MetabotUIMessagePart[]): AnalysisResult | null {
+  const analysisPart = parts.find((part) => part.type === "data-analysis");
+
+  if (!analysisPart || analysisPart.type !== "data-analysis" || !analysisPart.data) {
     return null;
   }
 
   try {
-    const parsed = typeof analysisPart.data === 'string'
-      ? JSON.parse(analysisPart.data)
-      : analysisPart.data;
-
+    const parsed = typeof analysisPart.data === "string" ? JSON.parse(analysisPart.data) : analysisPart.data;
     const validation = AnalysisSchema.safeParse(parsed);
     return validation.success ? validation.data : null;
   } catch {
@@ -62,7 +95,9 @@ function extractSectionalDataFromParts(parts: MetabotUIMessagePart[]): Sectional
 
   for (const part of parts) {
     if (part.type === "data-summary") {
-      sectionalData.summary = part.data;
+      sectionalData.summary = typeof part.data === "string"
+        ? { text: part.data, citations: [] }
+        : { text: part.data.text, citations: part.data.citations ?? [] };
     } else if (part.type === "data-claims") {
       sectionalData.claims = part.data;
     } else if (part.type === "data-risks") {
@@ -71,6 +106,10 @@ function extractSectionalDataFromParts(parts: MetabotUIMessagePart[]): Sectional
       sectionalData.explanation = part.data;
     } else if (part.type === "data-references") {
       sectionalData.references = part.data;
+    } else if (part.type === "data-actions") {
+      sectionalData.actions = part.data.actions;
+    } else if (part.type === "data-action-insight") {
+      sectionalData.actionInsight = part.data;
     } else if (part.type === "data-suggested-questions") {
       sectionalData.suggestedQuestions = part.data;
     } else if (part.type === "data-reasoning") {
@@ -81,6 +120,20 @@ function extractSectionalDataFromParts(parts: MetabotUIMessagePart[]): Sectional
   return sectionalData;
 }
 
+function hasInterleavableDataPart(part: MetabotUIMessagePart): boolean {
+  return (
+    part.type === "data-summary" ||
+    part.type === "data-claims" ||
+    part.type === "data-risks" ||
+    part.type === "data-explanation" ||
+    part.type === "data-references" ||
+    part.type === "data-actions" ||
+    part.type === "data-action-insight" ||
+    part.type === "data-suggested-questions" ||
+    part.type === "data-reasoning"
+  );
+}
+
 export function AssistantMessage({
   message,
   chatId,
@@ -89,6 +142,9 @@ export function AssistantMessage({
   completedStepSelections,
   onInteractiveChoice,
   onSuggestionClick,
+  onActionClick,
+  pendingActionId = null,
+  isActionLoading = false,
 }: AssistantMessageProps) {
   const fadeUp = {
     initial: { opacity: 0, y: 10 },
@@ -100,10 +156,8 @@ export function AssistantMessage({
   const { targetMessageId } = useInteractionStore();
   const isHighlighted = targetMessageId === message.id;
 
-  // Copy state
   const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(null);
 
-  // Only apply entrance animation on first mount, not on highlight changes
   const mountedRef = React.useRef(true);
   const shouldAnimate = mountedRef.current;
 
@@ -111,133 +165,191 @@ export function AssistantMessage({
     mountedRef.current = false;
   }, []);
 
-  // Check if message has interactive steps
-  const hasInteractiveSteps = React.useMemo(() => {
-    if (!message.parts || !Array.isArray(message.parts)) return false;
-    return (message.parts as MetabotUIMessagePart[]).some(
-      (part) => part.type === 'interactive-step'
+  const parts = React.useMemo(() => ((message.parts || []) as MetabotUIMessagePart[]), [message.parts]);
+
+  const hasInteractiveSteps = React.useMemo(
+    () => parts.some((part) => part.type === "interactive-step"),
+    [parts]
+  );
+
+  const analysisData = React.useMemo(() => extractAnalysisFromParts(parts), [parts]);
+  const sectionalData = React.useMemo(() => extractSectionalDataFromParts(parts), [parts]);
+
+  const hasInterleavedFlow = React.useMemo(
+    () => parts.some((part) => hasInterleavableDataPart(part) && part.type !== "data-analysis"),
+    [parts]
+  );
+
+  const availableReasoning = React.useMemo(() => {
+    if (hasInterleavedFlow) {
+      return sectionalData.reasoning;
+    }
+
+    return analysisData?.reasoning;
+  }, [analysisData?.reasoning, hasInterleavedFlow, sectionalData.reasoning]);
+
+  const hasConversationTextStarted = React.useMemo(
+    () => parts.some((part) => part.type === "text" && part.text.trim().length > 0),
+    [parts]
+  );
+
+  const shouldOpenReasoning =
+    isCurrentlyStreaming &&
+    !!(availableReasoning && availableReasoning.length > 0) &&
+    !hasConversationTextStarted;
+
+  const lastTextPartIndex = React.useMemo(() => {
+    for (let i = parts.length - 1; i >= 0; i -= 1) {
+      if (parts[i].type === "text") {
+        return i;
+      }
+    }
+
+    return -1;
+  }, [parts]);
+
+  const renderItems = React.useMemo<RenderItem[]>(() => {
+    const items: RenderItem[] = [];
+
+    if (hasInterleavedFlow) {
+      parts.forEach((part, index) => {
+        const key = `${message.id}-part-${index}-${part.type}`;
+
+        if (part.type === "text" || part.type === "interactive-step" || part.type === "choice-summary") {
+          items.push({ kind: "preview-part", key, part, partIndex: index });
+          return;
+        }
+
+        if (part.type === "data-reasoning" && part.data.length > 0) {
+          items.push({ kind: "reasoning", key, reasoning: part.data });
+          return;
+        }
+
+        if (part.type === "data-summary") {
+          const summary = typeof part.data === "string" ? part.data : part.data.text;
+          const citations: Citation[] = typeof part.data === "string" ? [] : part.data.citations ?? [];
+
+          if (summary.trim().length > 0) {
+            items.push({ kind: "summary", key, summary, citations });
+          }
+          return;
+        }
+
+        if (part.type === "data-claims" && part.data.length > 0) {
+          items.push({ kind: "claims", key, claims: part.data });
+          return;
+        }
+
+        if (part.type === "data-risks" && part.data.length > 0) {
+          items.push({ kind: "risks", key, risks: part.data });
+          return;
+        }
+
+        if (part.type === "data-explanation" && part.data.trim().length > 0) {
+          items.push({ kind: "explanation", key, explanation: part.data });
+          return;
+        }
+
+        if (part.type === "data-references" && part.data.length > 0) {
+          items.push({ kind: "references", key, references: part.data });
+          return;
+        }
+
+        if (part.type === "data-actions" && part.data.actions.length > 0) {
+          items.push({ kind: "actions", key, actions: part.data.actions });
+          return;
+        }
+
+        if (part.type === "data-action-insight" && part.data.points.length > 0) {
+          items.push({ kind: "action-insight", key, actionInsight: part.data });
+          return;
+        }
+
+        if (part.type === "data-suggested-questions" && part.data.length > 0) {
+          items.push({ kind: "suggested-questions", key, questions: part.data });
+        }
+      });
+
+      return items;
+    }
+
+    if (availableReasoning && availableReasoning.length > 0) {
+      items.push({ kind: "reasoning", key: `${message.id}-analysis-reasoning`, reasoning: availableReasoning });
+    }
+
+    const hasPreviewableParts = parts.some(
+      (part) => part.type === "text" || part.type === "interactive-step" || part.type === "choice-summary"
     );
-  }, [message.parts]);
 
-  const analysisData = React.useMemo(() => {
-    if (!message.parts || !Array.isArray(message.parts)) {
-      return null;
+    if (hasPreviewableParts) {
+      items.push({ kind: "preview-full", key: `${message.id}-preview-full` });
     }
 
-    return extractAnalysisFromParts(message.parts as MetabotUIMessagePart[]);
-  }, [message.parts]);
-
-  const sectionalData = React.useMemo(() => {
-    if (!message.parts || !Array.isArray(message.parts)) {
-      return {};
+    if (!analysisData) {
+      return items;
     }
 
-    return extractSectionalDataFromParts(message.parts as MetabotUIMessagePart[]);
-  }, [message.parts]);
-
-  const hasSectionalParts = React.useMemo(() => {
-    if (!message.parts || !Array.isArray(message.parts)) {
-      return false;
+    if (analysisData.summary.trim().length > 0) {
+      items.push({
+        kind: "summary",
+        key: `${message.id}-analysis-summary`,
+        summary: analysisData.summary,
+        citations: analysisData.summaryCitations ?? [],
+      });
     }
 
-    return (message.parts as MetabotUIMessagePart[]).some(
-      (part) =>
-        part.type === "data-summary" ||
-        part.type === "data-claims" ||
-        part.type === "data-risks" ||
-        part.type === "data-explanation" ||
-        part.type === "data-references" ||
-        part.type === "data-suggested-questions" ||
-        part.type === "data-reasoning"
-    );
-  }, [message.parts]);
+    if (analysisData.claims.length > 0) {
+      items.push({ kind: "claims", key: `${message.id}-analysis-claims`, claims: analysisData.claims });
+    }
 
-  const resolvedReasoning = hasSectionalParts ? sectionalData.reasoning : analysisData?.reasoning;
-  const resolvedSummary = hasSectionalParts ? sectionalData.summary : analysisData?.summary;
-  const resolvedClaims = hasSectionalParts ? sectionalData.claims : analysisData?.claims;
-  const resolvedRisks = hasSectionalParts ? sectionalData.risks : analysisData?.risks;
-  const resolvedExplanation = hasSectionalParts ? sectionalData.explanation : analysisData?.explanation;
-  const resolvedReferences = hasSectionalParts ? sectionalData.references : analysisData?.references;
-  const resolvedSuggestedQuestions = hasSectionalParts ? sectionalData.suggestedQuestions : analysisData?.suggestedQuestions;
+    if (analysisData.risks.length > 0) {
+      items.push({ kind: "risks", key: `${message.id}-analysis-risks`, risks: analysisData.risks });
+    }
 
-  // Extract text content for copying
+    if (analysisData.explanation?.trim().length) {
+      items.push({ kind: "explanation", key: `${message.id}-analysis-explanation`, explanation: analysisData.explanation });
+    }
+
+    if (analysisData.references.length > 0) {
+      items.push({ kind: "references", key: `${message.id}-analysis-references`, references: analysisData.references });
+    }
+
+    if (analysisData.suggestedQuestions.length > 0) {
+      items.push({
+        kind: "suggested-questions",
+        key: `${message.id}-analysis-suggested-questions`,
+        questions: analysisData.suggestedQuestions,
+      });
+    }
+
+    return items;
+  }, [analysisData, availableReasoning, hasInterleavedFlow, message.id, parts]);
+
   const getMessageContent = (): string => {
-    if (!message.parts || !Array.isArray(message.parts)) return '';
-
-    return (message.parts as MetabotUIMessagePart[])
-      .filter((part) => part.type === 'text')
-      .map((part) => (part.type === 'text' ? part.text : ''))
-      .join('\n\n');
+    return parts
+      .filter((part) => part.type === "text")
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join("\n\n");
   };
 
-  // Handle copy message
   const handleCopyMessage = async () => {
     const content = getMessageContent();
     try {
       await navigator.clipboard.writeText(content);
       setCopiedMessageId(message.id);
-      console.log('Message copied to clipboard');
 
-      // Reset copied state after 2 seconds
       setTimeout(() => {
         setCopiedMessageId(null);
       }, 2000);
     } catch (err) {
-      console.error('Failed to copy message:', err);
+      console.error("Failed to copy message:", err);
     }
   };
 
-  const hasAnyAnalysisSection = Boolean(
-    resolvedSummary || resolvedClaims || resolvedRisks || resolvedExplanation || resolvedReferences || resolvedSuggestedQuestions
-  );
-  const hasConversationTextStarted = React.useMemo(() => {
-    if (!message.parts || !Array.isArray(message.parts)) {
-      return false;
-    }
-
-    return (message.parts as MetabotUIMessagePart[]).some(
-      (part) => part.type === "text" && part.text.trim().length > 0
-    );
-  }, [message.parts]);
-
-  const shouldOpenReasoning =
-    isCurrentlyStreaming &&
-    !!(resolvedReasoning && resolvedReasoning.length > 0) &&
-    !hasConversationTextStarted;
-
-  return (
-    <div className={`flex gap-2 items-end group ${shouldAnimate ? 'animate-in slide-in-from-left-2 duration-300' : ''
-      } ${isHighlighted ? 'message-highlight-container' : ''
-      }`}>
-      <div className="w-full md:max-w-full relative">
-        <div className={`min-w-20 rounded-xl rounded-bl-sm pl-0 py-0 text-sm leading-relaxed text-foreground ${isHighlighted ? 'message-highlight' : ''
-          }`}>
-
-          {resolvedReasoning && resolvedReasoning.length > 0 && (
-            <motion.div {...fadeUp}>
-              <details className="rounded-lg bg-background py-2 group max-w-md" open={shouldOpenReasoning}>
-                <summary className="flex cursor-pointer list-none items-center justify-start gap-2 text-xs font-medium text-foreground px-1">
-                  <span>{isCurrentlyStreaming ? "Sedang berpikir..." : "Tampilkan alur berpikir"}</span>
-                  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-                </summary>
-                <div className="mt-3 ml-1 pl-3 border-l border-gray-300 space-y-1.5 text-xs">
-                  <p className="pl-2 text-muted-foreground italic">{resolvedReasoning[0].intent}</p>
-                  <ul className="space-y-1 pl-4">
-                    {resolvedReasoning[0].steps.map((step, index) => (
-                      <li key={`${message.id}-reasoning-step-${index}`} className="text-muted-foreground flex gap-1.5">
-                        <span className="text-primary font-semibold flex-shrink-0">-&gt;</span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrentlyStreaming && (
-                    <div className="pt-1 pl-2 text-[11px] text-muted-foreground animate-pulse">Thinking...</div>
-                  )}
-                </div>
-              </details>
-            </motion.div>
-          )}
-
+  const renderItem = (item: RenderItem) => {
+    if (item.kind === "preview-full") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
           <PreviewMessage
             chatId={chatId}
             message={message}
@@ -245,90 +357,148 @@ export function AssistantMessage({
             completedStepSelections={completedStepSelections}
             onInteractiveChoice={onInteractiveChoice}
           />
+        </motion.div>
+      );
+    }
 
-          {hasAnyAnalysisSection && (
-            <div className="mt-3 space-y-3 animate-in fade-in-0 duration-300">
-              {resolvedSummary?.trim().length > 0 && (
-                <motion.div {...fadeUp}>
-                  <SummaryCard summary={resolvedSummary} />
-                </motion.div>
-              )}
+    if (item.kind === "preview-part") {
+      const singlePartMessage: MetabotUIMessage = {
+        ...message,
+        parts: [item.part],
+      };
 
-              {resolvedClaims?.length > 0 && (
-                <motion.section {...fadeUp} className="space-y-2">
-                  {resolvedClaims.map((claim, index) => (
-                    <ClaimCard
-                      key={`${message.id}-claim-${index}`}
-                      text={claim.text}
-                      confidence={claim.confidence}
-                    />
-                  ))}
-                </motion.section>
-              )}
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <PreviewMessage
+            chatId={chatId}
+            message={singlePartMessage}
+            isLoading={isCurrentlyStreaming && item.partIndex === lastTextPartIndex}
+            completedStepSelections={completedStepSelections}
+            onInteractiveChoice={onInteractiveChoice}
+          />
+        </motion.div>
+      );
+    }
 
-              {resolvedRisks?.length > 0 && (
-                <motion.section {...fadeUp} className="space-y-2">
-                  {resolvedRisks.map((risk, index) => (
-                    <RiskCard
-                      key={`${message.id}-risk-${index}`}
-                      type={risk.type}
-                      description={risk.description}
-                    />
-                  ))}
-                </motion.section>
-              )}
+    if (item.kind === "reasoning") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <ReasoningComponent
+            messageId={message.id}
+            reasoning={item.reasoning}
+            isStreaming={isCurrentlyStreaming}
+            defaultOpen={shouldOpenReasoning}
+          />
+        </motion.div>
+      );
+    }
 
-              {resolvedExplanation?.trim().length > 0 && (
-                <motion.div {...fadeUp}>
-                  <ExplanationCard explanation={resolvedExplanation} />
-                </motion.div>
-              )}
+    if (item.kind === "summary") {
+      return (
+        <motion.div key={item.key} {...fadeUp} className="mt-2">
+          <SummaryCard summary={item.summary} citations={item.citations} />
+        </motion.div>
+      );
+    }
 
-              {resolvedReferences?.length > 0 && (
-                <motion.div {...fadeUp}>
-                  <details className="rounded-xl border border-border bg-card p-3 group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-foreground">
-                      <span>Referensi</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-3 border-t border-border pt-3 space-y-2">
-                      {resolvedReferences.map((ref, index) => (
-                        <div key={`${message.id}-reference-${index}`} className="text-xs">
-                          <p className="font-semibold text-foreground">{ref.title}</p>
-                          {ref.snippet && (
-                            <p className="mt-1 leading-relaxed text-muted-foreground italic">{ref.snippet}</p>
-                          )}
-                          {ref.url && (
-                            <a
-                              href={ref.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-1 inline-flex text-primary hover:underline"
-                            >
-                              View source -&gt;
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                </motion.div>
-              )}
+    if (item.kind === "claims") {
+      return (
+        <motion.section key={item.key} {...fadeUp} className="space-y-2">
+          {item.claims.map((claim, index) => (
+            <ClaimCard key={`${item.key}-claim-${index}`} text={claim.text} confidence={claim.confidence} />
+          ))}
+        </motion.section>
+      );
+    }
 
-              {resolvedSuggestedQuestions?.length > 0 && (
-                <motion.div {...fadeUp}>
-                  <SuggestionQuestions
-                    messageId={message.id}
-                    questions={resolvedSuggestedQuestions}
-                    onQuestionClick={onSuggestionClick}
-                  />
-                </motion.div>
-              )}
-            </div>
-          )}
+    if (item.kind === "risks") {
+      return (
+        <motion.section key={item.key} {...fadeUp} className="space-y-2">
+          {item.risks.map((risk, index) => (
+            <RiskCard key={`${item.key}-risk-${index}`} type={risk.type} description={risk.description} />
+          ))}
+        </motion.section>
+      );
+    }
+
+    if (item.kind === "explanation") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <ExplanationCard explanation={item.explanation} />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "references") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <details className="group rounded-xl bg-background border border-input p-4 py-3 transition-colors hover:bg-muted/70">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-muted-foreground">
+              <span>Sumber</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <section className="mt-3 space-y-2">
+              {item.references.map((reference, index) => (
+                <ReferenceCard key={`${item.key}-reference-${index}`} reference={reference} />
+              ))}
+            </section>
+          </details>
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "suggested-questions") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <SuggestionQuestions
+            messageId={message.id}
+            questions={item.questions}
+            onQuestionClick={onSuggestionClick}
+          />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "actions") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <AnalysisActions
+            messageId={message.id}
+            actions={item.actions}
+            onActionClick={onActionClick}
+            isLoading={isActionLoading}
+            pendingActionId={pendingActionId}
+          />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "action-insight") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <ActionInsightCard title={item.actionInsight.title} points={item.actionInsight.points} />
+        </motion.div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div
+      className={`flex gap-2 items-end group ${shouldAnimate ? "animate-in slide-in-from-left-2 duration-300" : ""} ${
+        isHighlighted ? "message-highlight-container" : ""
+      }`}
+    >
+      <div className="w-full md:max-w-full relative">
+        <div
+          className={`min-w-20 rounded-xl rounded-bl-sm pl-0 py-0 text-sm leading-relaxed text-foreground ${
+            isHighlighted ? "message-highlight" : ""
+          }`}
+        >
+          <div className="space-y-3">{renderItems.map((item) => renderItem(item))}</div>
         </div>
 
-        {/* Copy button - appears on hover only after streaming is complete, and disabled for interactive steps */}
         {!isCurrentlyStreaming && !hasInteractiveSteps && (
           <button
             onClick={handleCopyMessage}
