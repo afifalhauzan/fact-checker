@@ -248,6 +248,9 @@ export function Chat() {
     setShowResetModal(false);
   };
 
+  const sidebarMode = isSidebarOpen ? "expanded" : "collapsed";
+  const shouldRenderSidebar = !isMobile || isSidebarOpen;
+
   const renderMessage = (message: MetabotUIMessage, index: number) => {
     const isUser = message.role === "user";
     const isLastMessage = index === messages.length - 1;
@@ -278,10 +281,12 @@ export function Chat() {
 
   return (
     <div className="relative flex bg-background h-full w-full flex-col overflow-x-hidden md:flex-row">
-      {isSidebarOpen && (
+      {shouldRenderSidebar && (
         <Sidebar
           sources={sidebarSources}
-          onClose={() => setIsSidebarOpen(false)}
+          mode={sidebarMode}
+          onExpand={() => setIsSidebarOpen(true)}
+          onCollapse={() => setIsSidebarOpen(false)}
           className={isMobile ? "absolute inset-0 z-30 h-full w-full border-b-0" : ""}
         />
       )}
@@ -291,16 +296,16 @@ export function Chat() {
 
           <Toaster />
 
-          <div className="px-4 py-2">
+          <div className="flex justify-end px-4 py-2 md:hidden">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="inline-flex h-9 w-full items-center justify-between rounded-md bg-card px-3 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:h-8 sm:w-auto sm:justify-center sm:gap-2 sm:px-2"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card/90 px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               title={isSidebarOpen ? "Sembunyikan bagian konteks" : "Buka bagian konteks"}
               aria-expanded={isSidebarOpen}
               aria-label={isSidebarOpen ? "Sembunyikan panel konteks" : "Tampilkan panel konteks"}
             >
-              <span className="font-medium">Konteks</span>
+              <span>Konteks</span>
               {isSidebarOpen ? (
                 <PanelLeftClose className="h-4 w-4 shrink-0" />
               ) : (
