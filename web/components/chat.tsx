@@ -76,6 +76,16 @@ export function Chat() {
   const sidebarSources = React.useMemo<SidebarSourceItem[]>(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const parts = (messages[i].parts || []) as MetabotUIMessagePart[];
+      const sourcesPart = parts.find((part) => part.type === 'data-sources');
+
+      if (sourcesPart && sourcesPart.type === 'data-sources' && Array.isArray(sourcesPart.data) && sourcesPart.data.length > 0) {
+        return sourcesPart.data.map((source) => ({
+          id: source.id,
+          title: source.title,
+          link: source.link,
+        }));
+      }
+
       const analysisPart = parts.find((part) => part.type === 'data-analysis');
 
       if (!analysisPart || analysisPart.type !== 'data-analysis' || !analysisPart.data) {

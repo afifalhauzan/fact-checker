@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { analyzeContent } from "@/langchain/agents/analyzer/analyze";
 
+const STREAM_CHUNK_DELAY_MS = 28;
+const REASONING_STEP_MIN_DELAY_MS = 1000;
+const REASONING_STEP_MAX_DELAY_MS = 2000;
+const SECTION_STEP_DELAY_MS = 220;
+
 function extractLatestUserText(body: any): string {
   const lastMessage = body?.messages?.[body.messages.length - 1];
   if (!lastMessage) {
@@ -23,6 +28,19 @@ function extractLatestUserText(body: any): string {
   return "";
 }
 
+function buildStreamText(analysis: { conversationText?: string; explanation?: string; summary?: string }): string {
+  const conversationText = analysis.conversationText?.trim() ?? "";
+
+  // If the leading text is too short, append explanation so users can see progressive streaming.
+  if (conversationText.length < 80) {
+    return [conversationText, analysis.explanation?.trim(), analysis.summary?.trim()]
+      .filter((section): section is string => Boolean(section && section.length > 0))
+      .join("\n\n");
+  }
+
+  return conversationText;
+}
+
 function chunkByWords(text: string): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) {
@@ -30,6 +48,57 @@ function chunkByWords(text: string): string[] {
   }
 
   return words.map((word, index) => (index === 0 ? word : ` ${word}`));
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function buildReasoningSnapshots(
+  reasoning?: Array<{ intent?: string; steps?: string[] }>
+): Array<Array<{ intent: string; steps: string[] }>> {
+  if (!reasoning?.length) {
+    return [];
+  }
+
+  const normalized = reasoning
+    .map((block) => ({
+      intent: block.intent?.trim() ?? "",
+      steps: Array.isArray(block.steps) ? block.steps.filter((step): step is string => typeof step === "string") : [],
+    }))
+    .filter((block) => block.intent.length > 0 && block.steps.length > 0);
+
+  if (!normalized.length) {
+    return [];
+  }
+
+  const snapshots: Array<Array<{ intent: string; steps: string[] }>> = [];
+  const progressive = normalized.map((block) => ({
+    intent: block.intent,
+    steps: [] as string[],
+  }));
+
+  for (let blockIndex = 0; blockIndex < normalized.length; blockIndex += 1) {
+    for (const step of normalized[blockIndex].steps) {
+      progressive[blockIndex] = {
+        ...progressive[blockIndex],
+        steps: [...progressive[blockIndex].steps, step],
+      };
+
+      snapshots.push(
+        progressive.map((block) => ({
+          intent: block.intent,
+          steps: [...block.steps],
+        }))
+      );
+    }
+  }
+
+  return snapshots;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function POST(req: NextRequest) {
@@ -43,15 +112,65 @@ export async function POST(req: NextRequest) {
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         const textId = `analysis-${Date.now()}`;
+        const reasoningPartId = `analysis-reasoning-${Date.now()}`;
+
+        // Stream reasoning first, step-by-step, to mimic a "thinking" phase.
+        const reasoningSnapshots = buildReasoningSnapshots(analysis.reasoning);
+        for (const snapshot of reasoningSnapshots) {
+          writer.write({ type: "data-reasoning", id: reasoningPartId, data: snapshot });
+          await sleep(randomInt(REASONING_STEP_MIN_DELAY_MS, REASONING_STEP_MAX_DELAY_MS));
+        }
+
         writer.write({ type: "text-start", id: textId });
 
-        const conversationText = `${analysis.conversationText}`;
+        const conversationText = buildStreamText(analysis);
         for (const delta of chunkByWords(conversationText)) {
           writer.write({ type: "text-delta", id: textId, delta });
-          await Promise.resolve();
+          await sleep(STREAM_CHUNK_DELAY_MS);
         }
 
         writer.write({ type: "text-end", id: textId });
+
+        if (analysis.reasoning?.length) {
+          writer.write({ type: "data-reasoning", data: analysis.reasoning });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.summary?.trim().length) {
+          writer.write({ type: "data-summary", data: analysis.summary });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.claims?.length) {
+          writer.write({ type: "data-claims", data: analysis.claims });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.risks?.length) {
+          writer.write({ type: "data-risks", data: analysis.risks });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.explanation?.trim().length) {
+          writer.write({ type: "data-explanation", data: analysis.explanation });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.references?.length) {
+          writer.write({ type: "data-references", data: analysis.references });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.suggestedQuestions?.length) {
+          writer.write({ type: "data-suggested-questions", data: analysis.suggestedQuestions });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.sources?.length) {
+          writer.write({ type: "data-sources", data: analysis.sources });
+        }
+
+        // Keep compatibility for existing consumers and historical parsing paths.
         writer.write({ type: "data-analysis", data: analysis });
       },
 

@@ -18,6 +18,17 @@ export const SourceSchema = z.object({
   link: z.string().url(),
 });
 
+export const ReasoningSchema = z.object({
+  intent: z.string(),
+  steps: z.array(z.string()),
+});
+
+export const ReferenceSchema = z.object({
+  title: z.string(),
+  snippet: z.string().optional(),
+  url: z.string().url().optional(),
+});
+
 export const AnalysisSchema = z.object({
   conversationText: z.string(),
   claims: z.array(ClaimSchema),
@@ -26,9 +37,13 @@ export const AnalysisSchema = z.object({
   explanation: z.string().optional(),
   suggestedQuestions: z.array(z.string()).default([]),
   sources: z.array(SourceSchema).default([]),
+  reasoning: z.array(ReasoningSchema).optional(),
+  references: z.array(ReferenceSchema).default([]),
 });
 
 export type Claim = z.infer<typeof ClaimSchema>;
 export type Risk = z.infer<typeof RiskSchema>;
 export type Source = z.infer<typeof SourceSchema>;
+export type Reasoning = z.infer<typeof ReasoningSchema>;
+export type Reference = z.infer<typeof ReferenceSchema>;
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;

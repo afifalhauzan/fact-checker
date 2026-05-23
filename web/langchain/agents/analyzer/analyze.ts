@@ -85,6 +85,26 @@ Jika Anda memiliki pertanyaan lebih lanjut atau ingin mendalami aspek tertentu, 
         link: "https://example.com/docs/system-monitoring/stuck-mode-indicators",
       },
     ],
+    reasoning: trimmed ? [{
+      intent: "Menganalisis klaim utama dan mengidentifikasi potensi konteks yang hilang",
+      steps: [
+        "Mengekstraksi pernyataan kunci dari masukan",
+        "Evaluasi kejelasan informasi yang diberikan",
+        "Cek untuk konteks yang mungkin hilang atau disederhanakan secara berlebihan",
+      ],
+    }] : undefined,
+    references: trimmed ? [
+      {
+        title: "Medical Authority on Diabetes",
+        snippet: "Diabetes is a chronic condition affecting blood glucose regulation. Multiple factors including genetics, lifestyle, and environment play significant roles.",
+        url: "https://example.com/medical/diabetes-overview",
+      },
+      {
+        title: "Recent Research on Metabolic Disorders",
+        snippet: "Understanding the relationship between diet, exercise, and metabolic function is crucial for preventive health strategies.",
+        url: "https://example.com/research/metabolic-studies",
+      },
+    ] : [],
   };
 
   return AnalysisSchema.parse(mockResult);

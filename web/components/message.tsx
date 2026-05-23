@@ -3,7 +3,6 @@
 import type { MetabotUIMessage } from "@/types/streaming";
 import { motion, AnimatePresence } from "framer-motion";
 import { Streamdown } from "streamdown";
-import { AnimatedMarkdown } from "flowtoken";
 import "flowtoken/dist/styles.css";
 
 import { Sparkles } from "lucide-react";
@@ -59,7 +58,7 @@ export const PreviewMessage = ({
             contentParts.map((part, index: number) => {
               if (part.type === "text") {
                 return (
-                  <div key={message.id || index} className="flex flex-col gap-0 prose prose-sm dark:prose-invert max-w-none prose-pre:p-0 prose-pre:m-0 prose-pre:bg-transparent">
+                  <div key={`${message.id || "message"}-text-${index}`} className="flex flex-col gap-0 prose prose-sm dark:prose-invert max-w-none prose-pre:p-0 prose-pre:m-0 prose-pre:bg-transparent">
                     <div className="min-h-[1.5rem] leading-relaxed">
                       <AnimatePresence mode="wait">
                         {message.role === "assistant" && isLoading ? (
@@ -71,12 +70,10 @@ export const PreviewMessage = ({
                             transition={{ duration: 0.15, ease: "easeOut" }}
                             className="animated-markdown-container"
                           >
-                            <AnimatedMarkdown
-                              content={part.text}
-                              animation="dropIn"
-                              animationDuration="0.5s"
-                              animationTimingFunction="ease-in-out"
-                            />
+                            <div className="flex items-end gap-1">
+                              <Streamdown>{part.text}</Streamdown>
+                              <span className="mb-0.5 inline-block h-4 w-[2px] animate-pulse bg-foreground/60" />
+                            </div>
                           </motion.div>
                         ) : (
                           <motion.div

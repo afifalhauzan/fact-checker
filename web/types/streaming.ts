@@ -4,7 +4,14 @@
  */
 
 import type { UIMessage } from 'ai';
-import type { AnalysisResult } from '@/langchain/agents/analyzer/schema';
+import type {
+  AnalysisResult,
+  Claim,
+  Reference,
+  Reasoning,
+  Risk,
+  Source,
+} from '@/langchain/agents/analyzer/schema';
 
 export interface InteractiveStepPart {
   stepId: string;
@@ -20,6 +27,14 @@ export interface ChoiceSummaryPart {
 export type MetabotUIMessagePart =
   | { type: 'text'; text: string }
   | { type: 'data-analysis'; data: AnalysisResult | string }
+  | { type: 'data-summary'; data: string }
+  | { type: 'data-claims'; data: Claim[] }
+  | { type: 'data-risks'; data: Risk[] }
+  | { type: 'data-explanation'; data: string }
+  | { type: 'data-references'; data: Reference[] }
+  | { type: 'data-suggested-questions'; data: string[] }
+  | { type: 'data-sources'; data: Source[] }
+  | { type: 'data-reasoning'; data: Reasoning[] }
   | {
       type: 'data-notification';
       data: {
