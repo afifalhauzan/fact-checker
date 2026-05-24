@@ -37,6 +37,7 @@ cp .env.example .env
 **Frontend:**
 
 ```bash
+cd web
 pnpm install
 
 ```
@@ -46,7 +47,7 @@ pnpm install
 ```bash
 python -m venv venv
 source venv/bin/activate  # Untuk Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r api/requirements.txt
 
 ```
 
@@ -54,14 +55,13 @@ pip install -r requirements.txt
 
 ## 💻 Menjalankan Aplikasi
 
-Anda dapat menggunakan skrip yang sudah didefinisikan di `package.json` untuk mempermudah orkestrasi:
+Frontend dijalankan dari direktori `web`, sedangkan backend dijalankan dari root proyek:
 
 | Perintah | Deskripsi |
 | --- | --- |
-| `pnpm dev` | Menjalankan Frontend & Backend secara bersamaan (Concurrently). |
-| `pnpm fastapi-dev` | Menjalankan backend FastAPI saja di port `8000`. |
-| `pnpm next-dev` | Menjalankan frontend Next.js saja di port `3000`. |
-| `pnpm build` | Melakukan build produksi untuk aplikasi Next.js. |
+| `cd web && pnpm dev` | Menjalankan frontend Next.js di port `3000`. |
+| `python -m uvicorn api.main:app --reload` | Menjalankan backend FastAPI di port `8000`. |
+| `cd web && pnpm build` | Melakukan build produksi untuk aplikasi Next.js. |
 
 ---
 
@@ -72,20 +72,20 @@ Kami menyediakan dukungan Docker Compose untuk lingkungan pengembangan maupun pr
 **Mode Pengembangan (Hot Reload):**
 
 ```bash
-pnpm docker:dev
+docker compose -f docker-compose.dev.yml up --build
 
 ```
 
 **Mode Produksi:**
 
-1. **Build Image:** `pnpm docker:build`
-2. **Menjalankan Container:** `pnpm docker:up`
-3. **Menghentikan Container:** `pnpm docker:down`
+1. **Build Image:** `docker compose build`
+2. **Menjalankan Container:** `docker compose up -d`
+3. **Menghentikan Container:** `docker compose down`
 
 **Log Monitoring:**
 
 ```bash
-pnpm docker:logs
+docker compose logs -f
 
 ```
 

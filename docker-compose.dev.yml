@@ -27,14 +27,12 @@ services:
       - NODE_ENV=development
     volumes:
       - ./web:/app/web
-      - ./package.json:/app/package.json
-      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
-      - /app/node_modules
+      - /app/web/node_modules
     depends_on:
       - api-dev
     networks:
       - app-network
-    command: ["pnpm", "run", "next-dev"]
+    command: ["pnpm", "run", "dev"]
 
 networks:
   app-network:

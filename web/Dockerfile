@@ -2,10 +2,11 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN npm install -g pnpm
-COPY package*.json pnpm-lock.yaml* ./
+
+COPY web/package.json web/pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+COPY web/ ./
 # This creates the .next/standalone folder
 RUN pnpm run build
 
@@ -15,14 +16,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # 1. Copy the core server files
-COPY --from=builder /app/web/.next/standalone ./
+COPY --from=builder /app/.next/standalone ./
 
-# 2. Copy the static assets (Notice the path: web/.next/static)
+# 2. Copy the static assets
 # This ensures Tailwind and Next.js chunks actually load
-COPY --from=builder /app/web/.next/static ./web/.next/static
-COPY --from=builder /app/web/public ./web/public
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-# 3. Run the server from the subfolder path
-CMD ["node", "web/server.js"]
+# 3. Run the standalone Next.js server
+CMD ["node", "server.js"]

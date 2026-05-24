@@ -8,10 +8,12 @@ import type {
   AnalysisResult,
   Citation,
   Claim,
+  ExplanationItem,
   Reference,
   Reasoning,
   Risk,
 } from '@/langchain/agents/analyzer/schema';
+import type { ChartEmbedData } from '@/types/chart';
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 
 export interface InteractiveStepPart {
@@ -50,10 +52,11 @@ export type MetabotUIMessagePart =
       providerMetadata?: Record<string, any>;
     }
   | { type: 'data-analysis'; data: AnalysisResult | string }
+  | { type: 'data-chart'; data: string | ChartEmbedData }
   | { type: 'data-summary'; data: string | SummaryPartData }
   | { type: 'data-claims'; data: Claim[] }
   | { type: 'data-risks'; data: Risk[] }
-  | { type: 'data-explanation'; data: string }
+  | { type: 'data-explanation'; data: ExplanationItem[] }
   | { type: 'data-references'; data: Reference[] }
   | { type: "data-actions"; data: ActionsPartData }
   | { type: "data-action-insight"; data: ActionInsightPartData }

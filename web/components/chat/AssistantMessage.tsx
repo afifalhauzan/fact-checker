@@ -9,6 +9,7 @@ import {
   type AnalysisResult,
   type Citation,
   type Claim,
+  type ExplanationItem,
   type Reference,
   type Reasoning,
   type Risk,
@@ -41,7 +42,7 @@ interface SectionalAnalysisData {
   summary?: SummaryPartData;
   claims?: Claim[];
   risks?: Risk[];
-  explanation?: string;
+  explanations?: ExplanationItem[];
   references?: Reference[];
   actions?: AnalysisAction[];
   actionInsight?: {
@@ -60,7 +61,7 @@ type RenderItem =
   | { kind: "summary"; key: string; summary: string; citations: Citation[] }
   | { kind: "claims"; key: string; claims: Claim[] }
   | { kind: "risks"; key: string; risks: Risk[] }
-  | { kind: "explanation"; key: string; explanation: string }
+  | { kind: "explanations"; key: string; explanations: ExplanationItem[] }
   | { kind: "references"; key: string; references: Reference[] }
   | { kind: "actions"; key: string; actions: AnalysisAction[] }
   | {
@@ -103,7 +104,7 @@ function extractSectionalDataFromParts(parts: MetabotUIMessagePart[]): Sectional
     } else if (part.type === "data-risks") {
       sectionalData.risks = part.data;
     } else if (part.type === "data-explanation") {
-      sectionalData.explanation = part.data;
+      sectionalData.explanations = part.data;
     } else if (part.type === "data-references") {
       sectionalData.references = part.data;
     } else if (part.type === "data-actions") {
@@ -245,8 +246,8 @@ export function AssistantMessage({
           return;
         }
 
-        if (part.type === "data-explanation" && part.data.trim().length > 0) {
-          items.push({ kind: "explanation", key, explanation: part.data });
+        if (part.type === "data-explanation" && part.data.length > 0) {
+          items.push({ kind: "explanations", key, explanations: part.data });
           return;
         }
 
@@ -306,8 +307,12 @@ export function AssistantMessage({
       items.push({ kind: "risks", key: `${message.id}-analysis-risks`, risks: analysisData.risks });
     }
 
-    if (analysisData.explanation?.trim().length) {
-      items.push({ kind: "explanation", key: `${message.id}-analysis-explanation`, explanation: analysisData.explanation });
+    if (analysisData.explanations.length > 0) {
+      items.push({
+        kind: "explanations",
+        key: `${message.id}-analysis-explanations`,
+        explanations: analysisData.explanations,
+      });
     }
 
     if (analysisData.references.length > 0) {
@@ -421,10 +426,18 @@ export function AssistantMessage({
       );
     }
 
-    if (item.kind === "explanation") {
+    if (item.kind === "explanations") {
       return (
         <motion.div key={item.key} {...fadeUp}>
-          <ExplanationCard explanation={item.explanation} />
+          <section className="space-y-2">
+            {item.explanations.map((entry, index) => (
+              <ExplanationCard
+                key={`${item.key}-explanation-${index}`}
+                title={entry.title}
+                explanation={entry.explanation}
+              />
+            ))}
+          </section>
         </motion.div>
       );
     }

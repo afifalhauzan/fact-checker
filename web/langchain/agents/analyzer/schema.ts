@@ -31,13 +31,18 @@ export const ReferenceSchema = z.object({
   citations: z.array(CitationSchema).default([]),
 });
 
+export const ExplanationItemSchema = z.object({
+  title: z.string(),
+  explanation: z.string(),
+});
+
 export const AnalysisSchema = z.object({
   conversationText: z.string(),
   claims: z.array(ClaimSchema),
   risks: z.array(RiskSchema),
   summary: z.string(),
   summaryCitations: z.array(CitationSchema).default([]),
-  explanation: z.string().optional(),
+  explanations: z.array(ExplanationItemSchema).default([]),
   suggestedQuestions: z.array(z.string()).default([]),
   reasoning: z.array(ReasoningSchema).optional(),
   references: z.array(ReferenceSchema).default([]),
@@ -48,4 +53,5 @@ export type Risk = z.infer<typeof RiskSchema>;
 export type Reasoning = z.infer<typeof ReasoningSchema>;
 export type Citation = z.infer<typeof CitationSchema>;
 export type Reference = z.infer<typeof ReferenceSchema>;
+export type ExplanationItem = z.infer<typeof ExplanationItemSchema>;
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;

@@ -67,7 +67,12 @@ function extractActionContextFromMessage(message?: MetabotUIMessage): { claim?: 
         : summaryPart.data.text
       : undefined;
 
-  const context = summaryContext ?? (explanationPart?.type === "data-explanation" ? explanationPart.data : undefined);
+  const explanationContext =
+    explanationPart?.type === "data-explanation"
+      ? explanationPart.data.map((entry) => `${entry.title}: ${entry.explanation}`).join("\n\n")
+      : undefined;
+
+  const context = summaryContext ?? explanationContext;
 
   if (claim || context) {
     return { claim, context };
@@ -87,7 +92,9 @@ function extractActionContextFromMessage(message?: MetabotUIMessage): { claim?: 
 
     return {
       claim: validation.data.claims[0]?.text,
-      context: validation.data.summary || validation.data.explanation,
+      context:
+        validation.data.summary ||
+        validation.data.explanations.map((entry) => `${entry.title}: ${entry.explanation}`).join("\n\n"),
     };
   } catch {
     return {};

@@ -113,118 +113,146 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
   const trimmed = input.trim();
 
   const mockResult: AnalysisResult = {
-    conversationText: trimmed
-      ? "Berikut penjelasan untuk diabetes:"
-      : "No input provided for analysis.",
-    claims: trimmed
-      ? [
-          {
-            text: trimmed,
-            confidence: scoreConfidence(trimmed),
-          },
-        ]
-      : [
-          {
-            text: "No clear claim detected from the input.",
-            confidence: 0.2,
-          },
-        ],
+  conversationText: trimmed
+    ? "Berikut analisis cek fakta terkait klaim bahwa barang-barang rumah tangga dapat menyebabkan kanker:"
+    : "No input provided for analysis.",
 
-    risks: trimmed
-      ? [
-          {
-            type: "missing_context",
-            description:
-              "This statement might be too simplified. Important context or supporting details could be missing.",
-          },
-        ]
-      : [
-          {
-            type: "overclaim",
-            description:
-              "There is no information to evaluate, so any conclusion would be unreliable.",
-          },
-        ],
+  claims: trimmed
+    ? [
+        {
+          text: "Sejumlah barang rumah tangga seperti pengharum ruangan, wadah plastik, peralatan masak anti lengket, talenan plastik, makanan kaleng, detergen tertentu, obat nyamuk, dan lilin aromaterapi diklaim dapat menyebabkan kanker.",
+          confidence: scoreConfidence(trimmed),
+        },
+      ]
+    : [
+        {
+          text: "No clear claim detected from the input.",
+          confidence: 0.2,
+        },
+      ],
 
-    summary: trimmed
-      ? "Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat memproduksi atau menggunakan insulin dengan efektif, yang menyebabkan kadar gula darah menjadi tinggi."
-      : "We could not find a clear idea to analyze. Try entering a statement or claim.",
+  risks: trimmed
+    ? [
+        {
+          type: "overclaim",
+          description:
+            "Klaim ini berisiko terlalu menyederhanakan hubungan antara paparan bahan kimia rumah tangga dan kanker. Tidak semua barang rumah tangga mengandung zat berisiko, dan tingkat paparan sehari-hari umumnya rendah.",
+        },
+        {
+          type: "missing_context",
+          description:
+            "Klaim tidak membedakan antara penggunaan normal, paparan dosis tinggi, jenis bahan tertentu, kondisi rusak atau panas ekstrem, serta bukti ilmiah pada manusia.",
+        },
+      ]
+    : [
+        {
+          type: "overclaim",
+          description:
+            "There is no information to evaluate, so any conclusion would be unreliable.",
+        },
+      ],
 
-    summaryCitations: trimmed
-      ? [
-          {
-            id: "summary-citation-1",
-            label: "[1]",
-            title: "Medical Authority on Diabetes",
-            link: "https://example.com/medical/diabetes-overview",
-          },
-          {
-            id: "summary-citation-2",
-            label: "[2]",
-            title: "Recent Research on Metabolic Disorders",
-            link: "https://example.com/research/metabolic-studies",
-          },
-        ]
-      : [],
+  summary: trimmed
+    ? "Klaim bahwa barang-barang rumah tangga secara umum dapat menyebabkan kanker bersifat menyesatkan jika disampaikan tanpa konteks. Beberapa benda memang dapat mengandung bahan kimia tertentu, seperti BPA, phthalates, VOC, PTFE, atau insektisida, tetapi risiko kanker bergantung pada jenis bahan, dosis paparan, cara penggunaan, dan durasi paparan. Dalam penggunaan rumah tangga yang normal dan sesuai aturan, hubungan langsung dengan kanker pada manusia belum terbukti kuat."
+    : "We could not find a clear idea to analyze. Try entering a statement or claim.",
 
-    explanation: trimmed
-      ? `Dari pertanyaan ini: "${trimmed}".
-Diabetes adalah penyakit kronis yang terjadi ketika tubuh tidak dapat memproduksi atau menggunakan insulin dengan efektif, yang menyebabkan kadar gula darah menjadi tinggi.
-Penting untuk memahami bahwa diabetes bukan hanya tentang kadar gula darah, tetapi juga melibatkan faktor genetik, gaya hidup, dan lingkungan.
-Jika Anda memiliki pertanyaan lebih lanjut atau ingin mendalami aspek tertentu, jangan ragu untuk bertanya!`
-      : "Try entering a specific statement so we can break it down and explore it together.",
+  summaryCitations: trimmed
+    ? [
+        {
+          id: "summary-citation-1",
+          label: "[1]",
+          title: "Sukabumi Update - Cek Fakta Barang Rumah Tangga dan Risiko Kanker",
+          link: "https://sukabumiupdate.com",
+        },
+        {
+          id: "summary-citation-2",
+          label: "[2]",
+          title: "Tempo.co - Verifikasi Klaim Barang Rumah Tangga Penyebab Kanker",
+          link: "https://tempo.co",
+        },
+      ]
+    : [],
 
-    suggestedQuestions: [
-      "Bagaimana cara kerja diabetes?",
-      "Jelaskan lebih dalam tentang perbedaan pengaruh gula dan kopi.",
-      "Apa saja gejala awal diabetes?",
-    ],
+    explanations: trimmed
+    ? [
+        {
+          title: "Gambaran Umum Klaim",
+          explanation:
+            "Klaim menyebut bahwa banyak barang rumah tangga umum bisa menyebabkan kanker. Intinya, klaim ini perlu dibaca dengan konteks paparan dan kualitas sumber.",
+        },
+        {
+          title: "Konteks Risiko Nyata",
+          explanation:
+            "Tidak semua barang memiliki tingkat risiko yang sama. Risiko dipengaruhi jenis bahan, dosis, cara penggunaan, suhu, kondisi produk, serta durasi paparan.",
+        },
+        {
+          title: "Kesimpulan Praktis",
+          explanation:
+            "Lebih tepat menyebut bahwa ada bahan kimia tertentu yang perlu diwaspadai, bukan menyimpulkan semua barang rumah tangga sebagai penyebab kanker.",
+        },
+      ]
+    : [
+        {
+          title: "Butuh Input Lebih Jelas",
+          explanation: "Coba kirim pernyataan atau pertanyaan yang lebih spesifik supaya analisisnya bisa lebih tepat.",
+        },
+      ],
 
-    reasoning: trimmed
-      ? [
-          {
-            intent: "Menganalisis klaim utama dan mengidentifikasi potensi konteks yang hilang",
-            steps: [
-              "Mengekstraksi pernyataan kunci dari masukan",
-              "Evaluasi kejelasan informasi yang diberikan",
-              "Cek untuk konteks yang mungkin hilang atau disederhanakan secara berlebihan",
-            ],
-          },
-        ]
-      : undefined,
-    references: trimmed
-      ? [
-          {
-            title: "Medical Authority on Diabetes",
-            snippet:
-              "Diabetes is a chronic condition affecting blood glucose regulation. Multiple factors including genetics, lifestyle, and environment play significant roles.",
-            url: "https://example.com/medical/diabetes-overview",
-            citations: [
-              {
-                id: "reference-citation-1",
-                label: "[1]",
-                title: "Medical Authority on Diabetes",
-                link: "https://example.com/medical/diabetes-overview",
-              },
-            ],
-          },
-          {
-            title: "Recent Research on Metabolic Disorders",
-            snippet:
-              "Understanding the relationship between diet, exercise, and metabolic function is crucial for preventive health strategies.",
-            url: "https://example.com/research/metabolic-studies",
-            citations: [
-              {
-                id: "reference-citation-2",
-                label: "[2]",
-                title: "Recent Research on Metabolic Disorders",
-                link: "https://example.com/research/metabolic-studies",
-              },
-            ],
-          },
-        ]
-      : [],
-  };
+  suggestedQuestions: [
+    "Apa perbedaan antara zat berbahaya dan paparan berbahaya?",
+    "Barang rumah tangga apa yang perlu digunakan dengan lebih hati-hati?",
+    "Bagaimana cara mengurangi paparan bahan kimia di rumah tanpa panik berlebihan?",
+  ],
+
+  reasoning: trimmed
+    ? [
+        {
+          intent: "Menganalisis klaim kesehatan viral tentang barang rumah tangga dan risiko kanker",
+          steps: [
+            "Mengidentifikasi klaim utama dari unggahan media sosial",
+            "Memisahkan daftar barang rumah tangga dari kesimpulan bahwa semuanya menyebabkan kanker",
+            "Mengecek konteks paparan, dosis, jenis bahan, dan cara penggunaan",
+            "Membandingkan klaim viral dengan penjelasan ahli onkologi dan sumber cek fakta",
+            "Menyimpulkan bahwa klaim mengandung sebagian kekhawatiran yang masuk akal, tetapi terlalu luas jika disebut sebagai penyebab kanker secara langsung",
+          ],
+        },
+      ]
+    : undefined,
+
+  references: trimmed
+    ? [
+        {
+          title: "Sukabumi Update - Cek Fakta Barang Rumah Tangga dan Risiko Kanker",
+          snippet:
+            "Artikel membahas klaim viral bahwa barang rumah tangga seperti plastik, pengharum ruangan, teflon, makanan kaleng, detergen, obat nyamuk, dan lilin aromaterapi dapat menyebabkan kanker, lalu menjelaskan konteks risikonya berdasarkan verifikasi Tempo dan ahli onkologi.",
+          url: "https://sukabumiupdate.com",
+          citations: [
+            {
+              id: "reference-citation-1",
+              label: "[1]",
+              title: "Sukabumi Update - Cek Fakta Barang Rumah Tangga dan Risiko Kanker",
+              link: "https://sukabumiupdate.com",
+            },
+          ],
+        },
+        {
+          title: "Tempo.co - Verifikasi Klaim Barang Rumah Tangga Penyebab Kanker",
+          snippet:
+            "Tempo memverifikasi klaim dengan mewawancarai dokter spesialis onkologi dan merujuk berbagai sumber kredibel. Hasilnya, hubungan penggunaan normal barang rumah tangga dengan kanker belum terbukti kuat.",
+          url: "https://tempo.co",
+          citations: [
+            {
+              id: "reference-citation-2",
+              label: "[2]",
+              title: "Tempo.co - Verifikasi Klaim Barang Rumah Tangga Penyebab Kanker",
+              link: "https://tempo.co",
+            },
+          ],
+        },
+      ]
+    : [],
+};
 
   return AnalysisSchema.parse(mockResult);
 }
+

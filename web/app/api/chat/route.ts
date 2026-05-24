@@ -241,8 +241,8 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
-        if (analysis.explanation?.trim().length) {
-          writer.write({ type: "data-explanation", data: analysis.explanation });
+        if (analysis.explanations?.length) {
+          writer.write({ type: "data-explanation", data: analysis.explanations });
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
