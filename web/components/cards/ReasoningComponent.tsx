@@ -22,9 +22,21 @@ export function ReasoningComponent({
 
   return (
     <details className="group max-w-md rounded-lg bg-background py-2" open={defaultOpen}>
-      <summary className="flex cursor-pointer list-none items-center justify-start gap-2 px-1 text-xs font-medium text-foreground">
-        <span>{isStreaming ? "Sedang menganalisis..." : "Lihat tahapan analisis"}</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+      <summary className="flex cursor-pointer list-none items-center justify-start gap-2 px-1 text-xs font-medium text-foreground hover:text-primary">
+        {isStreaming ? (
+          <div className="flex items-center gap-2">
+            <span className="animate-pulse">Sedang menganalisis...</span>
+            <ChevronDown className="h-3 w-3 animate-pulse text-muted-foreground group-open:rotate-180" />
+          </div>
+
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="">Lihat tahapan analisis</span>
+            <ChevronDown className="h-3 w-3 text-muted-foreground group-open:rotate-180" />
+          </div>
+        )}
+
+
       </summary>
       <div className="mt-3 ml-1 space-y-1.5 border-l border-gray-300 pl-3 text-xs">
         <p className="pl-2 italic text-muted-foreground">{primaryReasoning.intent}</p>

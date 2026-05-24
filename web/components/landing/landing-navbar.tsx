@@ -10,8 +10,10 @@ export function LandingNavbar() {
   return (
     <nav className="fixed inset-x-0 top-0 z-50 bg-background/85 backdrop-blur-3xl">
       <div className="mx-auto flex h-18 w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
-        <Link href="/" className="font-bold text-xl font-medium tracking-normal text-[#17232c]">
-          FactChecker AI
+        <Link href="/" className="flex min-w-0 items-center gap-2">
+          <div className="truncate text-lg font-semibold tracking-tight text-foreground">
+            Fact<span className="text-primary">Checker</span> AI
+          </div>
         </Link>
 
         <div className="hidden items-center gap-10 md:flex">
