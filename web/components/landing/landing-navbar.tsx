@@ -8,9 +8,9 @@ export function LandingNavbar() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 border-b border-[#17232c]/10 bg-background/85 backdrop-blur-3xl">
-      <div className="mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
-        <Link href="/" className="font-[var(--font-instrument-serif)] text-3xl font-medium tracking-normal text-[#17232c]">
+    <nav className="fixed inset-x-0 top-0 z-50 bg-background/85 backdrop-blur-3xl">
+      <div className="mx-auto flex h-18 w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
+        <Link href="/" className="font-bold text-xl font-medium tracking-normal text-[#17232c]">
           FactChecker AI
         </Link>
 

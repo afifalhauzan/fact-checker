@@ -22,7 +22,7 @@ const steps = [
 export function StepsSection() {
   return (
     <section id="cara-kerja" className="mx-auto mb-24 w-full max-w-[1440px] px-4 sm:mb-32 sm:px-8">
-      <div className="mb-12 max-w-2xl">
+      <div className="mb-24 max-w-2xl">
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">Alur kerja</p>
         <h2 className="font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:text-5xl">
           Dirancang untuk berpikir, bukan sekadar menjawab.

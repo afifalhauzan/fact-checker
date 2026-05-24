@@ -231,19 +231,18 @@ export function HeroSection() {
   const canSubmit = !isPreparingAttachments && (input.trim().length > 0 || attachments.length > 0);
 
   return (
-    <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 pt-8 text-center sm:mb-28 sm:px-8">
-      <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        <span className="size-1.5 rounded-full bg-[#2b6f95]" />
+    <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 text-center sm:mb-28 sm:px-8">
+      <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
         Asisten berpikir kritis untuk informasi digital
       </div>
 
-      <h1 className="mx-auto max-w-5xl font-[var(--font-instrument-serif)] text-[3.35rem] leading-[0.9] tracking-normal text-[#17232c] sm:text-[5.25rem] md:text-[6.7rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
+      <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
         Pahami informasi
-        <span className="block italic text-[#2b6f95]">sebelum mempercayainya.</span>
+        <span className="block italic font-medium text-[#2b6f95]">sebelum mempercayainya.</span>
       </h1>
 
       <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-lg">
+        <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-md">
           FactChecker AI membedah klaim, tautan, atau screenshot menjadi konteks, kualitas sumber, potensi overclaim,
           dan tingkat ketidakpastian yang bisa kamu nilai sendiri.
         </p>
