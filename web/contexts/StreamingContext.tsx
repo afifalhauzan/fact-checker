@@ -5,7 +5,6 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import toast from "react-hot-toast";
 import { useConversationStore } from "@/lib/conversation-store";
-import { useAuthStore } from "@/lib/auth-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import { type MetabotUIMessage } from "@/types/streaming";
@@ -39,7 +38,6 @@ interface StreamingProviderProps {
 
 export function StreamingProvider({ children, chatId }: StreamingProviderProps) {
   const { conversationId } = useConversationStore();
-  const { isAuthenticated } = useAuthStore();
 
   // Chat history fetching
   const { fetchHistory } = useChatHistory();
@@ -63,8 +61,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
   // Prioritize URL over store to prevent race conditions
   const activeConversationId = effectiveConversationId;
 
-  // Only initialize useChat when user is authenticated
-  const shouldInitializeChat = isAuthenticated;
+  const shouldInitializeChat = true; // not require auth for now. Can add auth checks here if needed in the future.
 
   const {
     messages: rawMessages,
@@ -134,13 +131,8 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     });
   }, [activeConversationId, fetchHistory, setMessages]);
 
-  // Wrapped sendMessage to control immediate loading and check auth
+  // Wrapped sendMessage to control immediate loading
   const sendMessage = useCallback((message: any, options?: SendMessageOptions) => {
-    if (!isAuthenticated) {
-      toast.error('Anda harus login untuk mengirim pesan');
-      return;
-    }
-
     setIsUserSending(true);
     console.log('SendMessage called with:', message, 'options:', options);
 
@@ -162,7 +154,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     }
 
     originalSendMessage(messageObject, requestOptions);
-  }, [originalSendMessage, isAuthenticated]);
+  }, [originalSendMessage]);
 
   const handleInteractiveChoice = useCallback((stepId: string, selection: string) => {
     console.log('[StreamingContext] Interactive choice is not used in simplified mode:', { stepId, selection });

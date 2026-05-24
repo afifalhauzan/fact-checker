@@ -2,7 +2,7 @@
 import type { NextRequest } from "next/server";
 
 const publicRoutes = ["/", "/login"];
-const protectedRoutes = ["/chat", "/selection"];
+const protectedRoutes = ["/selection"];
 const legacyRouteRedirects: Record<string, string> = {
   "/landing": "/",
   "/dashboard": "/selection",

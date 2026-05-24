@@ -1,71 +1,96 @@
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Gauge, Quote } from "lucide-react";
 
 export function PreviewSection() {
   return (
-    <section className="mx-auto mb-24 grid w-full max-w-[1200px] grid-cols-1 items-center gap-10 px-4 sm:mb-32 sm:px-8 md:grid-cols-12 md:gap-8">
+    <section
+      id="produk"
+      className="mx-auto mb-24 grid w-full max-w-[1200px] grid-cols-1 items-center gap-10 px-4 sm:mb-32 sm:px-8 md:grid-cols-12 md:gap-10"
+    >
       <div className="relative md:col-span-7">
-        <div className="relative z-10 ml-auto max-w-md rounded-[28px] bg-white p-6 shadow-[0_20px_40px_rgba(44,52,55,0.08)] ring-1 ring-[#e3e9ed] sm:p-8">
-          <div className="mb-5 flex items-center gap-3 sm:mb-6">
-            <span className="size-2 rounded-full bg-[#a8364b]" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#596064] sm:text-xs">
-              Potential Misinformation
-            </span>
-          </div>
-          <h3 className="mb-3 font-['Newsreader',serif] text-2xl leading-tight text-[#2c3437] sm:mb-4 sm:text-[2rem]">
-            "Scientists discover coffee is now the only source of hydration needed."
-          </h3>
-          <p className="mb-5 text-sm leading-relaxed text-[#596064] sm:mb-6">
-            Deconstructed analysis shows this headline simplifies a study on polyphenols while ignoring
-            cellular hydration metrics.
-          </p>
-          <div className="flex gap-2">
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-[#e3e9ed]">
-              <div className="h-full w-1/3 bg-[#a8364b]" />
+        <div className="relative z-10 ml-auto max-w-xl rounded-lg border border-[#17232c]/10 bg-white p-5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] sm:p-6">
+          <div className="mb-5 flex items-start justify-between gap-4 border-b border-[#17232c]/10 pb-4">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#5a6a76] sm:text-xs">
+                Klaim yang dianalisis
+              </span>
+              <h3 className="mt-3 font-[var(--font-instrument-serif)] text-3xl leading-[0.95] text-[#17232c] sm:text-[2.45rem]">
+                "Riset terbaru membuktikan semua pemanis buatan berbahaya."
+              </h3>
             </div>
-            <div className="h-1 flex-1 rounded-full bg-[#e3e9ed]" />
-            <div className="h-1 flex-1 rounded-full bg-[#e3e9ed]" />
+            <Quote className="mt-1 size-5 shrink-0 text-[#2b6f95]" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-[#a34d3c]/20 bg-[#fff6f3] p-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#a34d3c]">
+                Potensi overclaim
+              </div>
+              <p className="text-sm leading-relaxed text-[#5a6a76]">
+                Kata "semua" membuat klaim lebih luas dari cakupan studi yang dikutip.
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#3a7ca5]/20 bg-[#eef7fc] p-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#3a7ca5]">
+                Konteks hilang
+              </div>
+              <p className="text-sm leading-relaxed text-[#5a6a76]">
+                Perlu jenis pemanis, dosis, populasi studi, dan durasi konsumsi.
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#2b6f95]/20 bg-[#f2f9fd] p-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2b6f95]">
+                Kesimpulan sementara
+              </div>
+              <p className="text-sm leading-relaxed text-[#5a6a76]">
+                Ada alasan untuk berhati-hati, tetapi bukti belum mendukung generalisasi absolut.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="absolute -bottom-12 left-0 z-20 w-64 rounded-2xl border border-white/50 bg-white/65 p-4 shadow-[0_20px_40px_rgba(44,52,55,0.08)] backdrop-blur-xl sm:-left-4 sm:w-72 sm:p-6">
-          <div className="mb-4 flex items-center gap-3 text-[#2c3437]">
-            <BookOpen className="size-4 text-[#4e45e4]" />
-            <span className="text-sm font-semibold">Sumber</span>
+        <div className="absolute -bottom-12 left-0 z-20 w-[19rem] rounded-lg border border-[#17232c]/10 bg-[#fbfdff]/90 p-4 shadow-[0_18px_45px_rgba(23,35,44,0.08)] backdrop-blur sm:-left-5 sm:w-80 sm:p-5">
+          <div className="mb-4 flex items-center justify-between text-[#17232c]">
+            <div className="flex items-center gap-2">
+              <BookOpen className="size-4 text-[#2b6f95]" />
+              <span className="text-sm font-semibold">Sumber ditimbang</span>
+            </div>
+            <Gauge className="size-4 text-[#47789a]" />
           </div>
           <ul className="space-y-3 sm:space-y-4">
             {[
-              { label: "01", width: "w-24" },
-              { label: "02", width: "w-32" },
+              { label: "01", title: "Jurnal primer", note: "relevan, cakupan sempit" },
+              { label: "02", title: "Artikel media", note: "judul lebih kuat dari isi" },
             ].map((source) => (
-              <li key={source.label} className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded bg-[#e3e9ed] text-xs text-[#2c3437]">
+              <li key={source.label} className="flex items-start gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-[#e8f2f8] text-xs text-[#17232c]">
                   {source.label}
                 </div>
-                <div className={`h-2 rounded-full bg-[#dce4e8] ${source.width}`} />
+                <div>
+                  <div className="text-sm font-medium text-[#17232c]">{source.title}</div>
+                  <div className="mt-0.5 text-xs text-[#5a6a76]">{source.note}</div>
+                </div>
               </li>
             ))}
           </ul>
         </div>
-
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_20%_20%,rgba(78,69,228,0.22),transparent_42%),radial-gradient(circle_at_80%_20%,rgba(103,96,253,0.2),transparent_44%),radial-gradient(circle_at_50%_90%,rgba(245,205,249,0.28),transparent_48%)] blur-2xl" />
-        </div>
       </div>
 
-      <div className="md:col-span-5 motion-safe:animate-[fadeUp_1000ms_cubic-bezier(0.34,1.2,0.64,1)_both]">
-        <h2 className="mb-5 font-['Newsreader',serif] text-[2.25rem] leading-tight text-[#2c3437] sm:mb-6 sm:text-5xl">
-          Memahami informasi,
-          <br />
-          hingga ke akarnya.
+      <div className="md:col-span-5 motion-safe:animate-[fadeUp_1000ms_cubic-bezier(0.22,1,0.36,1)_both]">
+        <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">Cara AI menjelaskan</p>
+        <h2 className="mb-5 font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:mb-6 sm:text-5xl">
+          Ketidakpastian dibuat terlihat.
         </h2>
-        <p className="mb-7 text-base leading-relaxed text-[#596064] sm:mb-8 sm:text-lg">
-          AI kami tidak hanya memberi jawaban “benar” atau “salah”.
-          Ia memetakan klaim, bias, dan sumber—agar kamu bisa menilai sendiri.
+        <p className="mb-7 text-base leading-relaxed text-[#5a6a76] sm:mb-8 sm:text-lg">
+          FactChecker AI tidak berpura-pura menjadi mesin kebenaran. Ia menunjukkan alasan, bukti, celah konteks, dan
+          tingkat keyakinan supaya keputusan akhir tetap bisa kamu pahami.
         </p>
-        <button className="group inline-flex items-center gap-3 text-sm font-medium text-[#4e45e4] transition-colors hover:text-[#4135d8] sm:text-base">
+        <a
+          href="#cara-kerja"
+          className="group inline-flex items-center gap-3 text-sm font-medium text-[#2b6f95] transition-colors hover:text-[#215875] sm:text-base"
+        >
           Jelajahi cara kerjanya
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-        </button>
+        </a>
       </div>
     </section>
   );

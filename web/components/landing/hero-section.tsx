@@ -1,8 +1,19 @@
 "use client";
 
 import React from "react";
-import { Paperclip, Search, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
+  Image,
+  Link2,
+  Paperclip,
+  Search,
+  SendHorizontal,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { saveLandingChatDraft, type LandingAttachmentDraft } from "@/lib/landing-chat-handoff";
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -20,6 +31,148 @@ function createAttachmentId(): string {
   }
 
   return `landing-attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+const reasoningSteps = [
+  {
+    title: "Mendeteksi klaim utama",
+    description: "Memisahkan pernyataan yang bisa diuji dari opini, nada, dan asumsi.",
+    signal: "Klaim terurai",
+    tone: "border-[#2b6f95]/20 bg-[#f2f9fd]",
+  },
+  {
+    title: "Mencari konteks tambahan",
+    description: "Melihat apa yang hilang: waktu, ruang lingkup, pembanding, dan definisi.",
+    signal: "Konteks kurang",
+    tone: "border-[#3a7ca5]/20 bg-[#eef7fc]",
+  },
+  {
+    title: "Membandingkan kualitas sumber",
+    description: "Memprioritaskan sumber primer, rekam jejak, dan konsistensi antar referensi.",
+    signal: "Sumber ditimbang",
+    tone: "border-[#325f7f]/20 bg-[#f4f9fd]",
+  },
+  {
+    title: "Menandai potensi overclaim",
+    description: "Membedakan bukti yang benar dari kesimpulan yang terlalu jauh.",
+    signal: "Overclaim mungkin",
+    tone: "border-[#a34d3c]/20 bg-[#fff7f7]",
+  },
+  {
+    title: "Menyusun kesimpulan bernuansa",
+    description: "Memberi ringkasan, tingkat keyakinan, dan pertanyaan lanjutan yang perlu dicek.",
+    signal: "Bukan verdict final",
+    tone: "border-[#17232c]/15 bg-white",
+  },
+];
+
+const inputModes = [
+  { label: "Klaim", icon: FileText },
+  { label: "Screenshot", icon: Image },
+  { label: "Link", icon: Link2 },
+];
+
+function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachments: boolean }) {
+  const hasDraft = input.trim().length > 0 || hasAttachments;
+  const displayClaim =
+    input.trim() ||
+    "Minum kopi tiga kali sehari terbukti menggantikan kebutuhan air putih.";
+
+  return (
+    <div
+      key={hasDraft ? "live-reasoning" : "sample-reasoning"}
+      className="mx-auto mt-8 w-full max-w-5xl text-left sm:mt-10"
+    >
+      <div className="grid gap-4 md:grid-cols-[1.12fr_0.88fr]">
+        <div className="rounded-lg border border-[#17232c]/10 bg-[#fbfdff]/[0.86] p-4 shadow-[0_18px_50px_rgba(23,35,44,0.07)] backdrop-blur sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 border-b border-[#17232c]/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">
+                {hasDraft ? "Analisis berjalan" : "Simulasi setelah submit"}
+              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#17232c]">
+                "{displayClaim}"
+              </p>
+            </div>
+            <div className="w-fit rounded-full border border-[#2b6f95]/15 bg-[#e9f4f9] px-3 py-1 text-xs font-medium text-[#2b6f95]">
+              Reasoning view
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <TypingIndicator />
+          </div>
+
+          <div className="relative space-y-3">
+            <div className="absolute bottom-6 left-[15px] top-6 w-px bg-[#17232c]/10" />
+            {reasoningSteps.map((step, index) => (
+              <div
+                key={step.title}
+                className={`relative flex gap-3 rounded-lg border p-3 motion-safe:opacity-0 motion-safe:animate-[fadeUp_620ms_cubic-bezier(0.22,1,0.36,1)_forwards] ${step.tone}`}
+                style={{ animationDelay: `${index * 160 + 160}ms` }}
+              >
+                <div className="relative z-10 mt-1 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#17232c]/10 bg-white text-xs font-semibold text-[#2b6f95]">
+                  {index + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <h3 className="text-sm font-semibold text-[#17232c]">{step.title}</h3>
+                    <span className="w-fit rounded-full border border-[#17232c]/10 bg-white/70 px-2 py-1 text-[11px] font-medium text-[#5a6a76]">
+                      {step.signal}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-[#5a6a76]">{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <aside
+          className="rounded-lg border border-[#17232c]/10 bg-[#142634] p-5 text-[#f8fbff] shadow-[0_18px_50px_rgba(23,35,44,0.12)] motion-safe:opacity-0 motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_forwards]"
+          style={{ animationDelay: "1040ms" }}
+        >
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#b8c9d6]">Output yang diutamakan</p>
+          <h3 className="mt-4 font-[var(--font-instrument-serif)] text-4xl leading-[0.95] text-white">
+            Bukan cuma benar atau salah.
+          </h3>
+          <p className="mt-4 text-sm leading-relaxed text-[#d7e4ec]">
+            FactChecker AI menjelaskan ruang abu-abu: apa yang kuat, apa yang lemah, dan bagian mana yang masih perlu
+            diverifikasi manusia.
+          </p>
+
+          <div className="mt-6 space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-[#b8c9d6]">
+                <span>Keyakinan analisis</span>
+                <span>72%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full w-[72%] rounded-full bg-[#8fc7e3]" />
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-white">
+                  <AlertTriangle className="size-4 text-[#f2c879]" />
+                  Overclaim
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Kesimpulan lebih luas dari bukti awal.</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-white">
+                  <CheckCircle2 className="size-4 text-[#8fc7e3]" />
+                  Sumber primer
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Perlu dibandingkan dengan data asli.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
 export function HeroSection() {
@@ -78,27 +231,47 @@ export function HeroSection() {
   const canSubmit = !isPreparingAttachments && (input.trim().length > 0 || attachments.length > 0);
 
   return (
-    <section className="mx-auto mb-24 w-full max-w-[1440px] px-4 pt-10 text-center sm:mb-32 sm:px-8">
-      <h1 className="font-['Newsreader',serif] text-[3rem] leading-[0.96] tracking-tight text-[#2c3437] sm:text-[4.75rem] md:text-[6.25rem] motion-safe:animate-[fadeUp_700ms_cubic-bezier(0.34,1.2,0.64,1)_both]">
-        Pahami kebenaran,
-        <span className="mt-1 block italic text-[#4e45e4] sm:mt-2">secara interaktif.</span>
+    <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 pt-8 text-center sm:mb-28 sm:px-8">
+      <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
+        <span className="size-1.5 rounded-full bg-[#2b6f95]" />
+        Asisten berpikir kritis untuk informasi digital
+      </div>
+
+      <h1 className="mx-auto max-w-5xl font-[var(--font-instrument-serif)] text-[3.35rem] leading-[0.9] tracking-normal text-[#17232c] sm:text-[5.25rem] md:text-[6.7rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
+        Pahami informasi
+        <span className="block italic text-[#2b6f95]">sebelum mempercayainya.</span>
       </h1>
 
-      <div className="mx-auto mt-8 max-w-3xl sm:mt-10 motion-safe:animate-[fadeUp_900ms_cubic-bezier(0.34,1.2,0.64,1)_both]">
-        <p className="mb-7 text-base text-[#596064] sm:text-lg">Punya informasi yang bikin ragu atau bingung?</p>
+      <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
+        <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-lg">
+          FactChecker AI membedah klaim, tautan, atau screenshot menjadi konteks, kualitas sumber, potensi overclaim,
+          dan tingkat ketidakpastian yang bisa kamu nilai sendiri.
+        </p>
+
+        <div className="mb-3 flex flex-wrap justify-center gap-2">
+          {inputModes.map(({ label, icon: Icon }) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1 text-xs font-medium text-[#5a6a76]"
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </span>
+          ))}
+        </div>
 
         {attachments.length > 0 && (
           <div className="mb-3 flex flex-wrap justify-center gap-2">
             {attachments.map((attachment) => (
               <div
                 key={attachment.id}
-                className="inline-flex max-w-[220px] items-center gap-2 rounded-full border border-[#dce4e8] bg-white px-3 py-1.5 text-xs text-[#596064] shadow-sm"
+                className="inline-flex max-w-[220px] items-center gap-2 rounded-full border border-[#17232c]/10 bg-white px-3 py-1.5 text-xs text-[#5a6a76] shadow-sm"
               >
                 <span className="truncate">{attachment.filename || "file"}</span>
                 <button
                   type="button"
                   onClick={() => setAttachments((prev) => prev.filter((item) => item.id !== attachment.id))}
-                  className="rounded-full p-0.5 text-[#7b8286] transition-colors hover:bg-[#eef2f5] hover:text-[#2c3437]"
+                  className="rounded-full p-0.5 text-[#748493] transition-colors hover:bg-[#edf5fa] hover:text-[#17232c]"
                   aria-label="Hapus file"
                 >
                   <X className="h-3 w-3" />
@@ -110,16 +283,16 @@ export function HeroSection() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-full bg-white p-1.5 shadow-[0_20px_40px_rgba(44,52,55,0.08)] ring-1 ring-[#dce4e8] transition-all focus-within:ring-2 focus-within:ring-[#4e45e4]/30 sm:p-2"
+          className="rounded-lg bg-white p-1.5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] ring-1 ring-[#17232c]/10 transition-all focus-within:ring-2 focus-within:ring-[#2b6f95]/25 sm:p-2"
         >
           <div className="flex items-center gap-1 sm:gap-2">
-            <Search className="ml-4 size-4 text-[#747c80] sm:ml-6" strokeWidth={2} />
+            <Search className="ml-3 size-4 text-[#748493] sm:ml-4" strokeWidth={2} />
             <input
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Tempel artikel, klaim, atau opini..."
-              className="w-full bg-transparent px-2 py-3 text-sm text-[#2c3437] placeholder:text-[#acb3b7] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
+              placeholder="Tempel klaim, link berita, atau jelaskan screenshot..."
+              className="w-full bg-transparent px-2 py-3 text-sm text-[#17232c] placeholder:text-[#9aa9b5] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
             />
 
             <input
@@ -135,7 +308,7 @@ export function HeroSection() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#596064] transition-colors hover:bg-[#eef2f5] hover:text-[#2c3437] sm:mr-0"
+              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#5a6a76] transition-colors hover:bg-[#edf5fa] hover:text-[#17232c] sm:mr-0"
               title="Lampirkan file"
               aria-label="Lampirkan file"
             >
@@ -145,13 +318,16 @@ export function HeroSection() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="rounded-full bg-[#4e45e4] px-5 py-2.5 text-sm font-medium text-[#fbf7ff] shadow-[0_10px_25px_rgba(78,69,228,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3.5"
+              className="inline-flex items-center gap-2 rounded-md bg-[#2b6f95] px-4 py-2.5 text-sm font-medium text-[#f8fbff] shadow-[0_10px_24px_rgba(43,111,149,0.22)] transition hover:bg-[#215875] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:py-3.5"
             >
               Analisis
+              <SendHorizontal className="hidden size-4 sm:block" />
             </button>
           </div>
         </form>
       </div>
+
+      <ReasoningFlow input={input} hasAttachments={attachments.length > 0} />
     </section>
   );
 }

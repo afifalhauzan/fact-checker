@@ -1,20 +1,25 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Geist, Instrument_Serif } from "next/font/google";
 import { cn } from "@/utils/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Inter font configuration - Following guide-ui.md specifications
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-inter",
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-instrument-serif",
   display: "swap",
 });
 
 export const metadata = {
-  title: "FactChecker AI - Analyze Facts with AI-Powered Insights",
+  title: "FactChecker AI - Pahami informasi sebelum mempercayainya",
   description:
-    "An AI-powered fact-checking tool with insights and data searching capabilities.",
+    "Asisten berpikir kritis untuk membedah klaim, konteks, kualitas sumber, dan ketidakpastian secara bertahap.",
 };
 
 export default function RootLayout({
@@ -23,8 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} style={{ scrollbarGutter: "stable both-edges" }}>
-      <body className={cn(inter.className, "font-sans antialiased")}>
+    <html
+      lang="id"
+      className={cn(geist.variable, instrumentSerif.variable)}
+      style={{ scrollbarGutter: "stable both-edges" }}
+    >
+      <body className={cn(geist.className, "font-sans antialiased")}>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

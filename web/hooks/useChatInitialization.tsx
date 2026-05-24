@@ -1,6 +1,5 @@
 import React from "react";
 import { useConversationStore } from "@/lib/conversation-store";
-import { useAuthStore } from "@/lib/auth-store";
 import { useConversationInit } from "@/hooks/useConversationInit";
 
 interface UseChatInitializationReturn {
@@ -21,7 +20,7 @@ export function useChatInitialization(): UseChatInitializationReturn {
     reset
   } = useConversationStore();
 
-  const { isAuthenticated } = useAuthStore();
+  // dont require auth for now, can add auth checks here if needed in the future
   const { initializeConversation } = useConversationInit();
 
   // Use a ref to track if we've already synced URL conversation_id to store
@@ -62,13 +61,8 @@ export function useChatInitialization(): UseChatInitializationReturn {
     await handleInitializeConversation();
   }, [reset, handleInitializeConversation]);
 
-  // Initialize conversation on mount - only when authenticated
+  // Initialize conversation on mount
   React.useEffect(() => {
-    // Don't initialize if not authenticated
-    if (!isAuthenticated) {
-      return;
-    }
-
     // Check if conversationId already exists in URL (page refresh/shared link)
     const urlParams = new URLSearchParams(window.location.search);
     const urlConversationId = urlParams.get('conversation_id');
@@ -96,10 +90,10 @@ export function useChatInitialization(): UseChatInitializationReturn {
       return;
     }
 
-    // Only initialize if we have an authenticated user AND no conversation yet
+    // Only initialize if no conversation exists yet
     console.log('🆕 [useChatInitialization] No conversation ID found, initializing new conversation');
     handleInitializeConversation();
-  }, [isAuthenticated, conversationId, isInitializing, setConversationId, setInitializing, setError, handleInitializeConversation]);
+  }, [conversationId, isInitializing, setConversationId, setInitializing, setError, handleInitializeConversation]);
 
   return {
     conversationId,
