@@ -20,7 +20,7 @@ export function ProtectedTopNavbar() {
                 <Link href="/chat" className="flex min-w-0 items-center gap-2">
                     <div className="flex min-w-0 leading-tight">
                         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
-                            Fact<span className="text-primary">Checker</span> AI
+                            Risk<span className="text-primary">Check</span> Loker
                         </div>
                     </div>
                 </Link>

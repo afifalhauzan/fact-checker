@@ -48,7 +48,9 @@ function extractUIActionPayload(body: any): UIActionPayload | null {
 
 function buildStreamText(analysis: { conversationText?: string }): string {
   const conversationText = analysis.conversationText?.trim() ?? "";
-  return conversationText.length > 0 ? conversationText : "I am ready. Please share what you want to analyze.";
+  return conversationText.length > 0
+    ? conversationText
+    : "Saya siap membantu telaah risiko lowongan. Tempel poster, teks, atau link yang ingin dicek.";
 }
 
 function chunkByWords(text: string): string[] {
@@ -162,6 +164,11 @@ export async function POST(req: NextRequest) {
           });
           await sleep(SECTION_STEP_DELAY_MS);
 
+          if (result.salaryBenefit) {
+            writer.write({ type: "data-salary-benefit", data: result.salaryBenefit });
+            await sleep(SECTION_STEP_DELAY_MS);
+          }
+
           if (result.references?.length) {
             writer.write({ type: "data-references", data: result.references });
             await sleep(SECTION_STEP_DELAY_MS);
@@ -222,8 +229,8 @@ export async function POST(req: NextRequest) {
         }
 
         const followupText = analysis.claims?.length
-          ? `Klaim utama yang saya tangkap: "${analysis.claims[0].text}".`
-          : "Mari lanjut ke konteks dan detail pendukung.";
+          ? `${analysis.claims[0].text}`
+          : "Mari lanjutkan ke indikator risiko dan langkah aman yang perlu dicek.";
         await streamTextBlock({
           writer,
           text: followupText,
@@ -233,6 +240,11 @@ export async function POST(req: NextRequest) {
 
         if (analysis.claims?.length) {
           writer.write({ type: "data-claims", data: analysis.claims });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
+        if (analysis.salaryBenefit) {
+          writer.write({ type: "data-salary-benefit", data: analysis.salaryBenefit });
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
@@ -258,8 +270,8 @@ export async function POST(req: NextRequest) {
         await sleep(SECTION_STEP_DELAY_MS);
 
         const closingText = analysis.suggestedQuestions?.length
-          ? "Kalau kamu mau, saya bisa lanjutkan ke pertanyaan lanjutan berikut."
-          : "Jika ada bagian yang ingin didalami, beri tahu saya.";
+          ? "Kalau kamu mau, kita bisa lanjutkan dengan investigasi spesifik lewat tombol aksi di bawah."
+          : "Kalau ada bagian yang ingin didalami, beri tahu saya.";
         await streamTextBlock({
           writer,
           text: closingText,

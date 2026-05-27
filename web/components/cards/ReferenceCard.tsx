@@ -1,6 +1,5 @@
 import { ExternalLink } from "lucide-react";
 import { type Reference } from "@/langchain/agents/analyzer/schema";
-import { CitationBadge } from "@/components/cards/CitationBadge";
 
 interface ReferenceCardProps {
   reference: Reference;
@@ -20,7 +19,7 @@ export function ReferenceCard({ reference }: ReferenceCardProps) {
           rel="noreferrer"
           className="mt-2 inline-flex items-center gap-1 text-primary hover:underline"
         >
-          Cek Sumber
+          Buka Sumber Verifikasi
           <ExternalLink className="h-3 w-3" />
         </a>
       )}

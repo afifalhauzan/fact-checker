@@ -17,9 +17,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata = {
-  title: "FactChecker AI - Pahami informasi sebelum mempercayainya",
+  title: "RiskCheck Loker - Cek Risiko Lowongan Kerja Sebelum Kamu Daftar",
   description:
-    "Asisten berpikir kritis untuk membedah klaim, konteks, kualitas sumber, dan ketidakpastian secara bertahap.",
+    "Ruang telaah interaktif untuk menganalisis risiko lowongan kerja digital, mengenali red flag, dan menyusun langkah aman sebelum kirim data.",
 };
 
 export default function RootLayout({

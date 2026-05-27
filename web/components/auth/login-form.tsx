@@ -38,7 +38,7 @@ export function LoginForm({ onSubmit, isLoading, showAlert }: LoginFormProps) {
         </div>
       )}
 
-      <h1 className="mb-1 text-2xl font-extrabold text-foreground">Masuk ke FactChecker AI</h1>
+      <h1 className="mb-1 text-2xl font-extrabold text-foreground">Masuk ke RiskCheck Loker</h1>
       <p className="mb-6 text-sm font-medium text-muted-foreground">
         Gunakan email dan password untuk melanjutkan ke chat.
       </p>

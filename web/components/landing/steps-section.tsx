@@ -1,21 +1,21 @@
 const steps = [
   {
     number: "1",
-    title: "Tempel klaim",
+    title: "Tempel lowongan",
     description:
-      "Masukkan kalimat, tautan, atau screenshot yang terasa meragukan. FactChecker AI akan mengekstrak klaim yang bisa diuji.",
+      "Masukkan poster, screenshot, link, atau teks lowongan yang terasa mencurigakan. Sistem akan mengekstrak elemen penting untuk telaah risiko awal.",
   },
   {
     number: "2",
-    title: "Lihat pembongkaran",
+    title: "Lihat red flag",
     description:
-      "AI memetakan konteks hilang, framing menyesatkan, kualitas sumber, dan bagian yang mungkin terlalu disimpulkan.",
+      "AI menandai indikator mencurigakan: validitas perusahaan, risiko link/kontak, permintaan biaya, dan detail yang perlu diverifikasi.",
   },
   {
     number: "3",
-    title: "Nilai dengan tenang",
+    title: "Ambil langkah aman",
     description:
-      "Hasilnya berupa alasan bertahap, indikator keyakinan, dan pertanyaan lanjutan, bukan vonis hitam-putih.",
+      "Hasilnya berupa analisis bertahap dan rekomendasi praktis sebelum kamu daftar, mengirim data pribadi, atau melakukan pembayaran.",
   },
 ];
 
@@ -25,7 +25,7 @@ export function StepsSection() {
       <div className="mb-24 max-w-2xl">
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">Alur kerja</p>
         <h2 className="font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:text-5xl">
-          Dirancang untuk berpikir, bukan sekadar menjawab.
+          Dirancang untuk telaah risiko lowongan, bukan sekadar vonis.
         </h2>
       </div>
 

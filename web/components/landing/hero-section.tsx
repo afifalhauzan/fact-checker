@@ -35,48 +35,48 @@ function createAttachmentId(): string {
 
 const reasoningSteps = [
   {
-    title: "Mendeteksi klaim utama",
-    description: "Memisahkan pernyataan yang bisa diuji dari opini, nada, dan asumsi.",
-    signal: "Klaim terurai",
+    title: "Mengekstrak info lowongan",
+    description: "Mengurai posisi, nama perusahaan, kanal pendaftaran, serta kontak recruiter dari materi awal.",
+    signal: "Info inti terbaca",
     tone: "border-[#2b6f95]/20 bg-[#f2f9fd]",
   },
   {
-    title: "Mencari konteks tambahan",
-    description: "Melihat apa yang hilang: waktu, ruang lingkup, pembanding, dan definisi.",
-    signal: "Konteks kurang",
+    title: "Menandai indikator mencurigakan",
+    description: "Mencari red flag seperti biaya awal, komunikasi personal, dan janji benefit yang terlalu muluk.",
+    signal: "Red flag terdeteksi",
     tone: "border-[#3a7ca5]/20 bg-[#eef7fc]",
   },
   {
-    title: "Membandingkan kualitas sumber",
-    description: "Memprioritaskan sumber primer, rekam jejak, dan konsistensi antar referensi.",
-    signal: "Sumber ditimbang",
+    title: "Memeriksa validitas kanal",
+    description: "Membandingkan domain, email, link pendaftaran, dan akun perusahaan dengan kanal resmi.",
+    signal: "Kanal diuji",
     tone: "border-[#325f7f]/20 bg-[#f4f9fd]",
   },
   {
-    title: "Menandai potensi overclaim",
-    description: "Membedakan bukti yang benar dari kesimpulan yang terlalu jauh.",
-    signal: "Overclaim mungkin",
+    title: "Menilai tingkat risiko awal",
+    description: "Menyusun level risiko rendah/sedang/tinggi berdasarkan kombinasi indikator yang muncul.",
+    signal: "Risiko terukur",
     tone: "border-[#a34d3c]/20 bg-[#fff7f7]",
   },
   {
-    title: "Menyusun kesimpulan bernuansa",
-    description: "Memberi ringkasan, tingkat keyakinan, dan pertanyaan lanjutan yang perlu dicek.",
-    signal: "Bukan verdict final",
+    title: "Menyusun langkah aman",
+    description: "Memberi checklist tindakan aman sebelum daftar, kirim data pribadi, atau melakukan pembayaran.",
+    signal: "Bukan vonis final",
     tone: "border-[#17232c]/15 bg-white",
   },
 ];
 
 const inputModes = [
-  { label: "Klaim", icon: FileText },
+  { label: "Poster/Teks", icon: FileText },
   { label: "Screenshot", icon: Image },
-  { label: "Link", icon: Link2 },
+  { label: "Link lowongan", icon: Link2 },
 ];
 
 function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachments: boolean }) {
   const hasDraft = input.trim().length > 0 || hasAttachments;
   const displayClaim =
     input.trim() ||
-    "Minum kopi tiga kali sehari terbukti menggantikan kebutuhan air putih.";
+    "Lowongan magang remote admin data, gaji 7-9 juta, daftar via WA + biaya onboarding.";
 
   return (
     <div
@@ -95,7 +95,7 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
               </p>
             </div>
             <div className="w-fit rounded-full border border-[#2b6f95]/15 bg-[#e9f4f9] px-3 py-1 text-xs font-medium text-[#2b6f95]">
-              Reasoning view
+              Risk analysis view
             </div>
           </div>
 
@@ -134,21 +134,21 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
         >
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#b8c9d6]">Output yang diutamakan</p>
           <h3 className="mt-4 font-[var(--font-instrument-serif)] text-4xl leading-[0.95] text-white">
-            Bukan cuma benar atau salah.
+            Bukan sekadar aman atau tidak aman.
           </h3>
           <p className="mt-4 text-sm leading-relaxed text-[#d7e4ec]">
-            FactChecker AI menjelaskan ruang abu-abu: apa yang kuat, apa yang lemah, dan bagian mana yang masih perlu
-            diverifikasi manusia.
+            Sistem membantu membaca ruang abu-abu: indikator risiko, bagian yang masih lemah, dan apa yang wajib
+            diverifikasi manual sebelum kamu bertindak.
           </p>
 
           <div className="mt-6 space-y-3">
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
               <div className="mb-2 flex items-center justify-between text-xs text-[#b8c9d6]">
-                <span>Keyakinan analisis</span>
-                <span>72%</span>
+                <span>Keyakinan analisis awal</span>
+                <span>78%</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full w-[72%] rounded-full bg-[#8fc7e3]" />
+                <div className="h-full w-[78%] rounded-full bg-[#8fc7e3]" />
               </div>
             </div>
 
@@ -156,16 +156,16 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <AlertTriangle className="size-4 text-[#f2c879]" />
-                  Overclaim
+                  Red flag
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Kesimpulan lebih luas dari bukti awal.</p>
+                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Permintaan biaya dan kontak personal naikkan risiko.</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <CheckCircle2 className="size-4 text-[#8fc7e3]" />
-                  Sumber primer
+                  Verifikasi kanal
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Perlu dibandingkan dengan data asli.</p>
+                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Cocokkan ke website resmi dan halaman karier.</p>
               </div>
             </div>
           </div>
@@ -233,18 +233,18 @@ export function HeroSection() {
   return (
     <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 text-center sm:mb-28 sm:px-8">
       <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        Asisten berpikir kritis untuk informasi digital
+        Asisten analisis risiko lowongan kerja digital
       </div>
 
       <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        Pahami informasi
-        <span className="block italic font-medium text-[#2b6f95]">sebelum mempercayainya.</span>
+        Cek Risiko Lowongan Kerja
+        <span className="block italic font-medium text-[#2b6f95]">sebelum kamu daftar.</span>
       </h1>
 
       <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
         <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-md">
-          FactChecker AI membedah klaim, tautan, atau screenshot menjadi konteks, kualitas sumber, potensi overclaim,
-          dan tingkat ketidakpastian yang bisa kamu nilai sendiri.
+          Unggah poster, screenshot, teks, atau link lowongan kerja. Sistem akan membantu membedah red flag,
+          validitas perusahaan, risiko link/kontak, dan langkah aman sebelum kamu kirim data atau melakukan pembayaran.
         </p>
 
         <div className="mb-3 flex flex-wrap justify-center gap-2">
@@ -290,7 +290,7 @@ export function HeroSection() {
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Tempel klaim, link berita, atau jelaskan screenshot..."
+              placeholder="Tempel teks lowongan, link pendaftaran, atau deskripsi poster yang ingin dicek..."
               className="w-full bg-transparent px-2 py-3 text-sm text-[#17232c] placeholder:text-[#9aa9b5] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
             />
 
@@ -319,7 +319,7 @@ export function HeroSection() {
               disabled={!canSubmit}
               className="inline-flex items-center gap-2 rounded-md bg-[#2b6f95] px-4 py-2.5 text-sm font-medium text-[#f8fbff] shadow-[0_10px_24px_rgba(43,111,149,0.22)] transition hover:bg-[#215875] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:py-3.5"
             >
-              Analisis
+              Analisis Risiko
               <SendHorizontal className="hidden size-4 sm:block" />
             </button>
           </div>

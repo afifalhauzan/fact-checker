@@ -11,9 +11,9 @@ export function SuggestionQuestions({ messageId, questions, onQuestionClick }: S
 
   return (
     <section className="space-y-2">
-      {/* <p className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Suggested questions
-      </p> */}
+      <p className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Pertanyaan Lanjutan
+      </p>
       {questions.map((question, index) => (
         <button
           key={`${messageId}-suggested-question-${index}`}

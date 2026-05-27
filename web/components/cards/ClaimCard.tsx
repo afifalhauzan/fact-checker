@@ -8,11 +8,12 @@ export function ClaimCard({ text, confidence }: ClaimCardProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/20">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Tingkat Risiko</p>
       <p className="text-base font-semibold leading-relaxed text-foreground">{text}</p>
 
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Confidence</span>
+          <span>Keyakinan Analisis Awal</span>
           <span className="font-medium text-muted-foreground">{confidencePercent}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

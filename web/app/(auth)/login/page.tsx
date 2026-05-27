@@ -29,7 +29,7 @@ function LoginPageContent() {
               <Bot size={18} strokeWidth={2.5} />
             </div>
             <span className="text-lg font-bold tracking-tight text-foreground">
-              FactChecker <span className="text-primary">AI</span>
+              RiskCheck <span className="text-primary">Loker</span>
             </span>
           </div>
 
@@ -46,9 +46,9 @@ function LoginPageContent() {
           </div>
 
           <div className="relative z-10 space-y-2 text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-primary-foreground">FactChecker AI</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-primary-foreground">RiskCheck Loker</h2>
             <p className="mx-auto max-w-[90%] text-sm font-medium leading-relaxed text-primary-foreground/80">
-              Telusuri klaim, cek konteks, dan pahami sumber dengan alur chat yang ringan.
+              Bantu cek red flag lowongan kerja digital sebelum kirim data atau ambil keputusan penting.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ function LoginPageContent() {
             <div className="flex items-center gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 shadow-lg backdrop-blur-md">
               <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
               <span className="text-xs font-semibold text-primary-foreground/95">
-                FactChecker AI <span className="font-normal text-primary-foreground/70">| Ready for mock flow</span>
+                RiskCheck Loker <span className="font-normal text-primary-foreground/70">| Ready for mock flow</span>
               </span>
             </div>
           </div>

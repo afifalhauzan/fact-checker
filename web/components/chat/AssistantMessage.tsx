@@ -12,6 +12,7 @@ import {
   type ExplanationItem,
   type Reference,
   type Reasoning,
+  type SalaryBenefitAssessment,
   type Risk,
 } from "@/langchain/agents/analyzer/schema";
 import { SummaryCard } from "@/components/cards/SummaryCard";
@@ -23,6 +24,7 @@ import { ReferenceCard } from "@/components/cards/ReferenceCard";
 import { ReasoningComponent } from "@/components/cards/ReasoningComponent";
 import { AnalysisActions } from "@/components/cards/AnalysisActions";
 import { ActionInsightCard } from "@/components/cards/ActionInsightCard";
+import { SalaryBenefitCard } from "@/components/cards/SalaryBenefitCard";
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 
 interface AssistantMessageProps {
@@ -41,6 +43,7 @@ interface AssistantMessageProps {
 interface SectionalAnalysisData {
   summary?: SummaryPartData;
   claims?: Claim[];
+  salaryBenefit?: SalaryBenefitAssessment;
   risks?: Risk[];
   explanations?: ExplanationItem[];
   references?: Reference[];
@@ -60,6 +63,7 @@ type RenderItem =
   | { kind: "reasoning"; key: string; reasoning: Reasoning[] }
   | { kind: "summary"; key: string; summary: string; citations: Citation[] }
   | { kind: "claims"; key: string; claims: Claim[] }
+  | { kind: "salary-benefit"; key: string; assessment: SalaryBenefitAssessment }
   | { kind: "risks"; key: string; risks: Risk[] }
   | { kind: "explanations"; key: string; explanations: ExplanationItem[] }
   | { kind: "references"; key: string; references: Reference[] }
@@ -101,6 +105,8 @@ function extractSectionalDataFromParts(parts: MetabotUIMessagePart[]): Sectional
         : { text: part.data.text, citations: part.data.citations ?? [] };
     } else if (part.type === "data-claims") {
       sectionalData.claims = part.data;
+    } else if (part.type === "data-salary-benefit") {
+      sectionalData.salaryBenefit = part.data;
     } else if (part.type === "data-risks") {
       sectionalData.risks = part.data;
     } else if (part.type === "data-explanation") {
@@ -125,6 +131,7 @@ function hasInterleavableDataPart(part: MetabotUIMessagePart): boolean {
   return (
     part.type === "data-summary" ||
     part.type === "data-claims" ||
+    part.type === "data-salary-benefit" ||
     part.type === "data-risks" ||
     part.type === "data-explanation" ||
     part.type === "data-references" ||
@@ -241,6 +248,11 @@ export function AssistantMessage({
           return;
         }
 
+        if (part.type === "data-salary-benefit") {
+          items.push({ kind: "salary-benefit", key, assessment: part.data });
+          return;
+        }
+
         if (part.type === "data-risks" && part.data.length > 0) {
           items.push({ kind: "risks", key, risks: part.data });
           return;
@@ -301,6 +313,14 @@ export function AssistantMessage({
 
     if (analysisData.claims.length > 0) {
       items.push({ kind: "claims", key: `${message.id}-analysis-claims`, claims: analysisData.claims });
+    }
+
+    if (analysisData.salaryBenefit) {
+      items.push({
+        kind: "salary-benefit",
+        key: `${message.id}-analysis-salary-benefit`,
+        assessment: analysisData.salaryBenefit,
+      });
     }
 
     if (analysisData.risks.length > 0) {
@@ -423,6 +443,14 @@ export function AssistantMessage({
             <RiskCard key={`${item.key}-risk-${index}`} type={risk.type} description={risk.description} />
           ))}
         </motion.section>
+      );
+    }
+
+    if (item.kind === "salary-benefit") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <SalaryBenefitCard assessment={item.assessment} />
+        </motion.div>
       );
     }
 

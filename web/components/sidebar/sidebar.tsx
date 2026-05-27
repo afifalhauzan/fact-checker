@@ -10,6 +10,7 @@ interface SidebarProps {
   onCollapse: () => void;
   onOpenSource?: (item: SidebarSourceItem) => void;
   className?: string;
+  isMobileOverlay?: boolean;
 }
 
 export function Sidebar({
@@ -19,12 +20,63 @@ export function Sidebar({
   onCollapse,
   onOpenSource,
   className = "",
+  isMobileOverlay = false,
 }: SidebarProps) {
-  if (mode === "collapsed") {
+  const isExpanded = mode === "expanded";
+
+  if (isMobileOverlay) {
     return (
       <aside
-        className={`hidden h-full w-16 shrink-0 flex-col items-center gap-2 border-r border-border bg-muted/40 py-3 md:flex ${className}`}
-        aria-label="Sidebar konteks minimal"
+        className={`flex min-h-0 w-full shrink-0 flex-col border-b border-border bg-muted/50 p-4 animate-in slide-in-from-left-3 duration-300 ${className}`}
+        aria-label="Sidebar konteks"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Konteks</h2>
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            title="Tutup panel konteks"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+          Lihat daftar sumber verifikasi yang bisa kamu cek untuk memastikan lowongan.
+        </p>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {sources.length > 0 ? (
+            sources.map((source) => (
+              <SourceItem key={source.id} item={source} onOpen={onOpenSource} />
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-card/30 p-3 text-xs text-muted-foreground">
+              Belum ada sumber verifikasi yang direkomendasikan untuk percakapan ini.
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          title="Favorit"
+        >
+          <Star className="h-4 w-4" />
+          <span>Favorit</span>
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <aside
+      className={`relative hidden h-full shrink-0 overflow-hidden border-r border-border bg-muted/50 transition-[width] duration-300 ease-out md:flex ${isExpanded ? "w-[320px]" : "w-16"} ${className}`}
+      aria-label="Sidebar konteks"
+    >
+      <div
+        className={`absolute inset-y-0 left-0 flex w-16 flex-col items-center gap-2 py-3 transition-opacity duration-150 ${isExpanded ? "pointer-events-none opacity-0" : "opacity-100 delay-150"}`}
       >
         <button
           type="button"
@@ -47,7 +99,6 @@ export function Sidebar({
           <Newspaper className="h-4 w-4" />
           <span className="sr-only">Lihat konteks</span>
         </button>
-
         <button
           type="button"
           onClick={onExpand}
@@ -57,48 +108,48 @@ export function Sidebar({
           <Star className="h-4 w-4" />
           <span className="sr-only">Favorit</span>
         </button>
-      </aside>
-    );
-  }
+      </div>
 
-  return (
-    <aside className={`flex min-h-0 w-full shrink-0 flex-col border-b border-border bg-muted/50 p-4 md:h-full md:w-[320px] md:border-b-0 ${className}`}>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Konteks</h2>
+      <div
+        className={`absolute inset-y-0 left-0 flex min-h-0 w-[320px] flex-col p-4 transition-opacity duration-150 ${isExpanded ? "opacity-100 delay-150" : "pointer-events-none opacity-0"}`}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Konteks</h2>
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            title="Tutup panel konteks"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+          Lihat daftar sumber verifikasi yang bisa kamu cek untuk memastikan lowongan.
+        </p>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {sources.length > 0 ? (
+            sources.map((source) => (
+              <SourceItem key={source.id} item={source} onOpen={onOpenSource} />
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-card/30 p-3 text-xs text-muted-foreground">
+              Belum ada sumber verifikasi yang direkomendasikan untuk percakapan ini.
+            </div>
+          )}
+        </div>
+
         <button
           type="button"
-          onClick={onCollapse}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          title="Collapse sidebar"
+          className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          title="Favorit"
         >
-          <PanelLeftClose className="h-4 w-4" />
+          <Star className="h-4 w-4" />
+          <span>Favorit</span>
         </button>
       </div>
-
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-        Klik bagian analisis untuk melihat sumber terkait
-      </p>
-
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-        {sources.length > 0 ? (
-          sources.map((source) => (
-            <SourceItem key={source.id} item={source} onOpen={onOpenSource} />
-          ))
-        ) : (
-          <div className="rounded-lg border border-dashed border-border bg-card/30 p-3 text-xs text-muted-foreground">
-            Belum ada sumber konteks untuk percakapan ini.
-          </div>
-        )}
-      </div>
-
-      <button
-        type="button"
-        className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        title="Favorit"
-      >
-        <Star className="h-4 w-4" />
-        <span>Favorit</span>
-      </button>
     </aside>
   );
 }

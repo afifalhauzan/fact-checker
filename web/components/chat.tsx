@@ -523,6 +523,7 @@ export function Chat() {
           mode={sidebarMode}
           onExpand={() => setIsSidebarOpen(true)}
           onCollapse={() => setIsSidebarOpen(false)}
+          isMobileOverlay={isMobile && isSidebarOpen}
           className={isMobile ? "absolute inset-0 z-30 h-full w-full border-b-0" : ""}
         />
       )}

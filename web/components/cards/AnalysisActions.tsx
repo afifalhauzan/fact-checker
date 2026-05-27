@@ -22,7 +22,7 @@ export function AnalysisActions({
 
   return (
     <section className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
-      <p className="text-xs font-medium text-primary">Aksi lanjutan</p>
+      <p className="text-xs font-medium text-primary">Aksi Investigasi Lanjutan</p>
       <div className="flex flex-wrap gap-2">
         {actions.map((action) => {
           const isActionPending = pendingActionId === action.id && isLoading;
@@ -50,4 +50,3 @@ export function AnalysisActions({
     </section>
   );
 }
-

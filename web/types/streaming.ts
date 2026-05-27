@@ -11,6 +11,7 @@ import type {
   ExplanationItem,
   Reference,
   Reasoning,
+  SalaryBenefitAssessment,
   Risk,
 } from '@/langchain/agents/analyzer/schema';
 import type { ChartEmbedData } from '@/types/chart';
@@ -55,6 +56,7 @@ export type MetabotUIMessagePart =
   | { type: 'data-chart'; data: string | ChartEmbedData }
   | { type: 'data-summary'; data: string | SummaryPartData }
   | { type: 'data-claims'; data: Claim[] }
+  | { type: 'data-salary-benefit'; data: SalaryBenefitAssessment }
   | { type: 'data-risks'; data: Risk[] }
   | { type: 'data-explanation'; data: ExplanationItem[] }
   | { type: 'data-references'; data: Reference[] }

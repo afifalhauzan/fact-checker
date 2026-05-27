@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 export const UIActionIdSchema = z.enum([
-  "inspect_source",
-  "expand_context",
-  "challenge_claim",
-  "simplify_explanation",
+  "validate_company",
+  "check_red_flags",
+  "check_link_contact",
+  "check_salary_benefit_reasonableness",
+  "safe_next_steps",
 ]);
 
 export type UIActionId = z.infer<typeof UIActionIdSchema>;
@@ -36,24 +37,28 @@ export type AnalysisAction = {
 
 export const DEFAULT_ANALYSIS_ACTIONS: AnalysisAction[] = [
   {
-    id: "inspect_source",
-    label: "Periksa Sumber",
-    description: "Lihat dari mana informasi ini berasal dan bagian mana yang perlu diverifikasi.",
+    id: "validate_company",
+    label: "Validasi Perusahaan",
+    description: "Periksa apakah identitas perusahaan konsisten di kanal resmi sebelum kamu daftar.",
   },
   {
-    id: "expand_context",
-    label: "Cari Konteks Hilang",
-    description: "Temukan konteks penting yang belum terlihat dari informasi awal.",
+    id: "check_red_flags",
+    label: "Cek Red Flag",
+    description: "Tinjau indikator mencurigakan yang sering muncul pada lowongan kerja palsu.",
   },
   {
-    id: "challenge_claim",
-    label: "Uji Klaim",
-    description: "Lihat kemungkinan bantahan atau hal yang perlu dicek sebelum percaya.",
+    id: "check_link_contact",
+    label: "Periksa Link & Kontak",
+    description: "Bedah risiko dari link pendaftaran, email recruiter, dan nomor kontak.",
   },
   {
-    id: "simplify_explanation",
-    label: "Sederhanakan Penjelasan",
-    description: "Ubah analisis menjadi bahasa yang lebih mudah dipahami.",
+    id: "check_salary_benefit_reasonableness",
+    label: "Cek Kewajaran Gaji",
+    description: "Nilai apakah klaim gaji/benefit masih wajar atau terlalu vague untuk posisi sejenis.",
+  },
+  {
+    id: "safe_next_steps",
+    label: "Beri Langkah Aman",
+    description: "Dapatkan checklist tindakan aman sebelum kirim data, daftar, atau membayar biaya.",
   },
 ];
-

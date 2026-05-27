@@ -36,9 +36,18 @@ export const ExplanationItemSchema = z.object({
   explanation: z.string(),
 });
 
+export const SalaryBenefitAssessmentSchema = z.object({
+  title: z.string().default("Kewajaran Gaji & Benefit"),
+  status: z.string().default("Perlu Diverifikasi"),
+  summary: z.string(),
+  highlights: z.array(z.string()).default([]),
+  hint: z.string().optional(),
+});
+
 export const AnalysisSchema = z.object({
   conversationText: z.string(),
   claims: z.array(ClaimSchema),
+  salaryBenefit: SalaryBenefitAssessmentSchema.optional(),
   risks: z.array(RiskSchema),
   summary: z.string(),
   summaryCitations: z.array(CitationSchema).default([]),
@@ -54,4 +63,5 @@ export type Reasoning = z.infer<typeof ReasoningSchema>;
 export type Citation = z.infer<typeof CitationSchema>;
 export type Reference = z.infer<typeof ReferenceSchema>;
 export type ExplanationItem = z.infer<typeof ExplanationItemSchema>;
+export type SalaryBenefitAssessment = z.infer<typeof SalaryBenefitAssessmentSchema>;
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;

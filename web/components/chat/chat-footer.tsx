@@ -133,7 +133,7 @@ export function ChatFooter({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder= {isLoading ? "Sedang berpikir..." : "Tanya tentang info apapun..."}
+            placeholder={isLoading ? "Sedang menganalisis risiko..." : "Tempel lowongan, link pendaftaran, atau pertanyaan verifikasi..."}
             autoComplete="off"
             disabled={isLoading}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -149,7 +149,7 @@ export function ChatFooter({
           </button>
         </form>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          AI bisa membantu memahami, tapi bukan selalu benar. Gunakan ini sebagai titik awal, lalu verifikasi sendiri ya.
+          Ini analisis risiko awal, bukan vonis final. Selalu verifikasi ke kanal resmi sebelum kirim data atau membayar biaya.
         </p>
       </div>
 
