@@ -17,7 +17,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata = {
-  title: "RiskCheck Loker - Cek Risiko Lowongan Kerja Sebelum Kamu Daftar",
+  title: "TelaahKarier - Cek Risiko Lowongan Kerja Sebelum Kamu Daftar",
   description:
     "Ruang telaah interaktif untuk menganalisis risiko lowongan kerja digital, mengenali red flag, dan menyusun langkah aman sebelum kirim data.",
 };

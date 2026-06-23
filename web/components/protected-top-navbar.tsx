@@ -22,7 +22,7 @@ export function ProtectedTopNavbar() {
                 <Link href="/chat" className="flex min-w-0 items-center gap-2">
                     <Image
                         src={Logo}
-                        alt="RiskCheck Loker"
+                        alt="TelaahKarier"
                         width={132}
                         height={24}
                         className="h-8 w-auto"

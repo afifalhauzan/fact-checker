@@ -15,7 +15,7 @@ export function LandingNavbar() {
         <Link href="/" className="flex min-w-0 items-center gap-2">
           <Image
             src={Logo}
-            alt="RiskCheck Loker"
+            alt="TelaahKarier"
             width={200}
             height={40}
             className="h-9 w-auto"

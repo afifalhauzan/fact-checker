@@ -94,9 +94,6 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
                 "{displayClaim}"
               </p>
             </div>
-            <div className="w-fit rounded-full border border-[#2b6f95]/15 bg-[#e9f4f9] px-3 py-1 text-xs font-medium text-[#2b6f95]">
-              Risk analysis view
-            </div>
           </div>
 
           <div className="mb-3">
@@ -129,21 +126,20 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
         </div>
 
         <aside
-          className="rounded-lg border border-[#17232c]/10 bg-[#142634] p-5 text-[#f8fbff] shadow-[0_18px_50px_rgba(23,35,44,0.12)] motion-safe:opacity-0 motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_forwards]"
+          className="rounded-lg border border-[#17232c]/10 bg-slate-50 p-5 text-[#f8fbff] shadow-[0_18px_50px_rgba(23,35,44,0.12)] motion-safe:opacity-0 motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_forwards]"
           style={{ animationDelay: "1040ms" }}
         >
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#b8c9d6]">Output yang diutamakan</p>
-          <h3 className="mt-4 font-[var(--font-instrument-serif)] text-4xl leading-[0.95] text-white">
+          <h3 className="mt-4 font-[var(--font-instrument-serif)] text-4xl leading-[0.95] text-slate-800">
             Bukan sekadar aman atau tidak aman.
           </h3>
-          <p className="mt-4 text-sm leading-relaxed text-[#d7e4ec]">
+          <p className="mt-4 text-sm leading-relaxed text-slate-700">
             Sistem membantu membaca ruang abu-abu: indikator risiko, bagian yang masih lemah, dan apa yang wajib
             diverifikasi manual sebelum kamu bertindak.
           </p>
 
           <div className="mt-6 space-y-3">
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-[#b8c9d6]">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
                 <span>Keyakinan analisis awal</span>
                 <span>78%</span>
               </div>
@@ -154,18 +150,18 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
 
             <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <AlertTriangle className="size-4 text-[#f2c879]" />
                   Red flag
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Permintaan biaya dan kontak personal naikkan risiko.</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500Asisten analisis risiko lowongan kerja digital">Permintaan biaya dan kontak personal naikkan risiko.</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <CheckCircle2 className="size-4 text-[#8fc7e3]" />
                   Verifikasi kanal
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[#c8d7e0]">Cocokkan ke website resmi dan halaman karier.</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">Cocokkan ke website resmi dan halaman karier.</p>
               </div>
             </div>
           </div>
@@ -233,7 +229,7 @@ export function HeroSection() {
   return (
     <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 text-center sm:mb-28 sm:px-8">
       <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        Asisten analisis risiko lowongan kerja digital
+        Analisis risiko lowongan kerja digital
       </div>
 
       <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
@@ -246,18 +242,6 @@ export function HeroSection() {
           Unggah poster, screenshot, teks, atau link lowongan kerja. Sistem akan membantu membedah red flag,
           validitas perusahaan, risiko link/kontak, dan langkah aman sebelum kamu kirim data atau melakukan pembayaran.
         </p>
-
-        <div className="mb-3 flex flex-wrap justify-center gap-2">
-          {inputModes.map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1 text-xs font-medium text-[#5a6a76]"
-            >
-              <Icon className="size-3.5" />
-              {label}
-            </span>
-          ))}
-        </div>
 
         {attachments.length > 0 && (
           <div className="mb-3 flex flex-wrap justify-center gap-2">
@@ -285,12 +269,12 @@ export function HeroSection() {
           className="rounded-lg bg-white p-1.5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] ring-1 ring-[#17232c]/10 transition-all focus-within:ring-2 focus-within:ring-[#2b6f95]/25 sm:p-2"
         >
           <div className="flex items-center gap-1 sm:gap-2">
-            <Search className="ml-3 size-4 text-[#748493] sm:ml-4" strokeWidth={2} />
+            <Search className="ml-3 size-6 text-[#748493] sm:ml-4" strokeWidth={2} />
             <input
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Tempel teks lowongan, link pendaftaran, atau deskripsi poster yang ingin dicek..."
+              placeholder="Tempel teks lowongan, link, atau poster yang ingin dicek..."
               className="w-full bg-transparent px-2 py-3 text-sm text-[#17232c] placeholder:text-[#9aa9b5] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
             />
 
@@ -317,13 +301,25 @@ export function HeroSection() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex items-center gap-2 rounded-md bg-[#2b6f95] px-4 py-2.5 text-sm font-medium text-[#f8fbff] shadow-[0_10px_24px_rgba(43,111,149,0.22)] transition hover:bg-[#215875] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:py-3.5"
+              className="inline-flex items-center gap-3 rounded-md bg-[#2b6f95] px-1 py-2 text-sm font-medium text-[#f8fbff] shadow-[0_10px_24px_rgba(43,111,149,0.22)] transition hover:bg-[#215875] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:py-3.5"
             >
-              Analisis Risiko
+              Analisis
               <SendHorizontal className="hidden size-4 sm:block" />
             </button>
           </div>
         </form>
+
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          {inputModes.map(({ label, icon: Icon }) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1 text-xs font-medium text-[#5a6a76]"
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <ReasoningFlow input={input} hasAttachments={attachments.length > 0} />

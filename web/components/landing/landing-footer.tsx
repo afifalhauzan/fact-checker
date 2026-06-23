@@ -1,3 +1,6 @@
+import Image from "next/image";
+import Logo from "@/assets/logo.svg";
+
 export function LandingFooter() {
   const links = ["Privasi", "Ketentuan", "Keamanan", "Kontak"];
 
@@ -5,9 +8,16 @@ export function LandingFooter() {
     <footer className="mt-24 w-full border-t border-[#17232c]/10 bg-[#eef5f9] py-10 sm:py-12">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start justify-between gap-8 px-4 sm:px-12 md:flex-row md:items-center">
         <div>
-          <div className="mb-2 font-[var(--font-instrument-serif)] text-2xl text-[#17232c]">RiskCheck Loker</div>
+          <Image
+            src={Logo}
+            alt="TelaahKarier"
+            width={132}
+            height={24}
+            className="h-10 w-auto"
+            priority
+          />
           <p className="text-sm tracking-wide text-[#17232c]/60">
-            2026 RiskCheck Loker. Membantu pencari kerja muda menganalisis risiko lowongan sebelum mengambil keputusan.
+            2026 TelaahKarier. Membantu pencari kerja muda menganalisis risiko lowongan sebelum mengambil keputusan.
           </p>
         </div>
 
