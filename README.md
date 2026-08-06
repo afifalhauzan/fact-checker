@@ -1,8 +1,4 @@
-# 🤖 BI Service Metabot: AI SDK Python Streaming & Generative UI
-
-Repositori ini adalah implementasi **Data Stream Protocol** untuk melakukan streaming chat completions dari backend **FastAPI** (Python) dan menampilkannya menggunakan hook `useChat` pada aplikasi **Next.js**.
-
-Proyek ini dioptimalkan untuk kebutuhan Business Intelligence (BI), memungkinkan pengiriman teks dan metadata grafik (Generative UI) secara *real-time*.
+# Title
 
 ---
 
@@ -108,12 +104,6 @@ Untuk mempelajari lebih lanjut mengenai teknologi yang digunakan dalam proyek in
 Anda juga dapat mengakses Wiki terpisah di dalam Repositori ini untuk melihat dokumentasi teknis yang lebih rinci.
 
 ---
-
-## 👥 Kontribusi & GitLab Flow
-
-1. Buat **Issue** terlebih dahulu untuk setiap fitur atau bug fix.
-2. Gunakan **Branch** dengan format `feat/nama-fitur` atau `fix/nama-bug`.
-3. Buka **Merge Request (MR)** ke branch `dev-integration` untuk peninjauan kode oleh mentor/tim.
 
 ---
 
