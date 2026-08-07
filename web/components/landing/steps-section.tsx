@@ -21,7 +21,7 @@ const steps = [
 
 export function StepsSection() {
   return (
-    <section id="cara-kerja" className="mx-auto mb-24 w-full max-w-[1440px] px-4 sm:mb-32 sm:px-8">
+    <section id="cara-kerja" className="mx-auto mb-24 w-full max-w-7xl px-4 sm:mb-32 sm:px-8">
       <div className="mb-24 max-w-2xl">
         <h2 className="font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:text-5xl">
           Dirancang untuk telaah risiko lowongan, bukan sekadar vonis.
