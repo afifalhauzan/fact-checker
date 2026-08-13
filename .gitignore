@@ -6,12 +6,14 @@
 !.env.example
 
 # =========================
-# 📝 MARKDOWN FILES
+# 📝 FILES
 # =========================
 # Ignore semua file .md
 *.md
+*.pdf
 # KECUALI README utama
 !README.md
+!docs/**/*.md
 
 # =========================
 # 🗑️ FOLDER SPESIFIK YG DI-IGNORE
