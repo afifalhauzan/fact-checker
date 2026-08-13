@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
         if (actionPayload) {
           const openingTextId = `action-opening-${Date.now()}`;
           const closingTextId = `action-closing-${Date.now()}`;
-          const result = handleMockUIAction(actionPayload);
+          const result = await handleMockUIAction(actionPayload);
 
           await streamTextBlock({
             writer,
