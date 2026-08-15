@@ -5,10 +5,21 @@ interface ReferenceCardProps {
   reference: Reference;
 }
 
+function getDomain(url: string): string | undefined {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return undefined;
+  }
+}
+
 export function ReferenceCard({ reference }: ReferenceCardProps) {
+  const domain = reference.url ? getDomain(reference.url) : undefined;
+
   return (
     <div className="rounded-xl border border-border bg-card p-3 text-xs">
       <p className="font-semibold text-foreground">{reference.title}</p>
+      {domain && <p className="mt-0.5 text-[10px] text-muted-foreground">{domain}</p>}
       {reference.snippet && (
         <p className="mt-1 leading-relaxed text-muted-foreground italic">{reference.snippet}</p>
       )}

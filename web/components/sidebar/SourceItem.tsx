@@ -11,14 +11,27 @@ interface SourceItemProps {
   onOpen?: (item: SidebarSourceItem) => void;
 }
 
+function getDomain(url: string): string | undefined {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return undefined;
+  }
+}
+
 export function SourceItem({ item, onOpen }: SourceItemProps) {
+  const domain = getDomain(item.link);
+
   return (
     <div className="flex items-start gap-2 rounded-lg border border-border bg-card/70 p-2">
       <div className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
         <Newspaper className="h-4 w-4" />
       </div>
 
-      <p className="flex-1 text-xs leading-relaxed text-foreground">{item.title}</p>
+      <div className="flex-1">
+        <p className="text-xs leading-relaxed text-foreground">{item.title}</p>
+        {domain && <p className="mt-0.5 text-[10px] text-muted-foreground">{domain}</p>}
+      </div>
 
       <a
         href={item.link}

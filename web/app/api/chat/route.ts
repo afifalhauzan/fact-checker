@@ -228,18 +228,16 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
-        const followupText = analysis.claims?.length
-          ? `${analysis.claims[0].text}`
-          : "Ceritakan detail lowongannya (teks, link, atau poster) supaya saya bisa bantu telaah.";
-        await streamTextBlock({
-          writer,
-          text: followupText,
-          id: followupTextId,
-        });
-        await sleep(SECTION_STEP_DELAY_MS);
-
         if (analysis.claims?.length) {
+          // Claim text is rendered by ClaimCard below; avoid streaming it twice as a plain text bubble.
           writer.write({ type: "data-claims", data: analysis.claims });
+          await sleep(SECTION_STEP_DELAY_MS);
+        } else {
+          await streamTextBlock({
+            writer,
+            text: "Ceritakan detail lowongannya (teks, link, atau poster) supaya saya bisa bantu telaah.",
+            id: followupTextId,
+          });
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
