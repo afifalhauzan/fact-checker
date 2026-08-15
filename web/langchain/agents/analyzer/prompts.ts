@@ -41,8 +41,7 @@ export const actionPromptTemplates: Record<string, string> = {
 Berdasarkan konteks lowongan sebelumnya berikut:
 "{context}"
 
-Berikan checklist 4 poin praktis untuk memeriksa identitas perusahaan (misal: keberadaan website resmi, domain email recruiter, akun LinkedIn resmi, alamat kantor).
-Susun respons dengan judul "Checklist Validasi Perusahaan".`,
+Berikan checklist 4 poin praktis untuk memeriksa identitas perusahaan (misal: keberadaan website resmi, domain email recruiter, akun LinkedIn resmi, alamat kantor).`,
 
   check_red_flags: `Pengguna meminta aksi "Cek Red Flag".
 Berdasarkan konteks lowongan sebelumnya berikut:

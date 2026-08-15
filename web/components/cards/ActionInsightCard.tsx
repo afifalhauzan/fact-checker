@@ -1,3 +1,5 @@
+import { Streamdown } from "streamdown";
+
 interface ActionInsightCardProps {
   title: string;
   points: string[];
@@ -15,7 +17,9 @@ export function ActionInsightCard({ title, points }: ActionInsightCardProps) {
         {points.map((point, index) => (
           <li key={`${title}-point-${index}`} className="flex items-start gap-2">
             <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-            <span>{point}</span>
+            <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed [&_p]:m-0">
+              <Streamdown>{point}</Streamdown>
+            </div>
           </li>
         ))}
       </ul>

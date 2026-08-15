@@ -50,7 +50,11 @@ export async function handleRealUIAction(actionPayload: UIActionPayload): Promis
     const points: string[] = [];
 
     for (const line of rawLines) {
-      const cleanLine = line.replace(/^[*\-•\d+.\s]+/, "").trim();
+      // Strip leading list markers (numbered, dash, bullet, single "* ") but keep "**bold**" markers intact.
+      const cleanLine = line
+        .replace(/^(?:\d+[.)]|[-•])\s+/, "")
+        .replace(/^\*(?!\*)\s+/, "")
+        .trim();
       if (cleanLine.length > 10 && !cleanLine.startsWith("Judul:") && !cleanLine.startsWith("Status:")) {
         points.push(cleanLine);
       }
