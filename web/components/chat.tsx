@@ -420,6 +420,24 @@ export function Chat() {
     }
   }, []);
 
+  // Bridges the page-level drag-and-drop dropzone (app/chat/page.tsx) into the
+  // existing attachment pipeline without prop-drilling the file input state up.
+  React.useEffect(() => {
+    const handlePageDroppedPhoto = (event: Event) => {
+      const file = (event as CustomEvent<File>).detail;
+      if (!file) {
+        return;
+      }
+
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      handleSelectFiles(dataTransfer.files);
+    };
+
+    window.addEventListener("telaahkarier:dropped-photo", handlePageDroppedPhoto);
+    return () => window.removeEventListener("telaahkarier:dropped-photo", handlePageDroppedPhoto);
+  }, [handleSelectFiles]);
+
   const handleRemoveAttachment = React.useCallback((id: string) => {
     setAttachments((prev) => prev.filter((attachment) => attachment.id !== id));
   }, []);
