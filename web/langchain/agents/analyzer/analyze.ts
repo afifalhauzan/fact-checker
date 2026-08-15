@@ -6,8 +6,14 @@ import { executeWebVerification } from "./tools/tavily-search";
 import { handleRealUIAction, type MockUIActionResult } from "./action-handler";
 import type { UIActionPayload } from "@/types/ui-actions";
 
+interface AnalyzeImage {
+  mediaType: string;
+  url: string;
+}
+
 interface AnalyzeInput {
   input: string;
+  images?: AnalyzeImage[];
 }
 
 export type { MockUIActionResult };
@@ -16,11 +22,12 @@ export function handleMockUIAction(actionPayload: UIActionPayload): MockUIAction
   return handleRealUIAction(actionPayload);
 }
 
-export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisResult> {
+export async function analyzeContent({ input, images = [] }: AnalyzeInput): Promise<AnalysisResult> {
   const preprocessed = preprocessJobInput(input);
   const trimmed = preprocessed.cleanedText;
+  const hasImages = images.length > 0;
 
-  if (!trimmed.length || !preprocessed.hasSubstantiveContent) {
+  if ((!trimmed.length || !preprocessed.hasSubstantiveContent) && !hasImages) {
     return AnalysisSchema.parse({
       conversationText: trimmed.length
         ? "Halo! Pesan ini sepertinya belum berisi detail lowongan kerja. Tempel teks, link, atau deskripsi poster lowongan yang ingin kamu periksa."
@@ -52,10 +59,20 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
       : null;
 
     if (structuredLlm) {
-      const formattedInput = await analyzerInputPrompt.format({ input: trimmed });
+      const formattedInput = await analyzerInputPrompt.format({
+        input: trimmed || "(Tidak ada teks. Materi lowongan terlampir sebagai gambar poster/screenshot di bawah ini.)",
+      });
+
+      const userContent = hasImages
+        ? [
+            { type: "text", text: formattedInput },
+            ...images.map((image) => ({ type: "image_url", image_url: image.url })),
+          ]
+        : formattedInput;
+
       const rawResult = await structuredLlm.invoke([
         { role: "system", content: analyzerSystemPrompt },
-        { role: "user", content: formattedInput },
+        { role: "user", content: userContent },
       ]);
 
       const mergedReferences =

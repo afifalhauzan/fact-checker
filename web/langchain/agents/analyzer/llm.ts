@@ -21,6 +21,11 @@ export function getLLMModel(options?: { temperature?: number; modelName?: string
       model: defaultGeminiModel,
       temperature,
       maxOutputTokens: 8192,
+      // Gemini 2.5 models spend part of maxOutputTokens on internal "thinking" by default,
+      // which can starve the actual JSON answer and cause truncated/unparsable structured output
+      // (especially with image input, which increases thinking usage). Disable it since we don't
+      // need chain-of-thought here — the schema's own "reasoning" field already covers that.
+      thinkingConfig: { thinkingBudget: 0 },
     });
   }
 
@@ -41,5 +46,6 @@ export function getLLMModel(options?: { temperature?: number; modelName?: string
     model: defaultGeminiModel,
     temperature,
     maxOutputTokens: 8192,
+    thinkingConfig: { thinkingBudget: 0 },
   });
 }

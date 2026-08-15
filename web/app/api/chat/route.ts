@@ -29,6 +29,23 @@ function extractLatestUserText(body: any): string {
   return "";
 }
 
+interface ExtractedImagePart {
+  mediaType: string;
+  url: string;
+}
+
+function extractLatestImageParts(body: any): ExtractedImagePart[] {
+  const lastMessage = body?.messages?.[body.messages.length - 1];
+  if (!lastMessage || !Array.isArray(lastMessage.parts)) {
+    return [];
+  }
+
+  return lastMessage.parts
+    .filter((part: any) => part?.type === "file" && typeof part?.mediaType === "string" && part.mediaType.startsWith("image/"))
+    .map((part: any) => ({ mediaType: part.mediaType as string, url: String(part?.url ?? "") }))
+    .filter((part: ExtractedImagePart) => part.url.length > 0);
+}
+
 function extractUIActionPayload(body: any): UIActionPayload | null {
   const rawPayload =
     body?.action_payload ??
@@ -139,6 +156,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const actionPayload = extractUIActionPayload(body);
     const input = extractLatestUserText(body);
+    const images = extractLatestImageParts(body);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -189,7 +207,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        const analysis = await analyzeContent({ input });
+        const analysis = await analyzeContent({ input, images });
         console.log("Generated analysis:", analysis);
 
         const openingTextId = `analysis-opening-${Date.now()}`;
