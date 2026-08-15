@@ -69,3 +69,7 @@ Thumbs.db
 .vscode/
 .idea/
 web/next.config.js
+docs/dokumen-teknis-perangkat-lunak-gemastik.md
+docs/draft-adopsi-lisensi-gemastik.md
+docs/daftar-komponen-dan-lisensi-gemastik.md
+docs/frontend-architecture.md
