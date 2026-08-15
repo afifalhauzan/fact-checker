@@ -88,7 +88,7 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
           <div className="mb-4 flex flex-col gap-3 border-b border-[#17232c]/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">
-                {hasDraft ? "Analisis berjalan" : "Simulasi setelah submit"}
+                {/* {hasDraft ? "Analisis berjalan" : "Simulasi setelah submit"} */}
               </p>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#17232c]">
                 "{displayClaim}"
@@ -154,7 +154,7 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
                   <AlertTriangle className="size-4 text-[#f2c879]" />
                   Red flag
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-slate-500Asisten analisis risiko lowongan kerja digital">Permintaan biaya dan kontak personal naikkan risiko.</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">Permintaan biaya dan kontak personal naikkan risiko.</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
@@ -234,7 +234,7 @@ export function HeroSection() {
 
       <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
         Cek Risiko Lowongan Kerja
-        <span className="block italic font-medium text-[#2b6f95]">sebelum kamu daftar.</span>
+        <span className="block italic font-medium text-[#2b6f95]">sebelum anda daftar.</span>
       </h1>
 
       <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
@@ -266,7 +266,7 @@ export function HeroSection() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg bg-white p-1.5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] ring-1 ring-[#17232c]/10 transition-all focus-within:ring-2 focus-within:ring-[#2b6f95]/25 sm:p-2"
+          className="rounded-xl bg-white p-1.5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] ring-1 ring-[#17232c]/10 transition-all focus-within:ring-2 focus-within:ring-[#2b6f95]/25 sm:p-2"
         >
           <div className="flex items-center gap-1 sm:gap-2">
             <Search className="ml-3 size-6 text-[#748493] sm:ml-4" strokeWidth={2} />
