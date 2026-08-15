@@ -57,12 +57,15 @@ export const ReasoningSchema = z.object({
  */
 export const AnalysisSchema = z.object({
   conversationText: z.string().describe("MUST ONLY contain AI opening greeting. NEVER copy the user's input text here."),
-  claims: z.array(
-    z.object({
-      text: z.string(),
-      confidence: z.number().min(0).max(1),
-    })
-  ),
+  claims: z
+    .array(
+      z.object({
+        text: z.string(),
+        confidence: z.number().min(0).max(1),
+      })
+    )
+    .default([])
+    .describe("Omit or leave empty if the input does not contain enough job-posting information to assess a risk level."),
   salaryBenefit: z
     .object({
       title: z.string(),
@@ -71,29 +74,38 @@ export const AnalysisSchema = z.object({
       highlights: z.array(z.string()),
       hint: z.string().optional(),
     })
-    .optional(),
-  risks: z.array(
-    z.object({
-      type: RiskTypeSchema,
-      description: z.string(),
-    })
-  ),
+    .optional()
+    .describe("Omit entirely if the input does not mention salary or benefits."),
+  risks: z
+    .array(
+      z.object({
+        type: RiskTypeSchema,
+        description: z.string(),
+      })
+    )
+    .default([])
+    .describe("Omit or leave empty if no concrete risk indicator was found."),
   summary: z.string(),
-  summaryCitations: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string().optional(),
-      title: z.string(),
-      link: z.string(),
-    })
-  ),
-  explanations: z.array(
-    z.object({
-      title: z.string(),
-      explanation: z.string(),
-    })
-  ),
-  suggestedQuestions: z.array(z.string()),
+  summaryCitations: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string().optional(),
+        title: z.string(),
+        link: z.string(),
+      })
+    )
+    .default([]),
+  explanations: z
+    .array(
+      z.object({
+        title: z.string(),
+        explanation: z.string(),
+      })
+    )
+    .default([])
+    .describe("Omit or leave empty if there is nothing substantive to explain yet."),
+  suggestedQuestions: z.array(z.string()).default([]),
   reasoning: z
     .array(
       z.object({
@@ -102,21 +114,26 @@ export const AnalysisSchema = z.object({
       })
     )
     .optional(),
-  references: z.array(
-    z.object({
-      title: z.string(),
-      snippet: z.string().optional(),
-      url: z.string().optional(),
-      citations: z.array(
-        z.object({
-          id: z.string(),
-          label: z.string().optional(),
-          title: z.string(),
-          link: z.string(),
-        })
-      ),
-    })
-  ),
+  references: z
+    .array(
+      z.object({
+        title: z.string(),
+        snippet: z.string().optional(),
+        url: z.string().optional(),
+        citations: z
+          .array(
+            z.object({
+              id: z.string(),
+              label: z.string().optional(),
+              title: z.string(),
+              link: z.string(),
+            })
+          )
+          .default([]),
+      })
+    )
+    .default([])
+    .describe("Omit or leave empty if there is no job posting to verify yet."),
 });
 
 export type Claim = z.infer<typeof ClaimSchema>;

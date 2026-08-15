@@ -20,29 +20,16 @@ export async function analyzeContent({ input }: AnalyzeInput): Promise<AnalysisR
   const preprocessed = preprocessJobInput(input);
   const trimmed = preprocessed.cleanedText;
 
-  if (!trimmed.length) {
+  if (!trimmed.length || !preprocessed.hasSubstantiveContent) {
     return AnalysisSchema.parse({
-      conversationText:
-        "Belum ada input lowongan yang bisa dianalisis. Tempel teks, link, atau deskripsi poster lowongan terlebih dahulu.",
-      claims: [
-        {
-          text: "Belum ada informasi lowongan yang cukup untuk menentukan tingkat risiko awal.",
-          confidence: 0.1,
-        },
-      ],
-      risks: [
-        {
-          type: "missing_context",
-          description: "Masukkan informasi lowongan lebih lengkap agar indikator risiko bisa dianalisis.",
-        },
-      ],
-      summary: "Belum ada ringkasan karena sistem belum menerima materi lowongan yang dapat dibedah.",
-      explanations: [
-        {
-          title: "Butuh Materi Lowongan",
-          explanation: "Tempel teks, link, atau deskripsi poster lowongan agar sistem bisa menampilkan analisis risiko awal.",
-        },
-      ],
+      conversationText: trimmed.length
+        ? "Halo! Pesan ini sepertinya belum berisi detail lowongan kerja. Tempel teks, link, atau deskripsi poster lowongan yang ingin kamu periksa."
+        : "Belum ada input lowongan yang bisa dianalisis. Tempel teks, link, atau deskripsi poster lowongan terlebih dahulu.",
+      claims: [],
+      risks: [],
+      summary: "",
+      summaryCitations: [],
+      explanations: [],
       suggestedQuestions: [
         "Bantu cek red flag dari tawaran kerja ini.",
         "Periksa apakah perusahaan dan link pendaftarannya valid.",

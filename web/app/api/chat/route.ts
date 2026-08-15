@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
 
         const followupText = analysis.claims?.length
           ? `${analysis.claims[0].text}`
-          : "Mari lanjutkan ke indikator risiko dan langkah aman yang perlu dicek.";
+          : "Ceritakan detail lowongannya (teks, link, atau poster) supaya saya bisa bantu telaah.";
         await streamTextBlock({
           writer,
           text: followupText,
@@ -263,13 +263,15 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
-        writer.write({
-          type: "data-actions",
-          data: { actions: DEFAULT_ANALYSIS_ACTIONS },
-        });
-        await sleep(SECTION_STEP_DELAY_MS);
+        if (analysis.references?.length) {
+          writer.write({
+            type: "data-actions",
+            data: { actions: DEFAULT_ANALYSIS_ACTIONS },
+          });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
 
-        const closingText = analysis.suggestedQuestions?.length
+        const closingText = analysis.references?.length
           ? "Kalau kamu mau, kita bisa lanjutkan dengan investigasi spesifik lewat tombol aksi di bawah."
           : "Kalau ada bagian yang ingin didalami, beri tahu saya.";
         await streamTextBlock({

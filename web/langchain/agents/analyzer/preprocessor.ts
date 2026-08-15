@@ -5,10 +5,17 @@ export interface PreprocessedInput {
   extractedDomains: string[];
   hasShortlink: boolean;
   hasFreeEmailDomain: boolean;
+  hasSubstantiveContent: boolean;
 }
 
 const SHORTLINK_DOMAINS = ["bit.ly", "tinyurl.com", "t.co", "cutt.ly", "linktr.ee", "wa.me", "api.whatsapp.com"];
 const FREE_EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "ymail.com"];
+const JOB_SIGNAL_KEYWORDS = [
+  "lowongan", "loker", "posisi", "gaji", "perusahaan", "pt ", "cv ",
+  "recruiter", "rekrutmen", "hr", "wawancara", "interview", "lamar",
+  "job", "vacancy", "hiring", "career", "salary", "wa ", "whatsapp",
+];
+const MIN_SUBSTANTIVE_LENGTH = 25;
 
 export function preprocessJobInput(input: string): PreprocessedInput {
   const rawInput = input || "";
@@ -38,6 +45,10 @@ export function preprocessJobInput(input: string): PreprocessedInput {
   const lowerText = cleanedText.toLowerCase();
   const hasFreeEmailDomain = FREE_EMAIL_DOMAINS.some((domain) => lowerText.includes(`@${domain}`));
 
+  const hasJobSignal = JOB_SIGNAL_KEYWORDS.some((keyword) => lowerText.includes(keyword));
+  const hasSubstantiveContent =
+    extractedUrls.length > 0 || hasJobSignal || cleanedText.length >= MIN_SUBSTANTIVE_LENGTH;
+
   return {
     rawInput,
     cleanedText,
@@ -45,5 +56,6 @@ export function preprocessJobInput(input: string): PreprocessedInput {
     extractedDomains,
     hasShortlink,
     hasFreeEmailDomain,
+    hasSubstantiveContent,
   };
 }
