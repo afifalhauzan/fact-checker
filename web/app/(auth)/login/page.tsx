@@ -56,7 +56,7 @@ function LoginPageContent() {
             <div className="flex items-center gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 shadow-lg backdrop-blur-md">
               <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
               <span className="text-xs font-semibold text-primary-foreground/95">
-                TelaahKarier <span className="font-normal text-primary-foreground/70">| Ready for mock flow</span>
+                TelaahKarier
               </span>
             </div>
           </div>
