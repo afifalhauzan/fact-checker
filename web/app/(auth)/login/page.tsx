@@ -51,15 +51,6 @@ function LoginPageContent() {
               Bantu cek red flag lowongan kerja digital sebelum kirim data atau ambil keputusan penting.
             </p>
           </div>
-
-          <div className="relative z-10 mt-auto flex w-full justify-center pb-2">
-            <div className="flex items-center gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 shadow-lg backdrop-blur-md">
-              <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
-              <span className="text-xs font-semibold text-primary-foreground/95">
-                TelaahKarier
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
