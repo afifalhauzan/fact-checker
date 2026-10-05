@@ -29,6 +29,19 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
   tinggi: "Tinggi",
 };
 
+export const ATTACHMENT_KINDS = [
+  "poster_lowongan",
+  "screenshot_chat",
+  "surat_dokumen",
+  "postingan_medsos",
+  "lainnya",
+  "bukan_lowongan",
+] as const;
+export const LEGIBILITY_LEVELS = ["jelas", "sebagian", "tidak_terbaca"] as const;
+
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
+export type Legibility = (typeof LEGIBILITY_LEVELS)[number];
+
 export const CitationSchema = z.object({
   id: z.string(),
   label: z.string().optional(),
@@ -163,6 +176,34 @@ export const AnalysisSchema = z.object({
     .default([]),
   // "ai" = model-backed analysis, "rule_fallback" = limited rule-based check used when the model is unavailable.
   mode: z.enum(["ai", "rule_fallback"]).optional(),
+  // What the analysis actually read. Actions and follow-up answers reuse the transcript instead of
+  // sending the attachments to the model again; the UI can show it so misreadings are visible.
+  material: z
+    .object({
+      source: z.enum(["text", "attachment", "text_and_attachment"]),
+      transcript: z.string().optional(),
+      legibility: z.enum(LEGIBILITY_LEVELS).optional(),
+      attachments: z
+        .array(
+          z.object({
+            kind: z.enum(ATTACHMENT_KINDS),
+            legibility: z.enum(LEGIBILITY_LEVELS),
+          })
+        )
+        .default([]),
+      visualCues: z.array(z.string()).default([]),
+      entities: z
+        .object({
+          companyNames: z.array(z.string()).default([]),
+          salaries: z.array(z.string()).default([]),
+          locations: z.array(z.string()).default([]),
+          phones: z.array(z.string()).default([]),
+          emails: z.array(z.string()).default([]),
+          urls: z.array(z.string()).default([]),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -248,19 +289,6 @@ export const LLMActionOutputSchema = z.object({
     .describe("Hanya diisi untuk aksi kewajaran gaji dan benefit."),
 });
 
-export const ATTACHMENT_KINDS = [
-  "poster_lowongan",
-  "screenshot_chat",
-  "surat_dokumen",
-  "postingan_medsos",
-  "lainnya",
-  "bukan_lowongan",
-] as const;
-export const LEGIBILITY_LEVELS = ["jelas", "sebagian", "tidak_terbaca"] as const;
-
-export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
-export type Legibility = (typeof LEGIBILITY_LEVELS)[number];
-
 /** What the model fills when reading attachments (images, documents) before the analysis. */
 export const LLMExtractionOutputSchema = z.object({
   attachments: z
@@ -285,7 +313,7 @@ export const LLMExtractionOutputSchema = z.object({
   visualCues: z
     .array(z.string())
     .default([])
-    .describe("Maksimal 5 pengamatan visual penting yang bukan teks."),
+    .describe("Maksimal 3 pengamatan visual yang relevan dengan keaslian; kosong jika tidak ada."),
 });
 
 /** Decides whether a short text-only message is new material to analyze or a question. */

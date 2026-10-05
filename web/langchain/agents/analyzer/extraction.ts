@@ -34,9 +34,11 @@ export interface ExtractionRun {
 }
 
 export const MAX_ATTACHMENTS = 4;
-const MAX_ATTACHMENT_BYTES = 7 * 1024 * 1024;
+const MAX_ATTACHMENT_MB = 7;
+const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
+export const ATTACHMENT_LIMITS_TEXT = `maksimal ${MAX_ATTACHMENTS} lampiran, ${MAX_ATTACHMENT_MB} MB per lampiran`;
 const EXTRACTION_TIMEOUT_MS = 30_000;
-const MAX_VISUAL_CUES = 5;
+const MAX_VISUAL_CUES = 3;
 const MATERIAL_HEADER = "[Teks dari lampiran]";
 
 const KIND_LABELS: Record<AttachmentKind, string> = {

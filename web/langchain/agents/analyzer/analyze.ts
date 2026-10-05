@@ -4,6 +4,7 @@ import {
   RISK_LEVEL_LABELS,
   SALARY_NOT_MENTIONED,
   type AnalysisResult,
+  type Legibility,
   type LLMAnalysisOutput,
   type Reasoning,
   type RiskLevel,
@@ -11,6 +12,15 @@ import {
 import { analyzerSystemPrompt, buildAnalyzerUserPrompt } from "./prompts";
 import { getLLMModel, LLM_TIMEOUT_MS, readTokenUsage, type TokenUsage } from "./llm";
 import { preprocessJobInput } from "./preprocessor";
+import {
+  ATTACHMENT_LIMITS_TEXT,
+  composeMaterialText,
+  describeExtractionForProgress,
+  extractAttachments,
+  limitAttachments,
+  type ExtractedMaterial,
+  type ExtractionStatus,
+} from "./extraction";
 import {
   compareRiskLevels,
   describeFloorForProgress,
@@ -50,11 +60,22 @@ export interface AnalyzeOptions {
   useRules?: boolean;
   useSearch?: boolean;
   useLLM?: boolean;
+  // Off: attachments go straight into the analysis call instead of being transcribed first.
+  useExtraction?: boolean;
 }
 
 export interface AnalysisRunMeta {
-  mode: "ai" | "rule_fallback" | "not_job_input";
+  mode: "ai" | "rule_fallback" | "not_job_input" | "unreadable_attachment";
   fallbackReason?: string;
+  extraction: {
+    status: ExtractionStatus | "none" | "disabled";
+    attachmentCount: number;
+    skippedAttachments: number;
+    legibility?: Legibility;
+    model?: string;
+    ms: number;
+    tokenUsage?: TokenUsage;
+  };
   signals: Array<Pick<DetectedSignal, "id" | "severity">>;
   search: { status: WebSearchStatus | "disabled"; retrievedCount: number; sourceCount: number };
   riskFloorApplied: boolean;
@@ -80,6 +101,12 @@ const MAX_SUGGESTED_QUESTIONS = 4;
 const MIN_FALLBACK_VERDICT_LENGTH = 80;
 // A displayed "100%" reads as an absolute verdict, which the product deliberately never gives.
 const MAX_CONFIDENCE = 0.95;
+
+const UNREADABLE_ATTACHMENT_MESSAGE =
+  "Teks pada lampiran belum bisa terbaca dengan jelas. Coba kirim gambar yang lebih tajam dan tidak terpotong, atau ketik isi lowongannya agar bisa saya periksa.";
+const NOT_JOB_ATTACHMENT_MESSAGE =
+  "Lampiran ini sepertinya bukan materi lowongan kerja. Kirim poster, screenshot, atau teks lowongan yang ingin kamu periksa.";
+const OVERSIZED_ATTACHMENT_MESSAGE = `Lampiran melebihi batas yang bisa diperiksa (${ATTACHMENT_LIMITS_TEXT}). Kirim ulang dengan ukuran lebih kecil, atau ketik isi lowongannya.`;
 
 // Shown before any posting is under discussion; answered by the follow-up Q&A mode.
 const GENERAL_SUGGESTED_QUESTIONS = [
@@ -159,6 +186,7 @@ function describeMaterial(text: string, imageCount: number): string {
 async function invokeAnalyzer(
   text: string,
   images: AnalyzeImage[],
+  visualCues: string[],
   signals: DetectedSignal[] | null,
   search: WebSearchResult
 ): Promise<{ output: LLMAnalysisOutput; usage: AnalysisRunMeta["tokenUsage"] }> {
@@ -168,6 +196,7 @@ async function invokeAnalyzer(
   const prompt = buildAnalyzerUserPrompt({
     text,
     imageCount: images.length,
+    visualCues,
     signals,
     sources: search.sources,
   });
@@ -374,20 +403,56 @@ function buildRuleBasedResult(text: string, signals: DetectedSignal[], search: W
   };
 }
 
+/** No verdict: the attachment cannot be read, is too large, or is not about a job at all. */
+function buildAttachmentNoticeResult(message: string): AnalysisResult {
+  return {
+    conversationText: message,
+    claims: [],
+    risks: [],
+    summary: "",
+    summaryCitations: [],
+    explanations: [],
+    suggestedQuestions: GENERAL_SUGGESTED_QUESTIONS,
+    references: [],
+  };
+}
+
+function describeMaterialRead(
+  userText: string,
+  attachmentCount: number,
+  material: ExtractedMaterial | undefined
+): AnalysisResult["material"] {
+  let source: "text" | "attachment" | "text_and_attachment" = "text";
+  if (attachmentCount > 0) {
+    source = userText.length ? "text_and_attachment" : "attachment";
+  }
+
+  return {
+    source,
+    transcript: material?.transcript,
+    legibility: material?.legibility,
+    attachments: material?.attachments ?? [],
+    visualCues: material?.visualCues ?? [],
+    entities: material?.entities,
+  };
+}
+
 /**
- * Full analysis pipeline: preprocess -> rule signals -> web search -> model -> grounding checks
- * -> risk floor. Returns the client-facing result plus run metadata for logging and evaluation.
+ * Full analysis pipeline: preprocess -> read attachments -> rule signals -> web search -> model
+ * -> grounding checks -> risk floor. Returns the client-facing result plus run metadata for
+ * logging and evaluation.
  */
 export async function runAnalysis({ input, images = [] }: AnalyzeInput, options: AnalyzeOptions = {}): Promise<AnalysisRun> {
-  const { onProgress, useRules = true, useSearch = true, useLLM = true } = options;
+  const { onProgress, useRules = true, useSearch = true, useLLM = true, useExtraction = true } = options;
   const startedAt = Date.now();
 
   const preprocessed = preprocessJobInput(input);
-  const text = preprocessed.cleanedText;
-  const hasImages = images.length > 0;
+  const userText = preprocessed.cleanedText;
+  const { usable: attachments, skipped: skippedAttachments } = limitAttachments(images);
 
   const meta: AnalysisRunMeta = {
     mode: "ai",
+    extraction: { status: "none", attachmentCount: attachments.length, skippedAttachments, ms: 0 },
     signals: [],
     search: { status: "disabled", retrievedCount: 0, sourceCount: 0 },
     riskFloorApplied: false,
@@ -396,10 +461,11 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
     timingsMs: { search: 0, llm: 0, total: 0 },
   };
 
-  if ((!text.length || !preprocessed.hasSubstantiveContent) && !hasImages) {
+  if (!preprocessed.hasSubstantiveContent && !attachments.length) {
     meta.mode = "not_job_input";
     meta.timingsMs.total = Date.now() - startedAt;
-    return { result: buildNotJobInputResult(text), meta };
+    const result = skippedAttachments ? buildAttachmentNoticeResult(OVERSIZED_ATTACHMENT_MESSAGE) : buildNotJobInputResult(userText);
+    return { result, meta };
   }
 
   const steps: string[] = [];
@@ -408,9 +474,62 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
     onProgress?.([{ intent: PROGRESS_INTENT, steps: [...steps] }]);
   };
 
-  addStep(describeMaterial(text, images.length));
+  let material: ExtractedMaterial | undefined;
+  const finish = (result: AnalysisResult): AnalysisRun => {
+    result.reasoning = [{ intent: PROGRESS_INTENT, steps: [...steps] }];
+    result.material = describeMaterialRead(userText, attachments.length, material);
+    meta.timingsMs.total = Date.now() - startedAt;
+    return { result: AnalysisSchema.parse(result), meta };
+  };
 
-  const signals = useRules ? detectSignals(text) : [];
+  addStep(describeMaterial(userText, attachments.length));
+  if (skippedAttachments) {
+    addStep(`${skippedAttachments} lampiran tidak diperiksa karena melebihi batas (${ATTACHMENT_LIMITS_TEXT})`);
+  }
+
+  // Read attachments first, so that rules, web search, and quote checks all see their text.
+  let materialText = userText;
+  let analysisAttachments = attachments;
+
+  if (attachments.length && !(useExtraction && useLLM)) {
+    meta.extraction.status = "disabled";
+  }
+
+  if (attachments.length && useExtraction && useLLM) {
+    const extraction = await extractAttachments(attachments);
+    meta.extraction = {
+      status: extraction.status,
+      attachmentCount: attachments.length,
+      skippedAttachments,
+      legibility: extraction.material?.legibility,
+      model: extraction.model,
+      ms: extraction.ms,
+      tokenUsage: extraction.tokenUsage,
+    };
+    addStep(describeExtractionForProgress(extraction));
+    material = extraction.material;
+
+    if (extraction.status === "unreadable" && !preprocessed.hasSubstantiveContent) {
+      meta.mode = "unreadable_attachment";
+      return finish(buildAttachmentNoticeResult(UNREADABLE_ATTACHMENT_MESSAGE));
+    }
+    if (extraction.status === "not_job" && !preprocessed.hasSubstantiveContent) {
+      meta.mode = "not_job_input";
+      return finish(buildAttachmentNoticeResult(NOT_JOB_ATTACHMENT_MESSAGE));
+    }
+
+    if ((extraction.status === "ok" || extraction.status === "not_job") && material) {
+      materialText = composeMaterialText(userText, material.transcript);
+      // The originals are sent again only when the transcript is known to be incomplete.
+      analysisAttachments = material.legibility === "sebagian" ? attachments : [];
+    } else if (extraction.status === "unreadable") {
+      // Nothing usable in the attachments; the user's own text is analyzed on its own.
+      analysisAttachments = [];
+    }
+    // On "error" the attachments go straight to the analysis call, as without this stage.
+  }
+
+  const signals = useRules ? detectSignals(materialText) : [];
   meta.signals = signals.map(({ id, severity }) => ({ id, severity }));
   if (useRules) {
     addStep(describeSignalsForProgress(signals));
@@ -419,7 +538,7 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
   let search: WebSearchResult = { status: "skipped_no_query", retrievedCount: 0, sources: [] };
   if (useSearch) {
     const searchStartedAt = Date.now();
-    search = await searchWeb(buildVerificationQuery(preprocessed));
+    search = await searchWeb(buildVerificationQuery(preprocessJobInput(materialText)));
     meta.timingsMs.search = Date.now() - searchStartedAt;
     meta.search = { status: search.status, retrievedCount: search.retrievedCount, sourceCount: search.sources.length };
     addStep(describeSearchForProgress(search));
@@ -431,9 +550,20 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
     addStep("Menelaah materi dengan model AI");
     const llmStartedAt = Date.now();
     try {
-      const { output, usage } = await invokeAnalyzer(text, images, useRules ? signals : null, search);
+      const { output, usage } = await invokeAnalyzer(
+        materialText,
+        analysisAttachments,
+        material?.visualCues ?? [],
+        useRules ? signals : null,
+        search
+      );
       meta.tokenUsage = usage;
-      result = mapModelOutput(output, { text, hasImages, search, meta });
+      result = mapModelOutput(output, {
+        text: materialText,
+        hasImages: analysisAttachments.length > 0,
+        search,
+        meta,
+      });
       steps.push(
         ...(output.analysisSteps ?? [])
           .map((step) => step.trim())
@@ -453,7 +583,7 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
 
   if (!result) {
     meta.mode = "rule_fallback";
-    result = buildRuleBasedResult(text, signals, search);
+    result = buildRuleBasedResult(materialText, signals, search);
   }
 
   if (useRules) {
@@ -464,8 +594,5 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
     }
   }
 
-  result.reasoning = [{ intent: PROGRESS_INTENT, steps: [...steps] }];
-  meta.timingsMs.total = Date.now() - startedAt;
-
-  return { result: AnalysisSchema.parse(result), meta };
+  return finish(result);
 }
