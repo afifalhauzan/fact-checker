@@ -1,5 +1,6 @@
 import { AnalysisSchema, type AnalysisResult, type Reference } from "./schema";
 import type { AnalyzeImage } from "./analyze";
+import { composeMaterialText } from "./extraction";
 import type { SearchSource } from "./tools/tavily-search";
 
 /** Minimal view of the AI SDK UI messages the client sends. Every field is untrusted input. */
@@ -92,9 +93,22 @@ export function findPostingContext(messages: LooseMessage[], fromIndex: number):
     }
 
     for (let j = i - 1; j >= 0; j -= 1) {
-      if (messages[j]?.role === "user") {
-        return { postingText: textOf(messages[j]), images: imagesOf(messages[j]), analysis, analysisIndex: i };
+      if (messages[j]?.role !== "user") {
+        continue;
       }
+
+      // Attachments were already transcribed during the analysis: reuse that text and only send
+      // the originals to the model again when the transcript is known to be incomplete.
+      const transcript = analysis.material?.transcript;
+      if (transcript?.trim()) {
+        return {
+          postingText: composeMaterialText(textOf(messages[j]), transcript),
+          images: analysis.material?.legibility === "sebagian" ? imagesOf(messages[j]) : [],
+          analysis,
+          analysisIndex: i,
+        };
+      }
+      return { postingText: textOf(messages[j]), images: imagesOf(messages[j]), analysis, analysisIndex: i };
     }
     return { postingText: "", images: [], analysis, analysisIndex: i };
   }
