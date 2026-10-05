@@ -62,6 +62,13 @@ yarn-error.log*
 pnpm-debug.log*
 
 # =========================
+# 🧪 DATASET EVALUASI AI
+# =========================
+# Repo ini publik: data mentah (teks lowongan, screenshot, kontak) disimpan di Drive privat tim.
+web/eval/dataset/*
+!web/eval/dataset/template.csv
+
+# =========================
 # 💻 OS & IDE 
 # =========================
 .DS_Store
