@@ -66,12 +66,13 @@ const NON_EMPLOYER_DOMAINS = [
   "twitter.com", "x.com", "linkedin.com", "youtube.com", "google.com", "forms.gle",
 ];
 
-const COMPANY_PATTERN = /\b(PT|CV)\.?\s+((?:[A-Z0-9][\w&'.-]*\s?){1,6})(?:\(([A-Z]{2,8})\))?/;
+// Names stay on one line: transcribed letters put the address ("Jl. ...") on the next line.
+const COMPANY_PATTERN = /\b(PT|CV)\.?[ \t]+((?:[A-Z0-9][\w&'.-]*[ \t]?){1,6})(?:\(([A-Z]{2,8})\))?/;
 const COMPANY_STOPWORDS = new Set([
   "membuka", "lowongan", "loker", "kerja", "dibutuhkan", "butuh", "mencari", "segera", "hiring",
   "rekrutmen", "recruitment", "karyawan", "posisi", "untuk", "bagian", "job", "vacancy", "sedang",
   "kini", "menerima", "is", "are", "opening", "gaji", "lokasi", "kualifikasi", "syarat",
-  "persyaratan", "penempatan", "domisili", "hubungi", "kirim", "daftar", "info",
+  "persyaratan", "penempatan", "domisili", "hubungi", "kirim", "daftar", "info", "jl", "jalan",
 ]);
 // Legal suffixes that sources often drop ("PT Bank Central Asia Tbk" vs "PT Bank Central Asia").
 const LEGAL_SUFFIXES = new Set(["tbk", "persero"]);
