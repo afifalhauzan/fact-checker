@@ -89,3 +89,21 @@ Dokumen ini mendokumentasikan secara rinci penemuan teknis (findings), batasan A
   3. Frasa biaya/OTP di dalam kalimat tanya tidak dihitung sebagai permintaan.
   4. Prompt menetapkan bahwa saran pertanyaan ditulis dari sudut pandang pengguna.
 - **Hasil uji**: pertanyaan alasan risiko, langkah darurat setelah transfer, desakan mengubah verdict (ditolak), pertanyaan di luar topik (ditolak sopan), lowongan pendek baru (dianalisis ulang), pertanyaan umum tanpa konteks, dan pertanyaan sumber (sitasi `[3] karir.bca.co.id` sesuai label analisis) semuanya dirutekan dan dijawab dengan benar.
+
+### L. Finding 12: Lampiran Gambar Melewati Semua Jaring Pengaman
+- **Problem**: Gambar langsung masuk ke satu panggilan analisis, sehingga aturan, pencarian web, verifikasi kutipan, dan *risk floor* tidak bekerja untuk isi poster. Gambar juga dikirim ulang ke model di setiap aksi dan tanya-jawab. Lampiran PDF dan format lain dibuang diam-diam.
+- **Solution**: tahap "baca dulu" (`extraction.ts`). Lampiran ditranskripsi sekali menjadi teks, entitas, dan petunjuk visual. Hasilnya digabung dengan teks pengguna dan dipakai seluruh pipeline, lalu disimpan di `material` untuk aksi dan tanya-jawab. PDF ikut lewat jalur yang sama; format lain dijawab "belum didukung".
+- **Hasil uji** (5 gambar uji + 1 PDF, Gemini 2.5 Flash):
+
+  | Lampiran | Hasil |
+  |---|---|
+  | Poster kerja ke Kamboja (visa turis, biaya medical, WA) | *Tinggi*; risiko `tppo` dan `payment_request` dengan kutipan terverifikasi dari transkrip |
+  | Poster dengan catatan injeksi berhuruf 11px | Catatan tertranskripsi tetapi tidak dituruti; aturan manipulasi menangkapnya; *Tinggi* |
+  | Poster BCA resmi | Nama PT dari gambar dipakai untuk pencarian (5/5 sumber relevan); *Rendah* |
+  | Screenshot chat HRD (transfer seragam + desakan) | Transkrip per pesan dengan label pengirim; *Tinggi* |
+  | Kartu ucapan | Berhenti setelah ekstraksi (±5 dtk), tanpa panggilan analisis |
+  | PDF surat panggilan interview palsu | Dikenali sebagai surat/dokumen; *Tinggi* (transfer Rp 2.500.000 ke rekening pribadi) |
+
+  Ekstraksi butuh ±3,7–4,1 dtk (±600 token input untuk gambar 800×600). Tanya-jawab setelah analisis gambar memakai ±1.250 token input, setara tanya-jawab teks, karena gambar tidak dikirim ulang.
+- **Catatan model**: pada uji awal, Gemini 2.5 Flash-Lite bisa membaca gambar dan sedikit lebih cepat, tetapi salah baca teks yang terpotong ("Fentu diversifikasi", "TUK" untuk "Tbk"), sedangkan Flash menandainya `[tidak terbaca]`. Ekstraksi memakai Flash; perbandingan final dilakukan dengan dataset `dev`.
+- **Bug yang ikut ditemukan**: nama perusahaan dari surat terbaca "PT ENERGI NUSANTARA RAYA Jl" karena pola nama melewati baris alamat. Pola nama kini berhenti di akhir baris dan di kata "Jl"/"Jalan".

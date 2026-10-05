@@ -16,9 +16,13 @@ sequenceDiagram
     participant Tavily as Tavily Search Tool
     participant LLM as Google Gemini LLM
 
-    User->>Route: Kirim teks/gambar lowongan
+    User->>Route: Kirim teks/gambar/PDF lowongan
     Route->>Engine: runAnalysis(input, { onProgress })
-    Engine->>Rules: detectSignals(text)
+    opt Ada lampiran (gambar/PDF)
+        Engine->>LLM: extractAttachments() (transkrip + entitas + petunjuk visual)
+        LLM-->>Engine: Teks lampiran digabung dengan teks pengguna
+    end
+    Engine->>Rules: detectSignals(teks gabungan)
     Rules-->>Engine: Sinyal + bukti (biaya, data sensitif, manipulasi, kontak)
     Engine-->>User: data-reasoning (progres tahap 1-2)
 
@@ -50,7 +54,17 @@ sequenceDiagram
 
 ### Tahap 1: Preprocessing (`preprocessor.ts`)
 1. Membersihkan teks, mengekstrak URL dan domain.
-2. Memutuskan apakah input berisi materi lowongan (`hasSubstantiveContent`). Jika tidak dan tanpa gambar, sistem langsung meminta detail lowongan.
+2. Memutuskan apakah input berisi materi lowongan (`hasSubstantiveContent`). Jika tidak dan tanpa lampiran, sistem langsung meminta detail lowongan.
+
+### Tahap 1b: Baca Lampiran Dulu (`extraction.ts`)
+1. **Batas**: maksimal 4 lampiran, 7 MB per lampiran. Format yang didukung: gambar dan PDF; format lain dijawab "belum didukung".
+2. **Ekstraksi** (model `GEMINI_EXTRACTION_MODEL`, suhu 0): untuk setiap lampiran, model mengeluarkan jenis lampiran (poster, screenshot chat, surat/dokumen, postingan medsos, bukan lowongan), keterbacaan, dan transkrip apa adanya. Screenshot chat ditulis per pesan dengan label pengirim, dan bagian yang buram ditandai `[tidak terbaca]`. Model juga mengeluarkan entitas (nama perusahaan, gaji, lokasi, nomor, email, URL) dan maksimal 3 petunjuk visual yang relevan dengan keaslian.
+3. **Keputusan setelah membaca**:
+   - tidak terbaca atau bukan lowongan (tanpa teks pengguna) → berhenti tanpa verdict, tanpa panggilan analisis;
+   - terbaca → transkrip digabung dengan teks pengguna dan dipakai oleh aturan, pencarian web, dan verifikasi kutipan;
+   - terbaca sebagian → lampiran asli ikut dikirim lagi ke tahap analisis;
+   - gagal (error) → lampiran langsung dikirim ke analisis seperti tanpa tahap ini.
+4. Transkrip disimpan di `data-analysis.material`. Aksi dan tanya-jawab memakai transkrip ini, sehingga lampiran **hanya dikirim sekali** ke model.
 
 ### Tahap 2: Deteksi Pola Berbasis Aturan (`signals.ts`)
 1. **Sinyal kuat** (memberi *risk floor*):
