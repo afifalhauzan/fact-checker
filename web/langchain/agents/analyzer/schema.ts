@@ -248,6 +248,46 @@ export const LLMActionOutputSchema = z.object({
     .describe("Hanya diisi untuk aksi kewajaran gaji dan benefit."),
 });
 
+export const ATTACHMENT_KINDS = [
+  "poster_lowongan",
+  "screenshot_chat",
+  "surat_dokumen",
+  "postingan_medsos",
+  "lainnya",
+  "bukan_lowongan",
+] as const;
+export const LEGIBILITY_LEVELS = ["jelas", "sebagian", "tidak_terbaca"] as const;
+
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
+export type Legibility = (typeof LEGIBILITY_LEVELS)[number];
+
+/** What the model fills when reading attachments (images, documents) before the analysis. */
+export const LLMExtractionOutputSchema = z.object({
+  attachments: z
+    .array(
+      z.object({
+        kind: z.enum(ATTACHMENT_KINDS),
+        legibility: z.enum(LEGIBILITY_LEVELS),
+        transcript: z
+          .string()
+          .describe("Seluruh teks lampiran persis sesuai urutan baca; bagian yang tidak terbaca ditandai [tidak terbaca]."),
+      })
+    )
+    .describe("Satu item per lampiran, sesuai urutan lampiran."),
+  entities: z.object({
+    companyNames: z.array(z.string()).default([]),
+    salaries: z.array(z.string()).default([]),
+    locations: z.array(z.string()).default([]),
+    phones: z.array(z.string()).default([]),
+    emails: z.array(z.string()).default([]),
+    urls: z.array(z.string()).default([]),
+  }),
+  visualCues: z
+    .array(z.string())
+    .default([])
+    .describe("Maksimal 5 pengamatan visual penting yang bukan teks."),
+});
+
 /** Decides whether a short text-only message is new material to analyze or a question. */
 export const LLMRouterOutputSchema = z.object({
   intent: z.enum(["materi_lowongan", "pertanyaan"]),
@@ -279,3 +319,4 @@ export type AnalysisResult = z.infer<typeof AnalysisSchema>;
 export type LLMAnalysisOutput = z.infer<typeof LLMAnalysisOutputSchema>;
 export type LLMActionOutput = z.infer<typeof LLMActionOutputSchema>;
 export type LLMFollowUpOutput = z.infer<typeof LLMFollowUpOutputSchema>;
+export type LLMExtractionOutput = z.infer<typeof LLMExtractionOutputSchema>;
