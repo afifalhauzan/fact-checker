@@ -209,7 +209,7 @@ sequenceDiagram
     Route->>Pre: sanitizeAndExtract(input)
     Pre-->>Route: Clean Text & Extracted Links
     
-    Route->>Agent: analyzeContent(cleanInput)
+    Route->>Agent: runAnalysis(input, { onProgress })
     Agent->>Tool: executeSearch(companyName / URL)
     Tool->>Tool: Query Web Index
     Tool-->>Agent: References & Evidences Array

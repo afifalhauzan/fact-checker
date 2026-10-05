@@ -11,52 +11,72 @@ sequenceDiagram
     autonumber
     actor User as Pengguna (UI)
     participant Route as POST /api/chat
-    participant Pre as Preprocessor
+    participant Engine as runAnalysis (analyze.ts)
+    participant Rules as Signals (signals.ts)
     participant Tavily as Tavily Search Tool
     participant LLM as Google Gemini LLM
-    participant Fallback as Smart Fallback Engine
 
-    User->>Route: Kirim teks lowongan / aksi chip
-    Route->>Pre: preprocessJobInput(input)
-    Pre-->>Route: Cleaned text, flags (shortlink, free email)
-    
-    Route->>Tavily: executeWebVerification(trimmedText)
-    Tavily-->>Route: Web references & citations
+    User->>Route: Kirim teks/gambar lowongan
+    Route->>Engine: runAnalysis(input, { onProgress })
+    Engine->>Rules: detectSignals(text)
+    Rules-->>Engine: Sinyal + bukti (biaya, data sensitif, manipulasi, kontak)
+    Engine-->>User: data-reasoning (progres tahap 1-2)
 
-    alt Structured LLM Available
-        Route->>LLM: invoke([systemPrompt, userPrompt])
-        LLM-->>Route: Raw JSON (Structured Output)
-        Route->>Route: Validate & parse with AnalysisSchema
-    else Error / LLM Timeout / Token Limit
-        Route->>Fallback: buildSmartAnalysisFallback()
-        Fallback-->>Route: Deterministic Rule-Based Analysis
+    Engine->>Tavily: searchWeb(buildVerificationQuery(...))
+    Tavily-->>Engine: Sumber yang membahas entitas yang sama (S1..Sn)
+    Engine-->>User: data-reasoning (progres tahap 3)
+
+    alt Model tersedia
+        Engine->>LLM: withStructuredOutput(LLMAnalysisOutputSchema)
+        LLM-->>Engine: Penilaian + ID sumber + kutipan bukti
+        Engine->>Engine: Grounding: buang ID sumber & kutipan yang tidak valid
+    else Error / timeout / output tidak valid
+        Engine->>Engine: buildRuleBasedResult() (pemeriksaan terbatas)
     end
 
-    Route-->>User: SSE Stream / JSON Response (AnalysisResult)
+    Engine->>Engine: applyRiskFloor() (sinyal kuat tidak bisa diturunkan)
+    Engine-->>Route: { result, meta }
+    Route-->>User: Kartu hasil (summary, claims, risks, references, actions)
 ```
 
 ---
 
 ## 📋 2. Rincian Tahapan Pipeline
 
+### Tahap 0: Routing (`turn-router.ts`)
+1. Pesan dengan gambar atau teks panjang langsung masuk ke analisis.
+2. Pesan teks pendek diklasifikasikan model: materi lowongan baru → analisis; pertanyaan → **mode tanya-jawab** (`follow-up.ts`).
+3. Mode tanya-jawab memakai lowongan terakhir yang punya verdict sebagai konteks (`conversation-context.ts`). Dengan begitu, pertanyaan seperti "Kenapa ini berisiko?" atau "Saya sudah terlanjur transfer, harus bagaimana?" dijawab tentang lowongan tersebut, bukan dianalisis sebagai lowongan baru.
+
 ### Tahap 1: Preprocessing (`preprocessor.ts`)
-1. **Sanitasi Teks**: Menghapus karakter khusus berbahaya dan spasi berlebih.
-2. **Pemeriksaan Pola**:
-   - Mendeteksi *shortlink* (`bit.ly`, `tinyurl.com`, `wa.me`).
-   - Mendeteksi domain email gratisan/non-korporat (`@gmail.com`, `@yahoo.com`, `@hotmail.com`).
-   - Ekstraksi nama domain utama jika ada URL website yang dicantumkan.
+1. Membersihkan teks, mengekstrak URL dan domain.
+2. Memutuskan apakah input berisi materi lowongan (`hasSubstantiveContent`). Jika tidak dan tanpa gambar, sistem langsung meminta detail lowongan.
 
-### Tahap 2: Verifikasi Web Real-time (`tavily-search.ts`)
-1. Jika teks lowongan mencantumkan nama perusahaan atau domain, sistem menjalankan pencarian web via **Tavily Search API**.
-2. Mengambil 3 referensi web teratas (link resmi, halaman LinkedIn, atau artikel berita) beserta cuplikan (*snippet*).
-3. Referensi ini nantinya digabungkan ke dalam field `references` pada respons akhir.
+### Tahap 2: Deteksi Pola Berbasis Aturan (`signals.ts`)
+1. **Sinyal kuat** (memberi *risk floor*):
+   - permintaan biaya kepada pelamar → minimal *Tinggi*,
+   - permintaan data sensitif (OTP, PIN, selfie dengan KTP) → minimal *Tinggi*,
+   - upaya manipulasi analisis (prompt injection) → minimal *Sedang*.
+2. **Sinyal sedang**: kontak lewat chat pribadi, email domain gratis, shortlink.
+3. Pola memahami negasi dan daftar. Contoh: "tidak dipungut biaya pendaftaran maupun biaya pelatihan" dan "biaya pelatihan ditanggung" tidak terdeteksi sebagai permintaan biaya.
+4. Sinyal dikirim ke model sebagai `<temuan_otomatis>` untuk dikonfirmasi atau ditolak.
 
-### Tahap 3: Pemanggilan LLM & Structured Output (`analyze.ts`)
-1. `getLLMModel()` mengambil instance `ChatGoogleGenerativeAI`.
-2. Menggunakan method `.withStructuredOutput(AnalysisSchema)` untuk memaksa model mengembalikan JSON yang sesuai dengan Zod schema.
-3. Prompt dikirimkan gabungan antara `analyzerSystemPrompt` dan `analyzerInputPrompt`.
+### Tahap 3: Verifikasi Web (`tools/tavily-search.ts`)
+1. Query dibangun dari entitas yang bisa diverifikasi: nama badan usaha (PT/CV) atau domain perusahaan. Tanpa entitas, pencarian dilewati karena hanya akan menghasilkan halaman umum.
+2. Hasil disaring: hanya sumber yang judul/URL-nya membahas entitas yang sama yang dipakai. Nama harus cocok utuh, misalnya "PT Sukses Makmur Sentosa" ≠ "PT Jaya Sukses Makmur Sentosa Tbk".
+3. Sumber yang lolos diberi ID `S1..Sn`. Hanya ID ini yang boleh dikutip model.
 
-### Tahap 4: Fallback Otomatis (`buildSmartAnalysisFallback`)
-1. Jika koneksi API gagal, API Key tidak valid, atau struktur JSON rusak, sistem tidak akan crash.
-2. `try-catch` block akan menangkap error dan mengalihkan proses ke `buildSmartAnalysisFallback()`.
-3. Fallback engine menggunakan aturan deterministik berdasarkan flag preprocessor (misal: jika ada shortlink & kata "biaya", tingkat risiko di-set "Tinggi").
+### Tahap 4: Pemanggilan LLM & Structured Output (`analyze.ts`)
+1. `getLLMModel()` membuat instance `ChatGoogleGenerativeAI` (retry 2x, timeout 45 detik).
+2. `.withStructuredOutput(LLMAnalysisOutputSchema, { includeRaw: true })` dipakai untuk mendapatkan output terstruktur sekaligus metadata token.
+3. Materi, temuan, dan sumber dibungkus tag data (`<materi_lowongan>`, `<temuan_otomatis>`, `<sumber_pencarian>`). Instruksi di dalamnya diperlakukan sebagai data, bukan perintah.
+4. Pasca-proses:
+   - verdict dibuang jika `informationSufficient = false`,
+   - ID sumber yang tidak ada dibuang,
+   - kutipan bukti yang tidak ada di teks lowongan dibuang,
+   - keyakinan dibatasi maksimal 0.95.
+
+### Tahap 5: Pengaman & Fallback
+1. **Risk floor**: jika sinyal kuat terdeteksi tetapi model menilai lebih rendah (misalnya karena prompt injection), verdict dinaikkan dan alasannya dicatat di tahapan analisis.
+2. **Fallback**: jika model gagal, `buildRuleBasedResult()` mengembalikan *pemeriksaan otomatis terbatas* yang diberi label jelas. Hasilnya tidak pernah menyatakan *Rendah*, karena aturan tidak bisa memastikan legitimasi perusahaan.
+3. Gambar tanpa teks yang tidak bisa dianalisis tidak diberi verdict; pengguna diminta mencoba lagi atau mengetik isi lowongan.

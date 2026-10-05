@@ -55,7 +55,7 @@ The application operates with Next.js API Routes orchestrating a real, stateless
 
 ### Feature 3: Interactive UI Action Chips
 * **Purpose**: Enables one-click sub-investigations ("Validate Company", "Check Red Flags", "Check Link & Contact", "Check Salary Reasonableness", "Safe Next Steps").
-* **How it works**: Sends `UIActionPayload` to `/api/chat`, handled by `handleRealUIAction()` in `/web/langchain/agents/analyzer/action-handler.ts`.
+* **How it works**: Sends `UIActionPayload` to `/api/chat`, handled by `handleUIAction()` in `/web/langchain/agents/analyzer/action-handler.ts`, which recovers the original posting (text and images) from the chat history.
 
 ---
 
