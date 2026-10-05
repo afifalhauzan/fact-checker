@@ -1,14 +1,13 @@
 import { getLLMModel, LLM_TIMEOUT_MS } from "./llm";
 import { ACTION_TITLES, actionSystemPrompt, buildActionUserPrompt } from "./prompts";
 import {
-  AnalysisSchema,
   LLMActionOutputSchema,
   type AnalysisResult,
   type Reference,
   type SalaryBenefitAssessment,
 } from "./schema";
 import type { AnalyzeImage } from "./analyze";
-import type { SearchSource } from "./tools/tavily-search";
+import { contextSources, findPostingContext, formatAnalysisContext, toMessageList } from "./conversation-context";
 import type { UIActionId, UIActionPayload } from "@/types/ui-actions";
 
 export interface UIActionResult {
@@ -24,20 +23,6 @@ interface ActionContext {
   postingText: string;
   images: AnalyzeImage[];
   analysis: Partial<AnalysisResult> | null;
-}
-
-interface LooseMessagePart {
-  type?: string;
-  text?: string;
-  mediaType?: string;
-  url?: string;
-  data?: unknown;
-}
-
-interface LooseMessage {
-  id?: string;
-  role?: string;
-  parts?: LooseMessagePart[];
 }
 
 const CLOSING_TEXT = "Jika ada aspek lain yang ingin kamu cek, pilih tombol aksi lainnya di bawah.";
@@ -79,101 +64,22 @@ const FALLBACK_POINTS: Record<UIActionId, string[]> = {
   ],
 };
 
-function partsOf(message: LooseMessage | undefined): LooseMessagePart[] {
-  return Array.isArray(message?.parts) ? message.parts : [];
-}
-
-function parseAnalysis(data: unknown): Partial<AnalysisResult> | null {
-  try {
-    const value = typeof data === "string" ? JSON.parse(data) : data;
-    if (!value || typeof value !== "object") {
-      return null;
-    }
-    const parsed = AnalysisSchema.safeParse(value);
-    return parsed.success ? parsed.data : (value as Partial<AnalysisResult>);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Recovers what the action should look at from the chat history the client already sends:
  * the analysis the chip belongs to and the user message (text + images) that produced it.
  */
-export function resolveActionContext(messages: unknown, payload: UIActionPayload): ActionContext {
-  const list: LooseMessage[] = Array.isArray(messages) ? messages : [];
+function resolveActionContext(messages: unknown, payload: UIActionPayload): ActionContext {
+  const list = toMessageList(messages);
 
   let sourceIndex = payload.sourceMessageId ? list.findIndex((message) => message?.id === payload.sourceMessageId) : -1;
   if (sourceIndex < 0) {
     sourceIndex = list.length - 1;
   }
 
-  for (let i = sourceIndex; i >= 0; i -= 1) {
-    if (list[i]?.role !== "assistant") {
-      continue;
-    }
-    const analysisPart = partsOf(list[i]).find((part) => part.type === "data-analysis");
-    if (!analysisPart) {
-      continue;
-    }
-
-    const analysis = parseAnalysis(analysisPart.data);
-    for (let j = i - 1; j >= 0; j -= 1) {
-      if (list[j]?.role !== "user") {
-        continue;
-      }
-      const parts = partsOf(list[j]);
-      return {
-        postingText: parts
-          .filter((part) => part.type === "text")
-          .map((part) => String(part.text ?? ""))
-          .join("\n")
-          .trim(),
-        images: parts
-          .filter(
-            (part) =>
-              part.type === "file" &&
-              typeof part.mediaType === "string" &&
-              part.mediaType.startsWith("image/") &&
-              typeof part.url === "string" &&
-              part.url.length > 0
-          )
-          .map((part) => ({ mediaType: part.mediaType as string, url: part.url as string })),
-        analysis,
-      };
-    }
-    return { postingText: "", images: [], analysis };
-  }
-
   // No analysis in the history (e.g. older client): fall back to the context the client sent.
-  return { postingText: payload.context ?? payload.claim ?? "", images: [], analysis: null };
-}
-
-function formatAnalysisContext(analysis: Partial<AnalysisResult> | null): string {
-  if (!analysis) {
-    return "";
-  }
-
-  const lines: string[] = [];
-  const claim = analysis.claims?.[0];
-  if (claim?.text) {
-    lines.push(`Tingkat risiko: ${claim.text}`);
-  }
-  if (analysis.summary) {
-    lines.push(`Ringkasan: ${analysis.summary}`);
-  }
-  if (analysis.risks?.length) {
-    lines.push("Risiko yang ditemukan:");
-    for (const risk of analysis.risks) {
-      lines.push(`- ${risk.type}: ${risk.description}${risk.evidence ? ` (bukti: "${risk.evidence}")` : ""}`);
-    }
-  }
-  return lines.join("\n");
-}
-
-// Only references that came from web search (they carry a citation) count as evidence.
-function searchReferencesOf(analysis: Partial<AnalysisResult> | null): Reference[] {
-  return (analysis?.references ?? []).filter((reference) => reference.url && reference.citations?.length);
+  return (
+    findPostingContext(list, sourceIndex) ?? { postingText: payload.context ?? payload.claim ?? "", images: [], analysis: null }
+  );
 }
 
 function cleanPoints(points: string[] | undefined): string[] {
@@ -189,19 +95,12 @@ export async function handleUIAction(payload: UIActionPayload, messages: unknown
   const isSalaryAction = actionId === "check_salary_benefit_reasonableness";
 
   const context = resolveActionContext(messages, payload);
-  const searchReferences = searchReferencesOf(context.analysis);
+  const { references: searchReferences, sources } = contextSources(context.analysis);
   const previousSalaryBenefit = isSalaryAction ? context.analysis?.salaryBenefit : undefined;
 
   try {
     const llm = getLLMModel({ temperature: 0.2 });
     const structuredLlm = llm.withStructuredOutput(LLMActionOutputSchema, { includeRaw: true });
-
-    const sources: SearchSource[] = searchReferences.map((reference, index) => ({
-      id: `S${index + 1}`,
-      title: reference.title,
-      url: reference.url as string,
-      snippet: reference.snippet ?? "",
-    }));
 
     const prompt = buildActionUserPrompt({
       actionId,
