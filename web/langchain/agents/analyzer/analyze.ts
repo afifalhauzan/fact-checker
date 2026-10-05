@@ -462,10 +462,3 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
 
   return { result: AnalysisSchema.parse(result), meta };
 }
-
-// Kept for the chat route until it streams pipeline progress from runAnalysis directly.
-export async function analyzeContent(input: AnalyzeInput): Promise<AnalysisResult> {
-  return (await runAnalysis(input)).result;
-}
-
-export { handleRealUIAction as handleMockUIAction } from "./action-handler";

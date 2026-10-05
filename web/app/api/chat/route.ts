@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { analyzeContent, handleMockUIAction } from "@/langchain/agents/analyzer/analyze";
+import { runAnalysis } from "@/langchain/agents/analyzer/analyze";
+import { handleRealUIAction } from "@/langchain/agents/analyzer/action-handler";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 
 const STREAM_CHUNK_DELAY_MS = 28;
-const REASONING_STEP_MIN_DELAY_MS = 1000;
-const REASONING_STEP_MAX_DELAY_MS = 2000;
 const SECTION_STEP_DELAY_MS = 220;
 
 function extractLatestUserText(body: any): string {
@@ -79,53 +78,6 @@ function chunkByWords(text: string): string[] {
   return words.map((word, index) => (index === 0 ? word : ` ${word}`));
 }
 
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function buildReasoningSnapshots(
-  reasoning?: Array<{ intent?: string; steps?: string[] }>
-): Array<Array<{ intent: string; steps: string[] }>> {
-  if (!reasoning?.length) {
-    return [];
-  }
-
-  const normalized = reasoning
-    .map((block) => ({
-      intent: block.intent?.trim() ?? "",
-      steps: Array.isArray(block.steps) ? block.steps.filter((step): step is string => typeof step === "string") : [],
-    }))
-    .filter((block) => block.intent.length > 0 && block.steps.length > 0);
-
-  if (!normalized.length) {
-    return [];
-  }
-
-  const snapshots: Array<Array<{ intent: string; steps: string[] }>> = [];
-  const progressive = normalized.map((block) => ({
-    intent: block.intent,
-    steps: [] as string[],
-  }));
-
-  for (let blockIndex = 0; blockIndex < normalized.length; blockIndex += 1) {
-    for (const step of normalized[blockIndex].steps) {
-      progressive[blockIndex] = {
-        ...progressive[blockIndex],
-        steps: [...progressive[blockIndex].steps, step],
-      };
-
-      snapshots.push(
-        progressive.map((block) => ({
-          intent: block.intent,
-          steps: [...block.steps],
-        }))
-      );
-    }
-  }
-
-  return snapshots;
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -163,7 +115,7 @@ export async function POST(req: NextRequest) {
         if (actionPayload) {
           const openingTextId = `action-opening-${Date.now()}`;
           const closingTextId = `action-closing-${Date.now()}`;
-          const result = await handleMockUIAction(actionPayload);
+          const result = await handleRealUIAction(actionPayload);
 
           await streamTextBlock({
             writer,
@@ -207,20 +159,21 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        const analysis = await analyzeContent({ input, images });
-        console.log("Generated analysis:", analysis);
-
         const openingTextId = `analysis-opening-${Date.now()}`;
         const followupTextId = `analysis-followup-${Date.now()}`;
         const closingTextId = `analysis-closing-${Date.now()}`;
         const reasoningPartId = `analysis-reasoning-${Date.now()}`;
 
-        // Stream reasoning first, step-by-step, to mimic a "thinking" phase.
-        const reasoningSnapshots = buildReasoningSnapshots(analysis.reasoning);
-        for (const snapshot of reasoningSnapshots) {
-          writer.write({ type: "data-reasoning", id: reasoningPartId, data: snapshot });
-          await sleep(randomInt(REASONING_STEP_MIN_DELAY_MS, REASONING_STEP_MAX_DELAY_MS));
-        }
+        // Each pipeline stage reports as it actually finishes, so the "thinking" panel shows real
+        // progress (rules, web search, model) instead of a replay after the fact.
+        const { result: analysis, meta } = await runAnalysis(
+          { input, images },
+          {
+            onProgress: (reasoning) => writer.write({ type: "data-reasoning", id: reasoningPartId, data: reasoning }),
+          }
+        );
+        // Metadata only: never log the posting or the analysis text.
+        console.info("[chat] analysis run", JSON.stringify(meta));
 
         const openingText = buildStreamText(analysis);
         await streamTextBlock({
@@ -279,7 +232,9 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
-        if (analysis.references?.length) {
+        const hasRiskVerdict = analysis.claims.length > 0;
+
+        if (hasRiskVerdict) {
           writer.write({
             type: "data-actions",
             data: { actions: DEFAULT_ANALYSIS_ACTIONS },
@@ -287,7 +242,7 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
-        const closingText = analysis.references?.length
+        const closingText = hasRiskVerdict
           ? "Kalau kamu mau, kita bisa lanjutkan dengan investigasi spesifik lewat tombol aksi di bawah."
           : "Kalau ada bagian yang ingin didalami, beri tahu saya.";
         await streamTextBlock({
