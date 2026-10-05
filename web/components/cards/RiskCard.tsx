@@ -1,8 +1,33 @@
 import type { Risk } from "@/langchain/agents/analyzer/schema";
 
-interface RiskCardProps extends Pick<Risk, "type" | "description"> {}
+interface RiskCardProps extends Pick<Risk, "type" | "description" | "evidence"> {}
 
 const riskStyleMap: Record<Risk["type"], { label: string; indicator: string; badge: string }> = {
+  payment_request: {
+    label: "Permintaan Biaya",
+    indicator: "bg-red-600",
+    badge: "bg-red-50 text-red-700 border-red-200",
+  },
+  sensitive_data: {
+    label: "Data Sensitif",
+    indicator: "bg-red-600",
+    badge: "bg-red-50 text-red-700 border-red-200",
+  },
+  tppo: {
+    label: "Indikasi TPPO",
+    indicator: "bg-rose-700",
+    badge: "bg-rose-50 text-rose-800 border-rose-200",
+  },
+  suspicious_contact: {
+    label: "Kontak/Link Mencurigakan",
+    indicator: "bg-orange-500",
+    badge: "bg-orange-50 text-orange-700 border-orange-200",
+  },
+  manipulation: {
+    label: "Upaya Manipulasi",
+    indicator: "bg-violet-500",
+    badge: "bg-violet-50 text-violet-700 border-violet-200",
+  },
   bias: {
     label: "Tekanan Sosial",
     indicator: "bg-amber-500",
@@ -20,7 +45,7 @@ const riskStyleMap: Record<Risk["type"], { label: string; indicator: string; bad
   },
 };
 
-export function RiskCard({ type, description }: RiskCardProps) {
+export function RiskCard({ type, description, evidence }: RiskCardProps) {
   const style = riskStyleMap[type];
 
   return (
@@ -34,6 +59,7 @@ export function RiskCard({ type, description }: RiskCardProps) {
             {style.label}
           </span>
           <p className="text-sm leading-relaxed text-foreground">{description}</p>
+          {evidence && <p className="text-xs italic leading-relaxed text-muted-foreground">Bukti: &ldquo;{evidence}&rdquo;</p>}
         </div>
       </div>
     </div>

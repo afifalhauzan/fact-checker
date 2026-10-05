@@ -440,7 +440,12 @@ export function AssistantMessage({
       return (
         <motion.section key={item.key} {...fadeUp} className="space-y-2">
           {item.risks.map((risk, index) => (
-            <RiskCard key={`${item.key}-risk-${index}`} type={risk.type} description={risk.description} />
+            <RiskCard
+              key={`${item.key}-risk-${index}`}
+              type={risk.type}
+              description={risk.description}
+              evidence={risk.evidence}
+            />
           ))}
         </motion.section>
       );
