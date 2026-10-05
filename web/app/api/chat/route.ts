@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { runAnalysis } from "@/langchain/agents/analyzer/analyze";
-import { handleRealUIAction } from "@/langchain/agents/analyzer/action-handler";
+import { handleUIAction } from "@/langchain/agents/analyzer/action-handler";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 
 const STREAM_CHUNK_DELAY_MS = 28;
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         if (actionPayload) {
           const openingTextId = `action-opening-${Date.now()}`;
           const closingTextId = `action-closing-${Date.now()}`;
-          const result = await handleRealUIAction(actionPayload);
+          const result = await handleUIAction(actionPayload, body?.messages);
 
           await streamTextBlock({
             writer,

@@ -1,9 +1,17 @@
-import { getLLMModel } from "./llm";
-import { actionPromptTemplates } from "./prompts";
-import type { UIActionPayload } from "@/types/ui-actions";
-import type { Reference, SalaryBenefitAssessment } from "./schema";
+import { getLLMModel, LLM_TIMEOUT_MS } from "./llm";
+import { ACTION_TITLES, actionSystemPrompt, buildActionUserPrompt } from "./prompts";
+import {
+  AnalysisSchema,
+  LLMActionOutputSchema,
+  type AnalysisResult,
+  type Reference,
+  type SalaryBenefitAssessment,
+} from "./schema";
+import type { AnalyzeImage } from "./analyze";
+import type { SearchSource } from "./tools/tavily-search";
+import type { UIActionId, UIActionPayload } from "@/types/ui-actions";
 
-export interface MockUIActionResult {
+export interface UIActionResult {
   openingText: string;
   title: string;
   points: string[];
@@ -12,133 +20,236 @@ export interface MockUIActionResult {
   salaryBenefit?: SalaryBenefitAssessment;
 }
 
-export async function handleRealUIAction(actionPayload: UIActionPayload): Promise<MockUIActionResult> {
-  const actionId = actionPayload.actionId;
-  const context = actionPayload.context || actionPayload.claim || "Informasi lowongan kerja digital";
+interface ActionContext {
+  postingText: string;
+  images: AnalyzeImage[];
+  analysis: Partial<AnalysisResult> | null;
+}
 
-  const template = actionPromptTemplates[actionId];
+interface LooseMessagePart {
+  type?: string;
+  text?: string;
+  mediaType?: string;
+  url?: string;
+  data?: unknown;
+}
 
-  if (!template) {
-    return {
-      openingText: "Saya akan memproses aksi yang kamu pilih.",
-      title: "Aksi Investigasi",
-      points: [
-        "Aksi telah diterima oleh sistem.",
-        "Silakan lakukan verifikasi lebih lanjut ke kanal resmi perusahaan.",
-      ],
-      closingText: "Silakan lanjutkan dengan aksi lain jika diperlukan.",
-    };
-  }
+interface LooseMessage {
+  id?: string;
+  role?: string;
+  parts?: LooseMessagePart[];
+}
 
+const CLOSING_TEXT = "Jika ada aspek lain yang ingin kamu cek, pilih tombol aksi lainnya di bawah.";
+const SALARY_BENEFIT_TITLE = "Kewajaran Gaji & Benefit";
+const MIN_POINTS = 2;
+const MAX_POINTS = 5;
+
+// Used only when the model cannot run; general but still specific to the chosen action.
+const FALLBACK_POINTS: Record<UIActionId, string[]> = {
+  validate_company: [
+    "Cari website resmi perusahaan dan pastikan lowongan yang sama tercantum di halaman kariernya.",
+    "Cocokkan nama perusahaan dan riwayat rekrutmennya di akun LinkedIn resmi.",
+    "Untuk badan usaha berbentuk PT, cek legalitasnya melalui AHU Online (ahu.go.id).",
+    "Periksa alamat kantor di peta digital dan pastikan alamatnya nyata.",
+  ],
+  check_red_flags: [
+    "Permintaan biaya dalam bentuk apa pun (pendaftaran, pelatihan, seragam, tes kesehatan) adalah tanda bahaya utama.",
+    "Permintaan data sensitif seperti OTP, PIN, atau foto KTP sambil selfie patut dicurigai.",
+    "Proses yang hanya lewat chat pribadi tanpa email domain resmi perlu diverifikasi.",
+    "Gaji tinggi dengan syarat sangat ringan atau desakan untuk segera mendaftar perlu diwaspadai.",
+  ],
+  check_link_contact: [
+    "Recruiter resmi biasanya memakai email berdomain perusahaan, bukan @gmail atau @yahoo.",
+    "Hindari membuka shortlink (bit.ly, s.id) tanpa tahu tujuan aslinya.",
+    "Kontak yang hanya lewat WhatsApp atau Telegram pribadi perlu dikonfirmasi ke nomor resmi perusahaan.",
+    "Jangan login atau mengisi data pribadi di tautan yang domainnya berbeda dari website resmi perusahaan.",
+  ],
+  check_salary_benefit_reasonableness: [
+    "Bandingkan gaji dengan lowongan posisi sejenis di portal kerja resmi.",
+    "Gaji yang jauh di atas rata-rata untuk syarat yang sangat ringan perlu diwaspadai.",
+    "Pastikan rincian gaji dan benefit tertulis di kontrak kerja resmi.",
+    "Pekerjaan yang sah tidak mensyaratkan pembayaran atau deposit di awal.",
+  ],
+  safe_next_steps: [
+    "Jangan membayar biaya apa pun sebelum lowongan terverifikasi di kanal resmi perusahaan.",
+    "Jangan mengirim OTP, PIN, kata sandi, atau foto KTP sambil selfie kepada siapa pun.",
+    "Hubungi perusahaan lewat kontak di website resminya untuk memastikan lowongan ini benar.",
+    "Simpan bukti percakapan dan laporkan lowongan mencurigakan ke platform tempat kamu menemukannya.",
+  ],
+};
+
+function partsOf(message: LooseMessage | undefined): LooseMessagePart[] {
+  return Array.isArray(message?.parts) ? message.parts : [];
+}
+
+function parseAnalysis(data: unknown): Partial<AnalysisResult> | null {
   try {
-    const llm = getLLMModel({ temperature: 0.2 });
-    const prompt = template.replace("{context}", context);
-
-    const response = await llm.invoke([
-      {
-        role: "system",
-        content:
-          "Anda adalah asisten investigasi risiko lowongan kerja digital. Berikan panduan analisis yang ringkas, logis, dan berbentuk poin-poin yang mudah dipahami.",
-      },
-      { role: "user", content: prompt },
-    ]);
-
-    const contentStr = typeof response.content === "string" ? response.content : JSON.stringify(response.content);
-
-    // Extract bullet points from LLM response
-    const rawLines = contentStr.split("\n").map((line) => line.trim()).filter(Boolean);
-    const points: string[] = [];
-
-    for (const line of rawLines) {
-      // Strip leading list markers (numbered, dash, bullet, single "* ") but keep "**bold**" markers intact.
-      const cleanLine = line
-        .replace(/^(?:\d+[.)]|[-•])\s+/, "")
-        .replace(/^\*(?!\*)\s+/, "")
-        .trim();
-      if (cleanLine.length > 10 && !cleanLine.startsWith("Judul:") && !cleanLine.startsWith("Status:")) {
-        points.push(cleanLine);
-      }
+    const value = typeof data === "string" ? JSON.parse(data) : data;
+    if (!value || typeof value !== "object") {
+      return null;
     }
-
-    const finalPoints = points.length >= 3 ? points.slice(0, 5) : [
-      "Periksa keberadaan website resmi dan domain email recruiter.",
-      "Cocokkan posisi yang sama pada halaman karier atau LinkedIn resmi.",
-      "Waspadai kontak personal WhatsApp atau permintaan biaya di awal.",
-      "Tahan pengiriman dokumen sensitif (KTP/rekening) sebelum verifikasi.",
-    ];
-
-    if (actionId === "check_salary_benefit_reasonableness") {
-      return {
-        openingText: "Saya telah menganalisis kewajaran gaji dan benefit berdasarkan informasi posisi ini.",
-        title: "Checklist Kewajaran Gaji & Benefit",
-        points: finalPoints,
-        salaryBenefit: {
-          title: "Kewajaran Gaji & Benefit",
-          status: "Perlu Diverifikasi",
-          summary:
-            "Klaim nominal gaji atau benefit yang ditawarkan perlu dibandingkan dengan standar industri untuk posisi sejenis.",
-          highlights: [
-            "Klaim benefit: perlu pengecekan pasar",
-            "Kejelasan role & tanggung jawab: harus dipastikan di wawancara",
-            "Sistem kontrak: pastikan ada dokumen tertulis",
-          ],
-          hint:
-            "Penawaran tinggi bukan otomatis penipuan, namun menjadi sinyal bahaya bila disertai permintaan pembayaran atau chat personal.",
-        },
-        closingText:
-          "Hasil ini adalah pembanding awal. Selalu verifikasi ke platform karier tepercaya atau situs resmi perusahaan.",
-      };
-    }
-
-    return {
-      openingText: `Siap, ini hasil pendalaman untuk **${actionPayload.actionLabel || "aksi yang kamu pilih"}**:`,
-      title: getActionTitle(actionId),
-      points: finalPoints,
-      closingText: "Jika ada aspek lain yang ingin kamu cek, pilih tombol aksi lainnya di bawah.",
-      references: [
-        {
-          title: "Website Resmi Perusahaan",
-          snippet: "Bandingkan informasi lowongan dan pastikan dipublikasikan di kanal korporat resmi.",
-          citations: [],
-        },
-        {
-          title: "LinkedIn Resmi Perusahaan",
-          snippet: "Cek keberadaan profil resmi, aktivitas terbaru, dan konsistensi informasi recruiter.",
-          url: "https://www.linkedin.com",
-          citations: [],
-        },
-      ],
-    };
-  } catch (error) {
-    console.error("[ActionHandler] Error generating real UI Action response:", error);
-    // Fallback to safe response
-    return {
-      openingText: "Berikut adalah langkah investigasi yang direkomendasikan:",
-      title: getActionTitle(actionId),
-      points: [
-        "Cari website resmi perusahaan lalu cek apakah nama brand, logo, dan alamatnya konsisten.",
-        "Pastikan posisi yang sama muncul di halaman karier resmi atau akun LinkedIn resmi perusahaan.",
-        "Cocokkan domain email recruiter. Domain gratis (@gmail/@yahoo) perlu diwaspadai.",
-        "Jika lowongan meminta pembayaran biaya administrasi/modul, segera hentikan proses pendaftaran.",
-      ],
-      closingText: "Selalu utamakan prinsip kehati-hatian sebelum mengirimkan data pribadi.",
-    };
+    const parsed = AnalysisSchema.safeParse(value);
+    return parsed.success ? parsed.data : (value as Partial<AnalysisResult>);
+  } catch {
+    return null;
   }
 }
 
-function getActionTitle(actionId: string): string {
-  switch (actionId) {
-    case "validate_company":
-      return "Checklist Validasi Perusahaan";
-    case "check_red_flags":
-      return "Indikator Mencurigakan yang Perlu Diwaspadai";
-    case "check_link_contact":
-      return "Analisis Risiko Link & Kontak";
-    case "check_salary_benefit_reasonableness":
-      return "Checklist Kewajaran Gaji & Benefit";
-    case "safe_next_steps":
-      return "Langkah Aman Sebelum Bertindak";
-    default:
-      return "Aksi Investigasi Lanjutan";
+/**
+ * Recovers what the action should look at from the chat history the client already sends:
+ * the analysis the chip belongs to and the user message (text + images) that produced it.
+ */
+export function resolveActionContext(messages: unknown, payload: UIActionPayload): ActionContext {
+  const list: LooseMessage[] = Array.isArray(messages) ? messages : [];
+
+  let sourceIndex = payload.sourceMessageId ? list.findIndex((message) => message?.id === payload.sourceMessageId) : -1;
+  if (sourceIndex < 0) {
+    sourceIndex = list.length - 1;
+  }
+
+  for (let i = sourceIndex; i >= 0; i -= 1) {
+    if (list[i]?.role !== "assistant") {
+      continue;
+    }
+    const analysisPart = partsOf(list[i]).find((part) => part.type === "data-analysis");
+    if (!analysisPart) {
+      continue;
+    }
+
+    const analysis = parseAnalysis(analysisPart.data);
+    for (let j = i - 1; j >= 0; j -= 1) {
+      if (list[j]?.role !== "user") {
+        continue;
+      }
+      const parts = partsOf(list[j]);
+      return {
+        postingText: parts
+          .filter((part) => part.type === "text")
+          .map((part) => String(part.text ?? ""))
+          .join("\n")
+          .trim(),
+        images: parts
+          .filter(
+            (part) =>
+              part.type === "file" &&
+              typeof part.mediaType === "string" &&
+              part.mediaType.startsWith("image/") &&
+              typeof part.url === "string" &&
+              part.url.length > 0
+          )
+          .map((part) => ({ mediaType: part.mediaType as string, url: part.url as string })),
+        analysis,
+      };
+    }
+    return { postingText: "", images: [], analysis };
+  }
+
+  // No analysis in the history (e.g. older client): fall back to the context the client sent.
+  return { postingText: payload.context ?? payload.claim ?? "", images: [], analysis: null };
+}
+
+function formatAnalysisContext(analysis: Partial<AnalysisResult> | null): string {
+  if (!analysis) {
+    return "";
+  }
+
+  const lines: string[] = [];
+  const claim = analysis.claims?.[0];
+  if (claim?.text) {
+    lines.push(`Tingkat risiko: ${claim.text}`);
+  }
+  if (analysis.summary) {
+    lines.push(`Ringkasan: ${analysis.summary}`);
+  }
+  if (analysis.risks?.length) {
+    lines.push("Risiko yang ditemukan:");
+    for (const risk of analysis.risks) {
+      lines.push(`- ${risk.type}: ${risk.description}${risk.evidence ? ` (bukti: "${risk.evidence}")` : ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+// Only references that came from web search (they carry a citation) count as evidence.
+function searchReferencesOf(analysis: Partial<AnalysisResult> | null): Reference[] {
+  return (analysis?.references ?? []).filter((reference) => reference.url && reference.citations?.length);
+}
+
+function cleanPoints(points: string[] | undefined): string[] {
+  return (points ?? [])
+    .map((point) => point.replace(/^\s*(?:\d+[.)]|[-•*])\s+/, "").trim())
+    .filter((point) => point.length > 5)
+    .slice(0, MAX_POINTS);
+}
+
+export async function handleUIAction(payload: UIActionPayload, messages: unknown): Promise<UIActionResult> {
+  const actionId = payload.actionId;
+  const title = ACTION_TITLES[actionId];
+  const isSalaryAction = actionId === "check_salary_benefit_reasonableness";
+
+  const context = resolveActionContext(messages, payload);
+  const searchReferences = searchReferencesOf(context.analysis);
+  const previousSalaryBenefit = isSalaryAction ? context.analysis?.salaryBenefit : undefined;
+
+  try {
+    const llm = getLLMModel({ temperature: 0.2 });
+    const structuredLlm = llm.withStructuredOutput(LLMActionOutputSchema, { includeRaw: true });
+
+    const sources: SearchSource[] = searchReferences.map((reference, index) => ({
+      id: `S${index + 1}`,
+      title: reference.title,
+      url: reference.url as string,
+      snippet: reference.snippet ?? "",
+    }));
+
+    const prompt = buildActionUserPrompt({
+      actionId,
+      postingText: context.postingText,
+      imageCount: context.images.length,
+      analysisContext: formatAnalysisContext(context.analysis),
+      sources,
+    });
+
+    const userContent = context.images.length
+      ? [{ type: "text", text: prompt }, ...context.images.map((image) => ({ type: "image_url", image_url: image.url }))]
+      : prompt;
+
+    const { parsed } = await structuredLlm.invoke(
+      [
+        { role: "system", content: actionSystemPrompt },
+        { role: "user", content: userContent },
+      ],
+      { signal: AbortSignal.timeout(LLM_TIMEOUT_MS) }
+    );
+
+    if (!parsed) {
+      throw new Error("Model output did not match LLMActionOutputSchema");
+    }
+
+    const points = cleanPoints(parsed.points);
+    const salaryBenefit = isSalaryAction
+      ? parsed.salaryBenefit
+        ? { title: SALARY_BENEFIT_TITLE, ...parsed.salaryBenefit }
+        : previousSalaryBenefit
+      : undefined;
+
+    return {
+      openingText: parsed.openingText?.trim() || `Siap, ini hasil pendalaman untuk **${title}**:`,
+      title,
+      points: points.length >= MIN_POINTS ? points : FALLBACK_POINTS[actionId],
+      closingText: CLOSING_TEXT,
+      references: searchReferences.length ? searchReferences : undefined,
+      salaryBenefit,
+    };
+  } catch (error) {
+    console.error("[ActionHandler] Model action failed, using static guidance:", error instanceof Error ? error.message : error);
+    return {
+      openingText: "Analisis AI untuk aksi ini sedang tidak dapat dijalankan. Berikut panduan umum yang tetap bisa kamu lakukan:",
+      title,
+      points: FALLBACK_POINTS[actionId],
+      closingText: CLOSING_TEXT,
+      salaryBenefit: previousSalaryBenefit,
+    };
   }
 }

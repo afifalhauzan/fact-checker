@@ -1,3 +1,4 @@
+import type { UIActionId } from "@/types/ui-actions";
 import { formatSignalsForPrompt, type DetectedSignal } from "./signals";
 import type { SearchSource } from "./tools/tavily-search";
 
@@ -102,38 +103,68 @@ export function buildAnalyzerUserPrompt({
   return sections.join("\n");
 }
 
-export const actionPromptTemplates: Record<string, string> = {
-  validate_company: `Pengguna meminta aksi "Validasi Perusahaan".
-Berdasarkan konteks lowongan sebelumnya berikut:
-"{context}"
-
-Berikan checklist 4 poin praktis untuk memeriksa identitas perusahaan (misal: keberadaan website resmi, domain email recruiter, akun LinkedIn resmi, alamat kantor).`,
-
-  check_red_flags: `Pengguna meminta aksi "Cek Red Flag".
-Berdasarkan konteks lowongan sebelumnya berikut:
-"{context}"
-
-Rangkum minimal 4 indikator mencurigakan atau poin kehati-hatian yang perlu diperiksa dari lowongan tersebut.
-Susun respons dengan judul "Indikator Mencurigakan yang Perlu Diwaspadai".`,
-
-  check_link_contact: `Pengguna meminta aksi "Periksa Link & Kontak".
-Berdasarkan konteks lowongan sebelumnya berikut:
-"{context}"
-
-Bedah risiko dari tautan pendaftaran, shortlink (bit.ly/tinyurl), domain email non-korporat (@gmail/@yahoo), dan kontak WhatsApp personal.
-Susun respons dengan judul "Analisis Risiko Link & Kontak".`,
-
-  check_salary_benefit_reasonableness: `Pengguna meminta aksi "Cek Kewajaran Gaji".
-Berdasarkan konteks lowongan sebelumnya berikut:
-"{context}"
-
-Evaluasi apakah tawaran gaji dan benefit terlihat wajar dibandingkan standar pasar entry-level di Indonesia.
-Susun respons dengan judul "Checklist Kewajaran Gaji & Benefit".`,
-
-  safe_next_steps: `Pengguna meminta aksi "Beri Langkah Aman".
-Berdasarkan konteks lowongan sebelumnya berikut:
-"{context}"
-
-Berikan 4-5 rekomendasi tindakan praktis pencegahan sebelum pengguna melamar, mengisi formulir, mengirim data pribadi (KTP/CV), atau membayar biaya.
-Susun respons dengan judul "Langkah Aman Sebelum Bertindak".`,
+export const ACTION_TITLES: Record<UIActionId, string> = {
+  validate_company: "Checklist Validasi Perusahaan",
+  check_red_flags: "Indikator Mencurigakan yang Perlu Diwaspadai",
+  check_link_contact: "Analisis Risiko Link & Kontak",
+  check_salary_benefit_reasonableness: "Checklist Kewajaran Gaji & Benefit",
+  safe_next_steps: "Langkah Aman Sebelum Bertindak",
 };
+
+const ACTION_INSTRUCTIONS: Record<UIActionId, string> = {
+  validate_company:
+    "Periksa identitas perusahaan pada materi: nama badan usaha, kecocokan domain email atau website, keberadaannya di <sumber_pencarian>, dan alamat. Sebutkan apa yang sudah terlihat, apa yang belum bisa dipastikan, dan cara memeriksanya (website atau halaman karier resmi, LinkedIn resmi, serta AHU Online untuk badan hukum PT).",
+  check_red_flags:
+    "Rangkum indikator mencurigakan yang benar-benar ada pada materi ini, urut dari yang paling berbahaya, dan kutip bagian materi yang relevan. Jika indikatornya sedikit, jelaskan juga bagian yang sudah wajar.",
+  check_link_contact:
+    "Bedah setiap link, email, dan nomor kontak yang ada di materi: domain resmi atau gratis, shortlink, dan chat pribadi. Jika materi tidak memuat link atau kontak, katakan demikian lalu jelaskan cara aman memverifikasinya.",
+  check_salary_benefit_reasonableness:
+    'Nilai kewajaran gaji dan benefit untuk posisi dan syarat pada materi dibanding kisaran umum pasar kerja Indonesia untuk posisi sejenis. Jangan mengarang angka statistik; gunakan perkiraan rentang dengan diksi hati-hati. WAJIB isi salaryBenefit; jika materi tidak menyebut gaji, gunakan status "Tidak Disebutkan".',
+  safe_next_steps:
+    "Berikan langkah aman yang spesifik terhadap risiko pada materi ini, urut dari yang paling mendesak, sebelum pengguna melamar, mengisi formulir, mengirim data pribadi, atau membayar apa pun.",
+};
+
+export const actionSystemPrompt = `Anda adalah asisten investigasi TelaahKarier untuk risiko lowongan kerja digital di Indonesia. Jalankan aksi yang diminta berdasarkan materi lowongan dan hasil analisis awal. Poin harus spesifik terhadap lowongan ini, bukan nasihat umum, dalam Bahasa Indonesia yang mudah dipahami.
+
+${DATA_BOUNDARY_RULES}
+
+ATURAN
+- Berikan 3-5 poin, masing-masing maksimal 2 kalimat.
+- Bukti eksternal hanya boleh berasal dari <sumber_pencarian>; jangan menyebut URL atau sumber lain.
+- Jangan memberi vonis mutlak; gunakan "terindikasi" atau "perlu diverifikasi".`;
+
+export function buildActionUserPrompt({
+  actionId,
+  postingText,
+  imageCount,
+  analysisContext,
+  sources,
+}: {
+  actionId: UIActionId;
+  postingText: string;
+  imageCount: number;
+  analysisContext: string;
+  sources: SearchSource[];
+}): string {
+  const sections = [`AKSI: ${ACTION_TITLES[actionId]}`, `INSTRUKSI: ${ACTION_INSTRUCTIONS[actionId]}`];
+  if (imageCount > 0) {
+    sections.push(imageNote(imageCount));
+  }
+
+  sections.push(
+    "",
+    "<materi_lowongan>",
+    formatMaterial(postingText),
+    "</materi_lowongan>",
+    "",
+    "<hasil_analisis_awal>",
+    escapeDataBlock(analysisContext || "Belum ada hasil analisis awal."),
+    "</hasil_analisis_awal>",
+    "",
+    "<sumber_pencarian>",
+    formatSourcesForPrompt(sources),
+    "</sumber_pencarian>"
+  );
+
+  return sections.join("\n");
+}
