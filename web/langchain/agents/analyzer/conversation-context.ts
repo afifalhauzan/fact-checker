@@ -1,6 +1,6 @@
 import { AnalysisSchema, type AnalysisResult, type Reference } from "./schema";
 import type { AnalyzeImage } from "./analyze";
-import { composeMaterialText } from "./extraction";
+import { composeMaterialText, isSupportedAttachment } from "./extraction";
 import type { SearchSource } from "./tools/tavily-search";
 
 /** Minimal view of the AI SDK UI messages the client sends. Every field is untrusted input. */
@@ -56,7 +56,7 @@ function imagesOf(message: LooseMessage | undefined): AnalyzeImage[] {
       (part) =>
         part.type === "file" &&
         typeof part.mediaType === "string" &&
-        part.mediaType.startsWith("image/") &&
+        isSupportedAttachment(part.mediaType) &&
         typeof part.url === "string" &&
         part.url.length > 0
     )

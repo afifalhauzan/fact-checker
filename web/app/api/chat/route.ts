@@ -5,11 +5,14 @@ import { handleUIAction } from "@/langchain/agents/analyzer/action-handler";
 import { answerFollowUp } from "@/langchain/agents/analyzer/follow-up";
 import { decideTurnMode } from "@/langchain/agents/analyzer/turn-router";
 import { findPostingContext, recentTurns, toMessageList } from "@/langchain/agents/analyzer/conversation-context";
+import { isSupportedAttachment } from "@/langchain/agents/analyzer/extraction";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const SECTION_STEP_DELAY_MS = 220;
 const MAX_FOLLOW_UP_TURNS = 6;
+const UNSUPPORTED_FILE_MESSAGE =
+  "Format file ini belum bisa diperiksa. Kirim lowongan dalam bentuk gambar (poster atau screenshot), PDF, atau tempel teksnya.";
 
 function extractLatestUserText(body: any): string {
   const lastMessage = body?.messages?.[body.messages.length - 1];
@@ -32,21 +35,24 @@ function extractLatestUserText(body: any): string {
   return "";
 }
 
-interface ExtractedImagePart {
+interface ExtractedFilePart {
   mediaType: string;
   url: string;
 }
 
-function extractLatestImageParts(body: any): ExtractedImagePart[] {
+function extractLatestFileParts(body: any): { attachments: ExtractedFilePart[]; unsupportedCount: number } {
   const lastMessage = body?.messages?.[body.messages.length - 1];
   if (!lastMessage || !Array.isArray(lastMessage.parts)) {
-    return [];
+    return { attachments: [], unsupportedCount: 0 };
   }
 
-  return lastMessage.parts
-    .filter((part: any) => part?.type === "file" && typeof part?.mediaType === "string" && part.mediaType.startsWith("image/"))
+  const files: ExtractedFilePart[] = lastMessage.parts
+    .filter((part: any) => part?.type === "file" && typeof part?.mediaType === "string")
     .map((part: any) => ({ mediaType: part.mediaType as string, url: String(part?.url ?? "") }))
-    .filter((part: ExtractedImagePart) => part.url.length > 0);
+    .filter((part: ExtractedFilePart) => part.url.length > 0);
+
+  const attachments = files.filter((file) => isSupportedAttachment(file.mediaType));
+  return { attachments, unsupportedCount: files.length - attachments.length };
 }
 
 function extractUIActionPayload(body: any): UIActionPayload | null {
@@ -109,7 +115,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const actionPayload = extractUIActionPayload(body);
     const input = extractLatestUserText(body);
-    const images = extractLatestImageParts(body);
+    const { attachments, unsupportedCount } = extractLatestFileParts(body);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -165,7 +171,12 @@ export async function POST(req: NextRequest) {
         const messages = toMessageList(body?.messages);
         const latestIndex = messages.length - 1;
         const context = findPostingContext(messages, latestIndex - 1);
-        const decision = await decideTurnMode({ text: input, imageCount: images.length, context });
+        if (unsupportedCount && !attachments.length && !input.length) {
+          await streamTextBlock({ writer, text: UNSUPPORTED_FILE_MESSAGE, id: `unsupported-file-${Date.now()}` });
+          return;
+        }
+
+        const decision = await decideTurnMode({ text: input, imageCount: attachments.length, context });
 
         if (decision.mode === "follow_up") {
           const turns = recentTurns(messages, context ? context.analysisIndex + 1 : 0, latestIndex, MAX_FOLLOW_UP_TURNS);
@@ -193,7 +204,7 @@ export async function POST(req: NextRequest) {
         // Each pipeline stage reports as it actually finishes, so the "thinking" panel shows real
         // progress (rules, web search, model) instead of a replay after the fact.
         const { result: analysis, meta } = await runAnalysis(
-          { input, images },
+          { input, images: attachments },
           {
             onProgress: (reasoning) => writer.write({ type: "data-reasoning", id: reasoningPartId, data: reasoning }),
           }

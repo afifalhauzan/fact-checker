@@ -43,6 +43,7 @@ import {
   type WebSearchStatus,
 } from "./tools/tavily-search";
 
+/** An attachment as a data URL: an image (poster, screenshot) or a PDF document. */
 export interface AnalyzeImage {
   mediaType: string;
   url: string;
@@ -178,7 +179,7 @@ function describeMaterial(text: string, imageCount: number): string {
     parts.push(`${text.length} karakter teks`);
   }
   if (imageCount > 0) {
-    parts.push(`${imageCount} gambar`);
+    parts.push(`${imageCount} lampiran`);
   }
   return `Membaca materi lowongan: ${parts.join(" dan ")}`;
 }
@@ -337,7 +338,7 @@ function buildRuleBasedResult(text: string, signals: DetectedSignal[], search: W
   if (!text.length) {
     return {
       conversationText:
-        "Maaf, analisis gambar sedang tidak dapat dijalankan. Coba kirim ulang beberapa saat lagi, atau ketik isi lowongannya agar bisa saya periksa.",
+        "Maaf, lampiran sedang tidak dapat dianalisis. Coba kirim ulang beberapa saat lagi, atau ketik isi lowongannya agar bisa saya periksa.",
       claims: [],
       risks: [],
       summary: "",

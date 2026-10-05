@@ -70,11 +70,11 @@ function formatSourcesForPrompt(sources: SearchSource[]): string {
 }
 
 function formatMaterial(text: string): string {
-  return text.trim().length ? escapeDataBlock(text) : "(Tidak ada teks. Materi lowongan berupa gambar terlampir.)";
+  return text.trim().length ? escapeDataBlock(text) : "(Tidak ada teks. Materi lowongan berupa lampiran.)";
 }
 
 function imageNote(imageCount: number): string {
-  return `Terlampir ${imageCount} gambar poster/screenshot yang juga merupakan bagian dari materi lowongan.`;
+  return `Terlampir ${imageCount} lampiran (gambar poster/screenshot atau dokumen PDF) yang juga merupakan bagian dari materi lowongan.`;
 }
 
 export function buildAnalyzerUserPrompt({

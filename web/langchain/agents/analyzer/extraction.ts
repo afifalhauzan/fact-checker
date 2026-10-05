@@ -50,6 +50,11 @@ const KIND_LABELS: Record<AttachmentKind, string> = {
   bukan_lowongan: "bukan materi lowongan",
 };
 
+/** File types the extraction step can read: images (posters, screenshots) and PDF documents. */
+export function isSupportedAttachment(mediaType: string): boolean {
+  return mediaType.startsWith("image/") || mediaType === "application/pdf";
+}
+
 function decodedSize(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
   return Math.floor((base64.length * 3) / 4);
