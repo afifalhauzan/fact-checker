@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { runAnalysis } from "@/langchain/agents/analyzer/analyze";
 import { handleUIAction } from "@/langchain/agents/analyzer/action-handler";
+import { answerFollowUp } from "@/langchain/agents/analyzer/follow-up";
+import { decideTurnMode } from "@/langchain/agents/analyzer/turn-router";
+import { findPostingContext, recentTurns, toMessageList } from "@/langchain/agents/analyzer/conversation-context";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const SECTION_STEP_DELAY_MS = 220;
+const MAX_FOLLOW_UP_TURNS = 6;
 
 function extractLatestUserText(body: any): string {
   const lastMessage = body?.messages?.[body.messages.length - 1];
@@ -69,13 +73,10 @@ function buildStreamText(analysis: { conversationText?: string }): string {
     : "Saya siap membantu telaah risiko lowongan. Tempel poster, teks, atau link yang ingin dicek.";
 }
 
+// Each chunk carries the whitespace before its word, so line breaks (Markdown lists) survive.
 function chunkByWords(text: string): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  if (words.length === 0) {
-    return [""];
-  }
-
-  return words.map((word, index) => (index === 0 ? word : ` ${word}`));
+  const chunks = text.trim().match(/\s*\S+/g);
+  return chunks?.length ? chunks : [""];
 }
 
 function sleep(ms: number): Promise<void> {
@@ -159,6 +160,31 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        // Questions about the posting under discussion (or general ones) are answered with that
+        // context instead of being analyzed as if they were a new posting.
+        const messages = toMessageList(body?.messages);
+        const latestIndex = messages.length - 1;
+        const context = findPostingContext(messages, latestIndex - 1);
+        const decision = await decideTurnMode({ text: input, imageCount: images.length, context });
+
+        if (decision.mode === "follow_up") {
+          const turns = recentTurns(messages, context ? context.analysisIndex + 1 : 0, latestIndex, MAX_FOLLOW_UP_TURNS);
+          const { result, meta } = await answerFollowUp({ question: input, context, turns });
+          console.info("[chat] follow-up run", JSON.stringify({ route: decision.reason, ...meta }));
+
+          await streamTextBlock({ writer, text: result.answer, id: `follow-up-${Date.now()}` });
+
+          if (result.references.length) {
+            await sleep(SECTION_STEP_DELAY_MS);
+            writer.write({ type: "data-references", data: result.references });
+          }
+          if (result.suggestedQuestions.length) {
+            await sleep(SECTION_STEP_DELAY_MS);
+            writer.write({ type: "data-suggested-questions", data: result.suggestedQuestions });
+          }
+          return;
+        }
+
         const openingTextId = `analysis-opening-${Date.now()}`;
         const followupTextId = `analysis-followup-${Date.now()}`;
         const closingTextId = `analysis-closing-${Date.now()}`;
@@ -173,7 +199,7 @@ export async function POST(req: NextRequest) {
           }
         );
         // Metadata only: never log the posting or the analysis text.
-        console.info("[chat] analysis run", JSON.stringify(meta));
+        console.info("[chat] analysis run", JSON.stringify({ route: decision.reason, ...meta }));
 
         const openingText = buildStreamText(analysis);
         await streamTextBlock({

@@ -248,6 +248,26 @@ export const LLMActionOutputSchema = z.object({
     .describe("Hanya diisi untuk aksi kewajaran gaji dan benefit."),
 });
 
+/** Decides whether a short text-only message is new material to analyze or a question. */
+export const LLMRouterOutputSchema = z.object({
+  intent: z.enum(["materi_lowongan", "pertanyaan"]),
+});
+
+/** What the model fills when answering a follow-up or general question. */
+export const LLMFollowUpOutputSchema = z.object({
+  answer: z
+    .string()
+    .describe("Jawaban dalam Markdown, maksimal sekitar 120 kata. Rujuk sumber dengan penanda seperti [S1]."),
+  sourceIds: z
+    .array(z.string())
+    .default([])
+    .describe('ID sumber dari <sumber_pencarian> yang dipakai dalam jawaban, misal ["S1"].'),
+  suggestedQuestions: z
+    .array(z.string())
+    .default([])
+    .describe("2-3 pertanyaan lanjutan singkat dari sudut pandang pengguna kepada TelaahKarier."),
+});
+
 export type Claim = z.infer<typeof ClaimSchema>;
 export type Risk = z.infer<typeof RiskSchema>;
 export type Reasoning = z.infer<typeof ReasoningSchema>;
@@ -258,3 +278,4 @@ export type SalaryBenefitAssessment = z.infer<typeof SalaryBenefitAssessmentSche
 export type AnalysisResult = z.infer<typeof AnalysisSchema>;
 export type LLMAnalysisOutput = z.infer<typeof LLMAnalysisOutputSchema>;
 export type LLMActionOutput = z.infer<typeof LLMActionOutputSchema>;
+export type LLMFollowUpOutput = z.infer<typeof LLMFollowUpOutputSchema>;
