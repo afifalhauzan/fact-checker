@@ -66,6 +66,7 @@ export const SalaryBenefitAssessmentSchema = z.object({
 export const ClaimSchema = z.object({
   text: z.string(),
   confidence: z.number().min(0).max(1),
+  riskLevel: RiskLevelSchema,
 });
 
 export const RiskSchema = z.object({
@@ -80,20 +81,21 @@ export const ReasoningSchema = z.object({
 });
 
 /**
- * Inlined Zod schema for Gemini API compatibility.
- * Avoids JSON Schema $ref / $defs generation which is rejected by Gemini API.
+ * Data contract streamed to the client (data-analysis and the sectional data-* parts).
+ * The LLM never fills this directly: it fills LLMAnalysisOutputSchema, and analyze.ts maps
+ * that output (plus retrieved sources and rule signals) into this shape.
  */
 export const AnalysisSchema = z.object({
-  conversationText: z.string().describe("MUST ONLY contain AI opening greeting. NEVER copy the user's input text here."),
+  conversationText: z.string(),
   claims: z
     .array(
       z.object({
         text: z.string(),
         confidence: z.number().min(0).max(1),
+        riskLevel: z.enum(RISK_LEVELS),
       })
     )
-    .default([])
-    .describe("Omit or leave empty if the input does not contain enough job-posting information to assess a risk level."),
+    .default([]),
   salaryBenefit: z
     .object({
       title: z.string(),
@@ -102,8 +104,7 @@ export const AnalysisSchema = z.object({
       highlights: z.array(z.string()),
       hint: z.string().optional(),
     })
-    .optional()
-    .describe("Omit entirely if the input does not mention salary or benefits."),
+    .optional(),
   risks: z
     .array(
       z.object({
@@ -112,8 +113,7 @@ export const AnalysisSchema = z.object({
         evidence: z.string().optional(),
       })
     )
-    .default([])
-    .describe("Omit or leave empty if no concrete risk indicator was found."),
+    .default([]),
   summary: z.string(),
   summaryCitations: z
     .array(
@@ -132,8 +132,7 @@ export const AnalysisSchema = z.object({
         explanation: z.string(),
       })
     )
-    .default([])
-    .describe("Omit or leave empty if there is nothing substantive to explain yet."),
+    .default([]),
   suggestedQuestions: z.array(z.string()).default([]),
   reasoning: z
     .array(
@@ -161,8 +160,9 @@ export const AnalysisSchema = z.object({
           .default([]),
       })
     )
-    .default([])
-    .describe("Omit or leave empty if there is no job posting to verify yet."),
+    .default([]),
+  // "ai" = model-backed analysis, "rule_fallback" = limited rule-based check used when the model is unavailable.
+  mode: z.enum(["ai", "rule_fallback"]).optional(),
 });
 
 /**
