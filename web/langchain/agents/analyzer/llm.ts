@@ -27,18 +27,36 @@ export function readTokenUsage(raw: unknown): TokenUsage | undefined {
   };
 }
 
+export type ModelStage = "analysis" | "extraction" | "router" | "follow_up" | "action";
+
+// Each pipeline stage can run on its own Gemini model, e.g. GEMINI_ROUTER_MODEL=gemini-2.5-flash-lite,
+// so stages can be compared and tuned independently during evaluation.
+const STAGE_MODEL_ENV: Record<ModelStage, string> = {
+  analysis: "GEMINI_ANALYSIS_MODEL",
+  extraction: "GEMINI_EXTRACTION_MODEL",
+  router: "GEMINI_ROUTER_MODEL",
+  follow_up: "GEMINI_FOLLOW_UP_MODEL",
+  action: "GEMINI_ACTION_MODEL",
+};
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
+/** Gemini model for a stage: stage override, then GEMINI_MODEL, then the default. */
+export function geminiModelFor(stage?: ModelStage): string {
+  return (stage && process.env[STAGE_MODEL_ENV[stage]]) || process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+}
+
 /**
- * Singleton factory for initializing LLM instances.
- * Supports configurable model names via GEMINI_MODEL or OPENAI_MODEL environment variables.
+ * Factory for chat model instances. An explicit modelName wins; otherwise the model comes from
+ * the stage's env override, then GEMINI_MODEL / OPENAI_MODEL.
  */
-export function getLLMModel(options?: { temperature?: number; modelName?: string }): BaseChatModel {
+export function getLLMModel(options?: { temperature?: number; modelName?: string; stage?: ModelStage }): BaseChatModel {
   const temperature = options?.temperature ?? 0.2;
 
   const geminiApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
-  const defaultGeminiModel = process.env.GEMINI_MODEL || options?.modelName || "gemini-2.5-flash";
-  const defaultOpenAIModel = process.env.OPENAI_MODEL || options?.modelName || "gpt-4o-mini";
+  const defaultGeminiModel = options?.modelName || geminiModelFor(options?.stage);
+  const defaultOpenAIModel = options?.modelName || process.env.OPENAI_MODEL || "gpt-4o-mini";
 
   if (geminiApiKey) {
     return new ChatGoogleGenerativeAI({

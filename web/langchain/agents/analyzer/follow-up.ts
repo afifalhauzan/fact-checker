@@ -71,7 +71,7 @@ export async function answerFollowUp({
   const meta: FollowUpRunMeta = { hasContext: Boolean(context), droppedSourceIds: 0, timingsMs: { llm: 0 } };
 
   try {
-    const structuredLlm = getLLMModel({ temperature: 0.3 }).withStructuredOutput(LLMFollowUpOutputSchema, {
+    const structuredLlm = getLLMModel({ temperature: 0.3, stage: "follow_up" }).withStructuredOutput(LLMFollowUpOutputSchema, {
       includeRaw: true,
     });
 

@@ -50,7 +50,7 @@ export async function decideTurnMode({
   const contextSummary = summarySource ? summarySource.slice(0, CONTEXT_SUMMARY_LENGTH) : null;
 
   try {
-    const router = getLLMModel({ temperature: 0 }).withStructuredOutput(LLMRouterOutputSchema);
+    const router = getLLMModel({ temperature: 0, stage: "router" }).withStructuredOutput(LLMRouterOutputSchema);
     const { intent } = await router.invoke(
       [
         { role: "system", content: routerSystemPrompt },

@@ -99,7 +99,7 @@ export async function handleUIAction(payload: UIActionPayload, messages: unknown
   const previousSalaryBenefit = isSalaryAction ? context.analysis?.salaryBenefit : undefined;
 
   try {
-    const llm = getLLMModel({ temperature: 0.2 });
+    const llm = getLLMModel({ temperature: 0.2, stage: "action" });
     const structuredLlm = llm.withStructuredOutput(LLMActionOutputSchema, { includeRaw: true });
 
     const prompt = buildActionUserPrompt({

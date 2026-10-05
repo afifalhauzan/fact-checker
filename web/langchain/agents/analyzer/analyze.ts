@@ -162,7 +162,7 @@ async function invokeAnalyzer(
   signals: DetectedSignal[] | null,
   search: WebSearchResult
 ): Promise<{ output: LLMAnalysisOutput; usage: AnalysisRunMeta["tokenUsage"] }> {
-  const llm = getLLMModel({ temperature: 0.2 });
+  const llm = getLLMModel({ temperature: 0.2, stage: "analysis" });
   const structuredLlm = llm.withStructuredOutput(LLMAnalysisOutputSchema, { includeRaw: true });
 
   const prompt = buildAnalyzerUserPrompt({
