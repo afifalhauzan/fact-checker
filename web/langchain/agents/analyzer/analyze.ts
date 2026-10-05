@@ -81,11 +81,18 @@ const MIN_FALLBACK_VERDICT_LENGTH = 80;
 // A displayed "100%" reads as an absolute verdict, which the product deliberately never gives.
 const MAX_CONFIDENCE = 0.95;
 
-const DEFAULT_SUGGESTED_QUESTIONS = [
-  "Bantu cek red flag dari tawaran kerja ini.",
-  "Periksa apakah perusahaan dan link pendaftarannya valid.",
-  "Apakah wajar kalau recruiter meminta biaya administrasi?",
-  "Apa langkah aman sebelum saya kirim data pribadi?",
+// Shown before any posting is under discussion; answered by the follow-up Q&A mode.
+const GENERAL_SUGGESTED_QUESTIONS = [
+  "Apa ciri-ciri lowongan kerja palsu?",
+  "Apakah wajar recruiter meminta biaya pendaftaran?",
+  "Bagaimana cara mengecek perusahaan itu resmi?",
+  "Apa yang harus saya lakukan kalau sudah terlanjur transfer?",
+];
+
+const POSTING_SUGGESTED_QUESTIONS = [
+  "Kenapa lowongan ini perlu diwaspadai?",
+  "Bagaimana cara memverifikasi perusahaan ini?",
+  "Apa langkah aman sebelum saya mengirim data pribadi?",
 ];
 
 const GENERAL_EXPLANATIONS = [
@@ -291,7 +298,7 @@ function buildNotJobInputResult(text: string): AnalysisResult {
     summary: "",
     summaryCitations: [],
     explanations: [],
-    suggestedQuestions: DEFAULT_SUGGESTED_QUESTIONS,
+    suggestedQuestions: GENERAL_SUGGESTED_QUESTIONS,
     references: [],
   };
 }
@@ -361,7 +368,7 @@ function buildRuleBasedResult(text: string, signals: DetectedSignal[], search: W
     summary: `Pemeriksaan otomatis terbatas menemukan ${signals.length} pola berisiko pada materi ini. Karena analisis AI tidak tersedia, konteks lengkap lowongan belum dinilai; lakukan verifikasi ke kanal resmi perusahaan.`,
     summaryCitations: [],
     explanations: GENERAL_EXPLANATIONS,
-    suggestedQuestions: DEFAULT_SUGGESTED_QUESTIONS,
+    suggestedQuestions: POSTING_SUGGESTED_QUESTIONS,
     references: search.sources.length ? sourcesToReferences(search.sources) : GUIDANCE_REFERENCES,
     mode: "rule_fallback",
   };
