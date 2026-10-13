@@ -95,9 +95,13 @@ export const useAuthStore = create<AuthState>()(
           document.cookie = 'X-API-Key=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=strict'
         }
 
-        // Clear old auth-storage cookie for backward compatibility
+        // Revoke the backend token and clear the httpOnly auth-storage cookie
         if (typeof window !== 'undefined') {
-          document.cookie = 'auth-storage=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=strict'
+          fetch('/api/auth/logout', { method: 'POST' })
+            .catch(() => {})
+            .finally(() => {
+              window.location.href = '/login'
+            })
         }
       },
 

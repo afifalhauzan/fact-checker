@@ -58,20 +58,14 @@ COPY . .
 # Install PHP dependencies with dev dependencies for seeding
 RUN composer install --optimize-autoloader --no-interaction
 
-# Ensure Excel import template exists in storage
-RUN mkdir -p /var/www/html/storage/app \
-    && test -f /var/www/html/storage/app/template_import_siswa.xlsx || echo "Template will be generated dynamically"
-
 # Run database migrations and seeders (if needed)
 # Note: This requires database connection, so it's better to run these commands after container starts
 
 # Remove dev dependencies for production
 # RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Set permissions
-# RUN chown -R www-data:www-data /var/www/html \
-#     && chmod -R 755 /var/www/html/storage \
-#     && chmod -R 755 /var/www/html/bootstrap/cache
+# php-fpm runs as www-data and must be able to write logs, cache and compiled views
+RUN chown -R www-data:www-data storage bootstrap/cache
 
 # Run the dump-autoload again to ensure the copied files are mapped
 RUN composer dump-autoload --optimize

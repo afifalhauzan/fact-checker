@@ -2,17 +2,41 @@
 
 import { Suspense, useState } from "react"
 import { Bot, CheckCircle2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { type EmailPasswordLoginFormData } from "@/lib/auth-schemas"
 
 function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+  const [alert, setAlert] = useState<{ type: "error" | "success"; message: string } | null>(null)
 
-  const handleLogin = async (_data: EmailPasswordLoginFormData) => {
+  const handleLogin = async (data: EmailPasswordLoginFormData) => {
     setIsLoading(true)
-    router.push("/chat")
+    setAlert(null)
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        setAlert({ type: "error", message: body.error || "Login gagal" })
+        setIsLoading(false)
+        return
+      }
+
+      const from = searchParams.get("from")
+      router.push(from?.startsWith("/") && !from.startsWith("//") ? from : "/chat")
+      router.refresh()
+    } catch {
+      setAlert({ type: "error", message: "Tidak dapat terhubung ke server" })
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -34,7 +58,7 @@ function LoginPageContent() {
           </div>
 
           <div className="mt-12 md:mt-8">
-            <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+            <LoginForm onSubmit={handleLogin} isLoading={isLoading} showAlert={alert} />
           </div>
         </div>
 
