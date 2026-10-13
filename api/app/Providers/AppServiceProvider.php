@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Requests arrive through the web app's server, so the IP alone would be shared by every user
+        RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(6)->by(
+            Str::lower((string) $request->input('email')).'|'.$request->ip(),
+        ));
     }
 }

@@ -1,83 +1,26 @@
 "use client"
 
-import { Suspense, useState } from "react"
-import { Bot, CheckCircle2 } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
+import Link from "next/link"
+import { AuthShell } from "@/components/auth/auth-shell"
 import { LoginForm } from "@/components/auth/login-form"
+import { useAuthSubmit } from "@/hooks/useAuthSubmit"
 import { type EmailPasswordLoginFormData } from "@/lib/auth-schemas"
 
 function LoginPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(false)
-  const [alert, setAlert] = useState<{ type: "error" | "success"; message: string } | null>(null)
-
-  const handleLogin = async (data: EmailPasswordLoginFormData) => {
-    setIsLoading(true)
-    setAlert(null)
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}))
-        setAlert({ type: "error", message: body.error || "Login gagal" })
-        setIsLoading(false)
-        return
-      }
-
-      const from = searchParams.get("from")
-      router.push(from?.startsWith("/") && !from.startsWith("//") ? from : "/chat")
-      router.refresh()
-    } catch {
-      setAlert({ type: "error", message: "Tidak dapat terhubung ke server" })
-      setIsLoading(false)
-    }
-  }
+  const { submit, isLoading, alert } = useAuthSubmit<EmailPasswordLoginFormData>("/api/auth/login", "Login gagal")
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted p-4">
-      <div
-        className="absolute inset-0 z-0 opacity-40"
-        style={{ backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)", backgroundSize: "24px 24px" }}
-      />
+    <AuthShell>
+      <LoginForm onSubmit={submit} isLoading={isLoading} showAlert={alert} />
 
-      <div className="relative z-10 flex w-full max-w-4xl flex-row overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-2xl">
-        <div className="relative flex w-full flex-col justify-center p-10 md:w-1/2">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary p-1.5 text-primary-foreground shadow-sm">
-              <Bot size={18} strokeWidth={2.5} />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-foreground">
-              TelaahKarier
-            </span>
-          </div>
-
-          <div className="mt-12 md:mt-8">
-            <LoginForm onSubmit={handleLogin} isLoading={isLoading} showAlert={alert} />
-          </div>
-        </div>
-
-        <div className="hidden w-1/2 flex-col items-center justify-center space-y-10 overflow-hidden bg-gradient-to-br from-primary/90 to-primary p-8 md:flex">
-          <div className="relative z-10 mb-6 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 p-8 shadow-xl backdrop-blur-md transition-transform duration-500 hover:scale-105">
-            <div className="rounded-full border border-primary-foreground/10 bg-primary-foreground/20 p-4">
-              <Bot className="h-12 w-12 text-primary-foreground" strokeWidth={1.5} />
-            </div>
-          </div>
-
-          <div className="relative z-10 space-y-2 text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-primary-foreground">TelaahKarier</h2>
-            <p className="mx-auto max-w-[90%] text-sm font-medium leading-relaxed text-primary-foreground/80">
-              Bantu cek red flag lowongan kerja digital sebelum kirim data atau ambil keputusan penting.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+      <p className="mt-5 text-center text-sm text-muted-foreground">
+        Belum punya akun?{" "}
+        <Link href="/register" className="font-semibold text-primary hover:underline">
+          Daftar
+        </Link>
+      </p>
+    </AuthShell>
   )
 }
 

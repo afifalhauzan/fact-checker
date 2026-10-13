@@ -41,10 +41,10 @@ export function LandingNavbar() {
 
         <div className="flex items-center gap-3 sm:gap-5">
           <Link
-            href="/login"
+            href="/register"
             className="text-sm font-medium text-[#17232c]/70 transition-colors duration-300 hover:text-[#2b6f95]"
           >
-            Masuk
+            Daftar
           </Link>
           <Link
             href="/chat"

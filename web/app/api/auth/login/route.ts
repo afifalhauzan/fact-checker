@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { backendFetch, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(req: NextRequest) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000/api';
-
   try {
     const credentials = await req.json();
 
-    const response = await fetch(`${backendUrl}/auth/login`, {
+    const response = await backendFetch('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(credentials),
     });
 
@@ -22,23 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     const res = NextResponse.json({ user: data.user });
-
-    // Same cookie shape proxy.ts already checks; httpOnly keeps the token away from client JS
-    res.cookies.set(
-      'auth-storage',
-      JSON.stringify({
-        isAuthenticated: true,
-        accessToken: data.token,
-        tokenType: data.token_type,
-      }),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
-      }
-    );
+    setAuthCookie(res, data.token, data.token_type);
 
     return res;
   } catch (error) {

@@ -29,6 +29,36 @@ class AuthTest extends TestCase
             ->assertJsonPath('user.email', $user->email);
     }
 
+    public function test_user_can_register(): void
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Budi Santoso',
+            'email' => 'budi@example.com',
+            'password' => 'rahasia-123',
+            'password_confirmation' => 'rahasia-123',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('user.name', 'Budi Santoso')
+            ->assertJsonStructure(['token', 'token_type']);
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/auth/me')
+            ->assertJsonPath('user.email', 'budi@example.com');
+    }
+
+    public function test_register_rejects_a_taken_email(): void
+    {
+        $user = User::factory()->create();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Someone Else',
+            'email' => $user->email,
+            'password' => 'rahasia-123',
+            'password_confirmation' => 'rahasia-123',
+        ])->assertUnprocessable()->assertJsonValidationErrors('email');
+    }
+
     public function test_login_fails_with_wrong_password(): void
     {
         $user = User::factory()->create();

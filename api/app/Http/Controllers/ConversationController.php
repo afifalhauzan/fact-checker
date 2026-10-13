@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Conversation;
+use App\Models\Message;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
+class ConversationController extends Controller
+{
+    /**
+     * List the authenticated user's conversations, most recent first.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $conversations = $request->user()->conversations()
+            ->latest('updated_at')
+            ->limit(50)
+            ->get(['id', 'title', 'created_at', 'updated_at']);
+
+        return response()->json(['data' => $conversations]);
+    }
+
+    /**
+     * Return the messages of one of the user's conversations.
+     */
+    public function messages(Request $request, string $conversation): JsonResponse
+    {
+        $conversation = $this->findOwned($request, $conversation);
+
+        $messages = $conversation
+            ? $conversation->messages()->orderBy('id')->get()->map($this->present(...))
+            : [];
+
+        return response()->json(['data' => $messages]);
+    }
+
+    /**
+     * Save messages into a conversation, creating the conversation on first use.
+     */
+    public function storeMessages(Request $request, string $conversation): JsonResponse
+    {
+        abort_unless(Str::isUuid($conversation), 404);
+
+        $data = $request->validate([
+            'messages' => ['required', 'array', 'min:1', 'max:20'],
+            'messages.*.id' => ['required', 'string', 'max:100'],
+            'messages.*.role' => ['required', 'in:user,assistant'],
+            'messages.*.content' => ['nullable', 'string'],
+            'messages.*.meta_data' => ['nullable', 'array'],
+        ]);
+
+        $existing = Conversation::find($conversation);
+
+        // The id comes from the client, so it may already belong to someone else
+        abort_if($existing && $existing->user_id !== $request->user()->id, 404);
+
+        $conversation = $existing ?? $request->user()->conversations()->create([
+            'id' => $conversation,
+            'title' => $this->titleFrom($data['messages']),
+        ]);
+
+        foreach ($data['messages'] as $message) {
+            $conversation->messages()->updateOrCreate(
+                ['client_id' => $message['id']],
+                [
+                    'role' => $message['role'],
+                    'content' => $message['content'] ?? null,
+                    'meta_data' => $message['meta_data'] ?? null,
+                ],
+            );
+        }
+
+        $conversation->touch();
+
+        return response()->json(['id' => $conversation->id], $existing ? 200 : 201);
+    }
+
+    /**
+     * Delete one of the user's conversations along with its messages.
+     */
+    public function destroy(Request $request, string $conversation): JsonResponse
+    {
+        $conversation = $this->findOwned($request, $conversation);
+
+        abort_unless($conversation, 404);
+
+        $conversation->delete();
+
+        return response()->json(['message' => 'Conversation deleted']);
+    }
+
+    private function findOwned(Request $request, string $id): ?Conversation
+    {
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
+        return $request->user()->conversations()->find($id);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $messages
+     */
+    private function titleFrom(array $messages): ?string
+    {
+        $firstUserMessage = collect($messages)->firstWhere('role', 'user');
+        $text = trim((string) ($firstUserMessage['content'] ?? ''));
+
+        return $text === '' ? null : Str::limit($text, 80);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function present(Message $message): array
+    {
+        return [
+            'id' => $message->client_id,
+            'conversation_id' => $message->conversation_id,
+            'role' => $message->role,
+            'content' => $message->content,
+            'meta_data' => $message->meta_data,
+            'created_at' => $message->created_at,
+        ];
+    }
+}

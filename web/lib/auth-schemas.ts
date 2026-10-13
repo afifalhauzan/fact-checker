@@ -1,4 +1,4 @@
-﻿import { z } from "zod"
+import { z } from "zod"
 
 export const apiKeyLoginSchema = z.object({
   apiKey: z.string().min(1, "API Key is required"),
@@ -13,4 +13,16 @@ export const emailPasswordLoginSchema = z.object({
 
 export type EmailPasswordLoginFormData = z.infer<typeof emailPasswordLoginSchema>
 
-// just for mock login form, not used for actual auth yet. Can expand in the future as needed.
+export const registerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nama minimal 2 karakter").max(255),
+    email: z.string().email("Email tidak valid"),
+    password: z.string().min(8, "Password minimal 8 karakter"),
+    passwordConfirmation: z.string(),
+  })
+  .refine((data) => data.password === data.passwordConfirmation, {
+    message: "Password tidak sama",
+    path: ["passwordConfirmation"],
+  })
+
+export type RegisterFormData = z.infer<typeof registerSchema>

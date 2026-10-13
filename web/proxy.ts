@@ -1,7 +1,8 @@
 ﻿import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/login"];
+const publicRoutes = ["/", "/login", "/register"];
+const guestOnlyRoutes = ["/login", "/register"];
 const protectedRoutes = ["/selection"];
 const legacyRouteRedirects: Record<string, string> = {
   "/landing": "/",
@@ -50,7 +51,7 @@ export function proxy(request: NextRequest) {
 
   // 1. Handle Public Routes & Logged-in Redirection
   if (publicRoutes.includes(pathname)) {
-    if (pathname === "/login" && isAuthenticated) {
+    if (guestOnlyRoutes.includes(pathname) && isAuthenticated) {
       return NextResponse.redirect(new URL("/chat", request.url));
     }
     return NextResponse.next();
