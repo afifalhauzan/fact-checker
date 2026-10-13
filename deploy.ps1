@@ -72,8 +72,7 @@ if ($services -contains 'api' -and -not $SkipMigrate) {
     Assert-Ok 'migrations'
 }
 
-Step 'Cleaning up old images on the server'
-ssh @ssh "sudo docker image prune -f | tail -1; cd $RemoteDir && sudo docker compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'"
+ssh @ssh "cd $RemoteDir && sudo docker compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'"
 
 Step "Verifying $Url"
 Start-Sleep -Seconds 3
@@ -99,7 +98,11 @@ Write-Host "POST /api/auth/login  -> $status (expected 422)"
 if ($status -ne 422) { $failed = $true }
 
 if ($failed) {
+    # Old images are left on the server (untagged) so a rollback is still possible
     Write-Host "`nDeployed, but verification FAILED" -ForegroundColor Red
     exit 1
 }
+
+Step 'Cleaning up old images on the server'
+ssh @ssh "sudo docker image prune -f | tail -1"
 Write-Host "`nDeployed and verified: $Url" -ForegroundColor Green

@@ -9,9 +9,13 @@ import { Button } from "@/components/ui/button";
 
 interface AuthButtonProps {
   onLogoutClick?: () => void;
+  /** Where to land after logging out. Defaults to the login page. */
+  logoutRedirectTo?: string;
+  /** Shown to signed-out visitors instead of the default "Masuk" button. */
+  guestFallback?: React.ReactNode;
 }
 
-export function AuthButton({ onLogoutClick }: AuthButtonProps) {
+export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: AuthButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuthStore();
@@ -34,7 +38,7 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
     if (onLogoutClick) {
       onLogoutClick();
     } else {
-      logout();
+      logout(logoutRedirectTo);
     }
   };
 
@@ -43,6 +47,10 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
   }
 
   if (!user) {
+    if (guestFallback !== undefined) {
+      return <>{guestFallback}</>;
+    }
+
     return (
       <Button asChild variant="ghost" className="h-10 rounded-lg px-3">
         <Link href="/login">Masuk</Link>

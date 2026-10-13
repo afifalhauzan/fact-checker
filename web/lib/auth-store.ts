@@ -10,7 +10,7 @@ export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (credentials: ApiKeyLoginFormData) => Promise<string | null>
-  logout: () => void
+  logout: (redirectTo?: string) => void
   setLoading: (loading: boolean) => void
   initializeAuth: () => void
 }
@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: (redirectTo = '/login') => {
         set({
           apiKey: null,
           isAuthenticated: false,
@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>()(
           fetch('/api/auth/logout', { method: 'POST' })
             .catch(() => {})
             .finally(() => {
-              window.location.href = '/login'
+              window.location.href = redirectTo
             })
         }
       },
