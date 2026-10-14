@@ -63,6 +63,7 @@ export interface AnalyzeOptions {
   useSearch?: boolean;
   useLLM?: boolean;
   // Off: attachments go straight into the analysis call instead of being transcribed first.
+  // Independent of useLLM, so a rules-only run can still read attachments.
   useExtraction?: boolean;
 }
 
@@ -494,11 +495,12 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
   let materialText = userText;
   let analysisAttachments = attachments;
 
-  if (attachments.length && !(useExtraction && useLLM)) {
+  if (attachments.length && !useExtraction) {
     meta.extraction.status = "disabled";
   }
 
-  if (attachments.length && useExtraction && useLLM) {
+  // Reading is separate from judging: with useLLM off, the rules still judge the transcript.
+  if (attachments.length && useExtraction) {
     const extraction = await extractAttachments(attachments);
     meta.extraction = {
       status: extraction.status,
