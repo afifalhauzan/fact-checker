@@ -80,3 +80,6 @@ docs/dokumen-teknis-perangkat-lunak-gemastik.md
 docs/draft-adopsi-lisensi-gemastik.md
 docs/daftar-komponen-dan-lisensi-gemastik.md
 docs/frontend-architecture.md
+
+# Evaluation outputs (per-case predictions; numbers go into the docs)
+web/eval/results/
