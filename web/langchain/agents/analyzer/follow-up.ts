@@ -1,6 +1,6 @@
 import { getLLMModel, LLM_TIMEOUT_MS, readTokenUsage, type TokenUsage } from "./llm";
 import { LLMFollowUpOutputSchema, type Reference } from "./schema";
-import { buildFollowUpUserPrompt, followUpSystemPrompt } from "./prompts";
+import { buildFollowUpUserPrompt, followUpSystemPrompt, withCurrentDate } from "./prompts";
 import {
   contextSources,
   formatAnalysisContext,
@@ -96,7 +96,7 @@ export async function answerFollowUp({
 
     const { raw, parsed } = await structuredLlm.invoke(
       [
-        { role: "system", content: followUpSystemPrompt },
+        { role: "system", content: withCurrentDate(followUpSystemPrompt) },
         { role: "user", content: userContent },
       ],
       { signal: AbortSignal.timeout(LLM_TIMEOUT_MS) }

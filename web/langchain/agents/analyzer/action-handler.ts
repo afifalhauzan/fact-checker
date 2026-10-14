@@ -1,5 +1,5 @@
 import { getLLMModel, LLM_TIMEOUT_MS } from "./llm";
-import { ACTION_TITLES, actionSystemPrompt, buildActionUserPrompt } from "./prompts";
+import { ACTION_TITLES, actionSystemPrompt, buildActionUserPrompt, withCurrentDate } from "./prompts";
 import {
   LLMActionOutputSchema,
   type AnalysisResult,
@@ -116,7 +116,7 @@ export async function handleUIAction(payload: UIActionPayload, messages: unknown
 
     const { parsed } = await structuredLlm.invoke(
       [
-        { role: "system", content: actionSystemPrompt },
+        { role: "system", content: withCurrentDate(actionSystemPrompt) },
         { role: "user", content: userContent },
       ],
       { signal: AbortSignal.timeout(LLM_TIMEOUT_MS) }

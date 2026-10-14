@@ -9,8 +9,9 @@ import {
   type Reasoning,
   type RiskLevel,
 } from "./schema";
-import { analyzerSystemPrompt, buildAnalyzerUserPrompt } from "./prompts";
+import { analyzerSystemPrompt, buildAnalyzerUserPrompt, withCurrentDate } from "./prompts";
 import { getLLMModel, LLM_TIMEOUT_MS, readTokenUsage, type TokenUsage } from "./llm";
+import { classifyMaterialDates } from "./dates";
 import { preprocessJobInput } from "./preprocessor";
 import {
   ATTACHMENT_LIMITS_TEXT,
@@ -200,6 +201,7 @@ async function invokeAnalyzer(
     visualCues,
     signals,
     sources: search.sources,
+    dates: classifyMaterialDates(text),
   });
 
   const userContent = images.length
@@ -208,7 +210,7 @@ async function invokeAnalyzer(
 
   const { raw, parsed } = await structuredLlm.invoke(
     [
-      { role: "system", content: analyzerSystemPrompt },
+      { role: "system", content: withCurrentDate(analyzerSystemPrompt) },
       { role: "user", content: userContent },
     ],
     { signal: AbortSignal.timeout(LLM_TIMEOUT_MS) }
