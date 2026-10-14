@@ -1,47 +1,41 @@
-FROM php:8.4-fpm-alpine
-
-# Set working directory
+# --- STAGE 1: BASE (runtime + PHP extensions) ---
+FROM php:8.4-fpm-alpine AS base
 WORKDIR /var/www/html
 
-# Install system dependencies
+# Compilers and -dev headers are only needed to build the extensions,
+# so they are removed again in the same layer
 RUN apk add --no-cache \
-    build-base \
-    curl \
-    freetype-dev \
-    git \
-    icu-dev \
-    jpeg-dev \
-    libpng-dev \
-    libxml2-dev \
-    libzip-dev \
-    oniguruma-dev \
-    postgresql-dev \
-    zip \
-    unzip \
+    nginx \
     supervisor \
-    nginx
-
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    icu-libs \
+    libpq \
+    libzip \
+    && apk add --no-cache --virtual .build-deps \
+    $PHPIZE_DEPS \
+    icu-dev \
+    postgresql-dev \
+    libzip-dev \
     && docker-php-ext-install -j$(nproc) \
     bcmath \
-    exif \
-    gd \
     intl \
-    mbstring \
     opcache \
-    pdo \
-    pdo_mysql \
     pdo_pgsql \
-    zip
+    zip \
+    && apk del .build-deps
 
-# Install Redis extension
-RUN apk add --no-cache $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis
+# --- STAGE 2: VENDOR (composer never reaches the final image) ---
+FROM base AS vendor
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Dependencies first so this layer is cached until composer.lock changes
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
+
+COPY . .
+RUN composer dump-autoload --no-dev --optimize
+
+# --- STAGE 3: RUNNER ---
+FROM base AS runner
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -52,32 +46,12 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy PHP configuration
 COPY php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
-# Copy application files
-COPY . .
+# Application code with production dependencies
+COPY --from=vendor /var/www/html ./
 
-# Install PHP dependencies with dev dependencies for seeding
-RUN composer install --optimize-autoloader --no-interaction
-
-# Ensure Excel import template exists in storage
-RUN mkdir -p /var/www/html/storage/app \
-    && test -f /var/www/html/storage/app/template_import_siswa.xlsx || echo "Template will be generated dynamically"
-
-# Run database migrations and seeders (if needed)
-# Note: This requires database connection, so it's better to run these commands after container starts
-
-# Remove dev dependencies for production
-# RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-# Set permissions
-# RUN chown -R www-data:www-data /var/www/html \
-#     && chmod -R 755 /var/www/html/storage \
-#     && chmod -R 755 /var/www/html/bootstrap/cache
-
-# Run the dump-autoload again to ensure the copied files are mapped
-RUN composer dump-autoload --optimize
-
-# Create necessary directories
-RUN mkdir -p /var/log/supervisor /var/run/nginx
+# php-fpm runs as www-data and must be able to write logs, cache and compiled views
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && mkdir -p /var/log/supervisor /var/run/nginx
 
 # Expose port
 EXPOSE 8000

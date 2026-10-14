@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { useConversationStore } from "@/lib/conversation-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
+import { persistLatestExchange } from "@/lib/chat-persistence";
 import { type MetabotUIMessage } from "@/types/streaming";
 import type { UIActionPayload } from "@/types/ui-actions";
 
@@ -61,6 +62,10 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
   // Prioritize URL over store to prevent race conditions
   const activeConversationId = effectiveConversationId;
 
+  // onFinish is created once by useChat, so it reads the current id through a ref
+  const activeConversationIdRef = useRef(activeConversationId);
+  activeConversationIdRef.current = activeConversationId;
+
   const shouldInitializeChat = true; // not require auth for now. Can add auth checks here if needed in the future.
 
   const {
@@ -83,9 +88,12 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
         );
       }
     },
-    onFinish: (message) => {
-      console.log('Chat finished:', message);
+    onFinish: ({ messages: finishedMessages, isError }) => {
       setIsUserSending(false); // Reset loading when finished
+
+      if (!isError && activeConversationIdRef.current) {
+        persistLatestExchange(activeConversationIdRef.current, finishedMessages as MetabotUIMessage[]);
+      }
     }
   });
 

@@ -1,0 +1,60 @@
+name: gemastik-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: gemastik
+      POSTGRES_USER: gemastik
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gemastik -d gemastik"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    # These override api/.env (which stays on sqlite for running artisan/tests on the host)
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: gemastik
+      DB_USERNAME: gemastik
+      DB_PASSWORD: secret
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile.dev
+    env_file:
+      - web/.env
+    environment:
+      BACKEND_URL: http://api:8000/api
+      # File change events don't cross the Windows/macOS bind mount
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app/web
+      - /app/web/node_modules
+      - /app/web/.next
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

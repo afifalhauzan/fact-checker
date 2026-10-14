@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { LogOut, User } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 
 interface AuthButtonProps {
   onLogoutClick?: () => void;
+  /** Where to land after logging out. Defaults to the login page. */
+  logoutRedirectTo?: string;
+  /** Shown to signed-out visitors instead of the default "Masuk" button. */
+  guestFallback?: React.ReactNode;
 }
 
-export function AuthButton({ onLogoutClick }: AuthButtonProps) {
+export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: AuthButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuthStore();
-  const dummyUser = {
-    username: "John Doe",
-    email: "john.doe@example.com",
-  };
+  const { user, isLoading } = useCurrentUser();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,9 +38,25 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
     if (onLogoutClick) {
       onLogoutClick();
     } else {
-      logout();
+      logout(logoutRedirectTo);
     }
   };
+
+  if (isLoading) {
+    return <div className="h-8 w-24 animate-pulse rounded-lg bg-muted" aria-hidden />;
+  }
+
+  if (!user) {
+    if (guestFallback !== undefined) {
+      return <>{guestFallback}</>;
+    }
+
+    return (
+      <Button asChild variant="ghost" className="h-10 rounded-lg px-3">
+        <Link href="/login">Masuk</Link>
+      </Button>
+    );
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -55,7 +74,7 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
             </div>
           </div>
           <div className="hidden md:flex flex-col items-start text-left">
-            <span className="text-sm font-medium leading-none text-foreground">{dummyUser.username}</span>
+            <span className="text-sm font-medium leading-none text-foreground">{user.name}</span>
           </div>
         </div>
       </Button>
@@ -72,8 +91,8 @@ export function AuthButton({ onLogoutClick }: AuthButtonProps) {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{dummyUser.username}</p>
-                <p className="text-xs text-muted-foreground break-all">{dummyUser.email}</p>
+                <p className="text-sm font-medium text-foreground">{user.name}</p>
+                <p className="text-xs text-muted-foreground break-all">{user.email}</p>
               </div>
             </div>
           </div>

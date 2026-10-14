@@ -1,0 +1,13 @@
+FROM php:8.4-cli-alpine
+
+WORKDIR /var/www/html
+
+RUN apk add --no-cache git unzip postgresql-dev \
+    && docker-php-ext-install pdo_pgsql
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+EXPOSE 8000
+
+# Source is bind-mounted, so dependencies and migrations are handled at start
+CMD ["sh", "-c", "composer install --no-interaction && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]

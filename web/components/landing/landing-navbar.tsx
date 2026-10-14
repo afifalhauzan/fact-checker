@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/assets/logo.svg";
+import { AuthButton } from "@/components/auth/auth-button";
 
 export function LandingNavbar() {
   const navItems = [
@@ -40,12 +41,17 @@ export function LandingNavbar() {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-5">
-          <Link
-            href="/login"
-            className="text-sm font-medium text-[#17232c]/70 transition-colors duration-300 hover:text-[#2b6f95]"
-          >
-            Masuk
-          </Link>
+          <AuthButton
+            logoutRedirectTo="/"
+            guestFallback={
+              <Link
+                href="/register"
+                className="text-sm font-medium text-[#17232c]/70 transition-colors duration-300 hover:text-[#2b6f95]"
+              >
+                Daftar
+              </Link>
+            }
+          />
           <Link
             href="/chat"
             className="rounded-md bg-[#2b6f95] px-4 py-2 text-sm font-medium text-[#f8fbff] shadow-[0_12px_25px_rgba(43,111,149,0.18)] transition hover:bg-[#215875] sm:px-6 sm:py-2.5"

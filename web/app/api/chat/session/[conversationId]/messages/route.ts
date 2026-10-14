@@ -1,39 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { backendFetch, getAccessToken } from '@/lib/server-auth';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ conversationId: string }> }
-) {
+type RouteContext = { params: Promise<{ conversationId: string }> };
+
+const NO_CACHE = { 'Cache-Control': 'no-cache' };
+
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const { conversationId } = await params;
+  const token = getAccessToken(req);
+
+  // Guests can chat, but nothing is stored for them
+  if (!token) {
+    return NextResponse.json({ data: [] }, { headers: NO_CACHE });
+  }
+
   try {
-    const { conversationId } = await params;
+    const response = await backendFetch(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      { token, cache: 'no-store' }
+    );
 
-    // Validate conversationId
-    if (!conversationId) {
-      return NextResponse.json(
-        { error: 'Conversation ID is required' },
-        { status: 400 }
-      );
+    if (!response.ok) {
+      return NextResponse.json({ data: [] }, { headers: NO_CACHE });
     }
 
-    return NextResponse.json(
-      {
-        data: [],
-      },
-      {
-        status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      },
-      }
-    );
+    return NextResponse.json(await response.json(), { headers: NO_CACHE });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[ROUTE] Failed to load chat history:', error);
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+    return NextResponse.json({ data: [] }, { headers: NO_CACHE });
+  }
+}
+
+export async function POST(req: NextRequest, { params }: RouteContext) {
+  const { conversationId } = await params;
+  const token = getAccessToken(req);
+
+  if (!token) {
+    return NextResponse.json({ saved: false }, { status: 401 });
+  }
+
+  try {
+    const response = await backendFetch(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      { method: 'POST', token, body: JSON.stringify(await req.json()) }
     );
+
+    return NextResponse.json({ saved: response.ok }, { status: response.status });
+  } catch (error) {
+    console.error('[ROUTE] Failed to save chat messages:', error);
+
+    return NextResponse.json({ saved: false }, { status: 502 });
   }
 }

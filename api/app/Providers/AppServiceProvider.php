@@ -2,10 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use App\Models\User;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,32 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
-        });
-
-        // Define gate for API docs access
-        Gate::define('viewApiDocs', function (?User $user = null) {
-            // Allow access in local environment
-            if (app()->environment('local')) {
-                return true;
-            }
-            
-            // Check if user is authenticated via any guard
-            if (!$user) {
-                // Try to get user from different guards
-                $user = auth()->guard('web')->user() ?? auth()->guard('sanctum')->user();
-            }
-            
-            if (!$user) {
-                return false;
-            }
-            
-            // Allow access for admin users or specific emails
-            return $user->role === 'admin' || in_array($user->email, [
-                'admin@smkn5.com',
-                'developer@smkn5.com'
-            ]);
-        });
+        // Requests arrive through the web app's server, so the IP alone would be shared by every user
+        RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(6)->by(
+            Str::lower((string) $request->input('email')).'|'.$request->ip(),
+        ));
     }
 }

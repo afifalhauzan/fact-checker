@@ -3,171 +3,75 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Register a new user
+     * Create an account and sign it in.
      */
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'nis_nip' => ['required', 'string', 'max:20', 'unique:users,nis_nip'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['required', 'in:guru,siswa'],
-            'jurusan_id' => ['required', 'exists:jurusans,id'],
-            'kelas_id' => ['required_if:role,siswa', 'exists:kelas,id'],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'nis_nip' => $request->nis_nip,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'jurusan_id' => $request->jurusan_id,
-            'kelas_id' => $request->role === 'siswa' ? $request->kelas_id : null,
-        ]);
+        $user = User::create($data);
 
-        $user->load(['jurusan', 'kelas']);
-
-        // Add jurusan_name to user data
-        $userData = $user->toArray();
-        $userData['jurusan_name'] = $user->jurusan ? $user->jurusan->nama : null;
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $userData,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ], 201);
+        return $this->tokenResponse($user, 201);
     }
 
     /**
-     * Login user
+     * Issue a Sanctum token for the given credentials.
      */
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
-        $request->validate([
+        $credentials = $request->validate([
             'email' => ['required', 'email'],
-            'password' => ['required'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json([
-                'message' => 'Invalid login credentials'
-            ], 401);
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.failed')],
+            ]);
         }
 
-        $user = User::where('email', $request->email)->with(['jurusan', 'kelas', 'jurusans'])->firstOrFail();
-
-        // Add jurusan_name to user data
-        $userData = $user->toArray();
-        $userData['jurusan_name'] = $user->jurusan ? $user->jurusan->nama : null;
-        
-        // Add jurusan_ids for guru users (multiple jurusans)
-        if ($user->role === 'guru') {
-            $userData['jurusan_ids'] = $user->jurusans->pluck('id')->toArray();
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $userData,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ], 200);
+        return $this->tokenResponse($user);
     }
 
     /**
-     * Get authenticated user
+     * Return the authenticated user.
      */
-    public function me(Request $request)
+    public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['jurusan', 'kelas', 'jurusans']);
-
-        // Add jurusan_name to user data
-        $userData = $user->toArray();
-        $userData['jurusan_name'] = $user->jurusan ? $user->jurusan->nama : null;
-        
-        // Add jurusan_ids for guru users (multiple jurusans)
-        if ($user->role === 'guru') {
-            $userData['jurusan_ids'] = $user->jurusans->pluck('id')->toArray();
-        }
-
-        return response()->json([
-            'user' => $userData
-        ], 200);
+        return response()->json(['user' => $request->user()]);
     }
 
     /**
-     * Logout user
+     * Revoke the token used for the current request.
      */
-    public function logout(Request $request)
+    public function logout(Request $request): JsonResponse
     {
-        // Revoke the current token
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'message' => 'Logged out successfully'
-        ], 200);
+        return response()->json(['message' => 'Logged out']);
     }
 
-    /**
-     * Logout from all devices
-     */
-    public function logoutAll(Request $request)
+    private function tokenResponse(User $user, int $status = 200): JsonResponse
     {
-        // Revoke all tokens
-        $request->user()->tokens()->delete();
-
         return response()->json([
-            'message' => 'Logged out from all devices successfully'
-        ], 200);
-    }
-
-    /**
-     * Get user statistics
-     */
-    public function userStats(Request $request)
-    {
-        $user = $request->user();
-
-        if (in_array($user->role, ['siswa'])) {
-            $stats = [
-                'jumlahKarya' => $user->proyeks()->count(),
-                'totalViews' => $user->proyeks()->sum('views'),
-            ];
-        }
-
-        if ($user->isGuru()) {
-            $stats = [
-                'jumlahKarya' => $user->proyeks()->count(),
-                'totalViews' => $user->proyeks()->sum('views'),
-            ];
-        }
-
-        if ($user->isAdmin()) {
-            $stats = [
-                'totalUsers' => User::count(),
-                'totalGuru' => User::where('role', 'guru')->count(),
-                'totalSiswa' => User::where('role', 'siswa')->count(),
-                'totalProyeks' => \App\Models\Proyek::count(),
-            ];
-        }
-
-        return response()->json([
-            'stats' => $stats
-        ], 200);
+            'token' => $user->createToken('web')->plainTextToken,
+            'token_type' => 'Bearer',
+            'user' => $user,
+        ], $status);
     }
 }

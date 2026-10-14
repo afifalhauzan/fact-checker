@@ -1,0 +1,43 @@
+import { Bot } from "lucide-react"
+
+// Shared two-column card used by the login and register pages
+export function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted p-4">
+      <div
+        className="absolute inset-0 z-0 opacity-40"
+        style={{ backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)", backgroundSize: "24px 24px" }}
+      />
+
+      <div className="relative z-10 flex w-full max-w-4xl flex-row overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-2xl">
+        <div className="relative flex w-full flex-col justify-center p-10 md:w-1/2">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary p-1.5 text-primary-foreground shadow-sm">
+              <Bot size={18} strokeWidth={2.5} />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-foreground">
+              TelaahKarier
+            </span>
+          </div>
+
+          <div className="mt-12 md:mt-8">{children}</div>
+        </div>
+
+        <div className="hidden w-1/2 flex-col items-center justify-center space-y-10 overflow-hidden bg-gradient-to-br from-primary/90 to-primary p-8 md:flex">
+          <div className="relative z-10 mb-6 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 p-8 shadow-xl backdrop-blur-md transition-transform duration-500 hover:scale-105">
+            <div className="rounded-full border border-primary-foreground/10 bg-primary-foreground/20 p-4">
+              <Bot className="h-12 w-12 text-primary-foreground" strokeWidth={1.5} />
+            </div>
+          </div>
+
+          <div className="relative z-10 space-y-2 text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-primary-foreground">TelaahKarier</h2>
+            <p className="mx-auto max-w-[90%] text-sm font-medium leading-relaxed text-primary-foreground/80">
+              Bantu cek red flag lowongan kerja digital sebelum kirim data atau ambil keputusan penting.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

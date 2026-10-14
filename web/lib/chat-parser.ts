@@ -25,13 +25,13 @@ interface BackendHistoryResponse {
  * [SERVER-SIDE SOURCE OF TRUTH]
  *
  * Transforms backend messages to Vercel AI SDK MetabotUIMessage format with parts array.
- * History parsing is text-only, and structured custom data is handled during live streaming.
+ * Structured parts saved in meta_data.parts are restored as-is; older rows fall back to text.
  * 
  * @param rawData - Raw response from GET /api/chat/session/{conversation_id}/messages
  *   Can be either:
  *   - Array of BackendHistoryMessage (legacy format)
  *   - BackendHistoryResponse with { data } (current format)
- * @returns Array of frontend-compatible MetabotUIMessage objects with text parts
+ * @returns Array of frontend-compatible MetabotUIMessage objects
  */
 export function parseHistoryToMessages(rawData: unknown): MetabotUIMessage[] {
   // Handle both wrapped response format and raw array format
@@ -73,10 +73,12 @@ export function parseHistoryToMessages(rawData: unknown): MetabotUIMessage[] {
           return null
         }
 
-        // Build text parts for Vercel AI SDK history messages.
-        const parts: any[] = []
-        
-        if (message.content) {
+        // Prefer the full parts saved with the message (cards, references, ...),
+        // falling back to plain text for rows that only have content.
+        const storedParts = message.meta_data?.parts
+        const parts: any[] = Array.isArray(storedParts) ? [...storedParts] : []
+
+        if (parts.length === 0 && message.content) {
           parts.push({ type: 'text', text: message.content })
         }
 
