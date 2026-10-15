@@ -141,3 +141,24 @@ Dokumen ini mendokumentasikan secara rinci penemuan teknis (findings), batasan A
   2. Alarm palsu yang tersisa (A008, P3MI ke Korea yang mencantumkan biaya penempatan ditanggung pekerja) dinilai *Tinggi* di semua run, sebelum maupun sesudah. Belum diputuskan apakah rincian biaya resmi P3MI perlu dibedakan dari permintaan uang.
   3. n dev kecil (11 asli), sehingga satu kasus = 9 poin persen. Angka ini hanya untuk penyetelan; angka resmi menunggu run `test` iterasi kedua.
   4. P027 (Unilever palsu yang mengarahkan ke "LinkedIn/JobStreet/Kalibrr") tetap *Rendah*; tidak ada tanda yang bisa ditunjuk di materinya.
+
+### O. Finding 15: Iterasi 2 pada Set `test`
+- **Run**: `web/eval/results/2026-10-15T16-50-01` (commit `f758b4d`, Gemini 2.5 Flash), dibandingkan dengan iterasi 1 `web/eval/results/2026-10-15T09-11-08` (commit `11364d5`). Sebelum iterasi 2, jejak artikel cek fakta di 12 baris `test` dibersihkan (`05-DATASET-EVALUASI.md` bagian 6, "Iterasi 2"); label dan baris lain tidak berubah.
+- **Hasil varian `lengkap`** (n = 50 penipuan, 50 asli; IK 95% Wilson):
+
+  | Metrik | Iterasi 1 | Iterasi 2 |
+  |---|---|---|
+  | Lolos kritis (penipuan → *Rendah*) | 6% (3/50) | 0% (0/50; 0–7%) |
+  | Deteksi (penipuan → *Tinggi*) | 30% (15/50; 19–44%) | 66% (33/50; 52–78%) |
+  | Alarm palsu (asli → *Tinggi*) | 0% (0/50) | 2% (1/50) |
+  | Asli dinilai *Sedang* | 19 | 29 |
+  | F1 ketat / longgar | 46,2% / 78,9% | 78,6% / 75,0% |
+  | Deteksi pada `bukti_terlihat = ya` (n = 26) | 46% | 85% |
+  | Deteksi pada `bukti_terlihat = tidak` (n = 24) | 13% | 46% |
+
+- **Ablasi iterasi 2**: `aturan_saja` 30% deteksi tanpa alarm palsu (iterasi 1: 2%), `llm_saja` 64%, `llm_pencarian` 66%, `lengkap` 66%. Kenaikan terbesar datang dari prompt (rubrik), sama seperti di dev. Aturan kuat menyala di 15 kasus, semuanya penipuan dan tidak satu pun asli; risk floor tetap tidak terpicu karena model sudah memberi *Tinggi* di semua kasus tersebut.
+- **Memisahkan efek engine dari pembersihan data**: pada 38 penipuan yang teksnya tidak diubah, *Tinggi* naik dari 13 ke 23 (efek engine saja). Pada 12 baris yang dibersihkan, naik dari 2 ke 10 (campuran efek engine dan tautan yang kini terbaca). Tidak ada penipuan yang turun tingkat; tiga lolos kritis iterasi 1 (P015, P031, P069) kini *Sedang*.
+- **Efek samping**:
+  1. **Alarm palsu A024**: pengumuman resmi BGN SPPI (Januari 2025, pendaftaran sudah ditutup) dinilai *Tinggi* dengan alasan jadwal sudah lewat dan sumber pencarian tidak relevan. Prompt sudah menyatakan tanggal tidak menaikkan risiko, jadi ini kelemahan engine; contoh datanya sendiri juga sudah basi.
+  2. **Lowongan asli tanpa tautan menjadi *Sedang***: 15 asli turun dari *Rendah* ke *Sedang* (mis. Richeese, Cimory, J&T, Japfa, PNM) karena teks disalin dari halaman resmi tanpa URL, dan rubrik melarang kanal yang tidak terlihat dinilai *Rendah*. Ini konsisten dengan rubrik tetapi menambah ajakan verifikasi pada lowongan sah; perlu keputusan produk (diterima, atau sistem meminta tautan sebelum memberi *Rendah*).
+- **Keterbatasan**: rubrik disusun setelah melihat kesalahan iterasi 1, sehingga angka iterasi 2 kemungkinan lebih optimistis dibanding lowongan yang benar-benar baru. Kedua iterasi dilaporkan berdampingan; iterasi 1 tetap menjadi angka utama yang ditetapkan sebelum perbaikan.
