@@ -64,6 +64,21 @@ Aturan tambahan:
 - Utamakan kasus 2025–2026 supaya modusnya aktual.
 - Kasus yang sudah dipakai saat pengembangan (contoh di `MASTER_AI_SPEC`, probe uji Oktober 2026) hanya boleh masuk `dev`.
 
+### Realisasi set `test` (Oktober 2026) dan keterbatasannya
+
+Set `test` berisi 50 penipuan dan 50 asli. Sebagian target sebaran tidak tercapai:
+
+| Kategori | Target | Realisasi | Penyebab |
+|---|---|---|---|
+| Penipuan: TPPO / luar negeri non-prosedural | 5 | 2 | Lihat di bawah. |
+| Penipuan: impersonasi | 15 | 12 | Sebagian kasus dipindah ke cadangan untuk menyeimbangkan komposisi. |
+| Penipuan: biaya | 10 | 8 | Surat panggilan palsu sering hanya tersedia dalam versi bercap "PENIPUAN" di artikel cek fakta, sehingga tidak bisa dipakai sebagai input. |
+| Asli dengan pasangan palsu | 15 | 12 | Pasangan ikut lepas ketika kasus palsunya dipindah ke cadangan. |
+
+**TPPO (2 dari 5).** Iklan rekrutmen TPPO jarang terdokumentasi dalam bentuk yang bisa dipakai sebagai input. Pemberitaan kasus (Kamboja, Myanmar, rekrutmen WNI menjadi tentara Rusia) hanya menceritakan isi iklan tanpa memuat teks atau gambarnya. Cek fakta MAFINDO hanya mencatat dua lowongan luar negeri palsu (Brunei dan Australia), dan contoh iklan dari peringatan KBRI/KP2MI berada di media sosial yang tidak bisa diarsipkan. Satu-satunya iklan TPPO yang terdokumentasi lengkap (grup Telegram Indonesia-Kamboja, dimuat DW) sudah dipakai di `dev`. Karena itu, angka per modus untuk TPPO hanya bersifat indikatif dan tidak dilaporkan dengan interval kepercayaan. Kedua kasus yang ada juga lebih tepat disebut lowongan luar negeri non-prosedural dengan tautan phishing daripada perdagangan orang yang terbukti.
+
+Kasus yang dikeluarkan dari `test` disimpan di `cadangan.csv` (masih valid, bisa dipakai untuk `dev`), dan kasus yang labelnya diragukan di `ambigu.csv`. Keduanya berada di `web/eval/dataset/` dan tidak di-commit.
+
 ---
 
 ## 5. Set Uji Prompt Injection
