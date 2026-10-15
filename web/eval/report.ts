@@ -209,6 +209,7 @@ function variantDetail(variant: string, records: EvalRecord[]): string {
         ["Rata-rata token input / output", `${ops.avgTokens.input} / ${ops.avgTokens.output}`],
         ["Jatuh ke fallback aturan", isModelEnabled(variant) ? short(ops.fallback) : "- (model dimatikan)"],
         ["Risk floor diterapkan", ops.riskFloorApplied],
+        ["Batas manipulasi diterapkan", ops.manipulationCapApplied],
         ["Sitasi halusinasi dibuang", `${ops.droppedSourceIds.total} (di ${ops.droppedSourceIds.runs} kasus)`],
         ["Kutipan palsu dibuang", `${ops.droppedEvidence.total} (di ${ops.droppedEvidence.runs} kasus)`],
         ["Status pencarian", Object.entries(ops.searchStatus).map(([k, v]) => `${k}: ${v}`).join(", ") || "-"],

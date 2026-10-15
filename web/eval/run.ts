@@ -223,6 +223,7 @@ async function main() {
           sourceCount: meta.search.sourceCount,
           extractionStatus: meta.extraction.status,
           riskFloorApplied: meta.riskFloorApplied,
+          manipulationCapApplied: meta.manipulationCapApplied,
           droppedSourceIds: meta.droppedSourceIds,
           droppedEvidence: meta.droppedEvidence,
           timingsMs: { ...meta.timingsMs, extraction: meta.extraction.ms },

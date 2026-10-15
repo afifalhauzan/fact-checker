@@ -25,6 +25,8 @@ export interface EvalRecord {
   sourceCount: number;
   extractionStatus?: string;
   riskFloorApplied: boolean;
+  // Absent in runs from before the cap existed.
+  manipulationCapApplied?: boolean;
   droppedSourceIds: number;
   droppedEvidence: number;
   timingsMs: { total: number; llm: number; search: number; extraction: number };
@@ -176,6 +178,7 @@ export interface OperationalSummary {
   // Runs that fell back to rules although the model was enabled.
   fallback: Rate;
   riskFloorApplied: number;
+  manipulationCapApplied: number;
   droppedSourceIds: { total: number; runs: number };
   droppedEvidence: { total: number; runs: number };
   searchStatus: Record<string, number>;
@@ -208,6 +211,7 @@ export function operationalSummary(all: EvalRecord[], modelEnabled: boolean): Op
     },
     fallback: rate(modelEnabled ? fallbacks : 0, records.length),
     riskFloorApplied: records.filter((record) => record.riskFloorApplied).length,
+    manipulationCapApplied: records.filter((record) => record.manipulationCapApplied).length,
     droppedSourceIds: {
       total: sumOf((record) => record.droppedSourceIds),
       runs: records.filter((record) => record.droppedSourceIds > 0).length,
