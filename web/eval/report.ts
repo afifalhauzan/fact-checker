@@ -4,7 +4,8 @@
  *   pnpm eval:report eval/results/<run>
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { loadDataset, VISIBLE_EVIDENCE_COLUMN } from "./lib/dataset";
 import {
   classificationSummary,
   groupBy,
@@ -32,6 +33,8 @@ function table(header: string[], rows: Array<Array<string | number>>): string {
 function readRecords(file: string): EvalRecord[] {
   return readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line) as EvalRecord);
 }
+
+const EVIDENCE_ORDER = ["ya", "tidak", "belum dianotasi"];
 
 // Main metrics use labeled dev/test cases only; injection-set cases are scored as attack pairs.
 const isScored = (record: EvalRecord) => record.split !== "injeksi" && !record.injected;
@@ -87,6 +90,26 @@ function variantDetail(variant: string, records: EvalRecord[]): string {
           ["Modus", "n", "Deteksi (tinggi)", "Waspada (sedang+tinggi)", "Lolos kritis"],
           [...byModus].map(([modus, rows]) => [
             modus,
+            rows.length,
+            short(rate(rows.filter((r) => r.prediction === "tinggi").length, rows.length)),
+            short(rate(rows.filter((r) => r.prediction === "tinggi" || r.prediction === "sedang").length, rows.length)),
+            short(rate(rows.filter((r) => r.prediction === "rendah").length, rows.length)),
+          ])
+        )
+      );
+    }
+
+    // Post-hoc breakdown: was the red flag visible in the material at all?
+    if (scams.some((record) => record.visibleEvidence)) {
+      const byEvidence = groupBy(scams, (record) => [record.visibleEvidence || "belum dianotasi"]);
+      out.push(
+        "",
+        `### Penipuan per \`${VISIBLE_EVIDENCE_COLUMN}\` (analisis setelah evaluasi)`,
+        "",
+        table(
+          ["Tanda bahaya di materi", "n", "Deteksi (tinggi)", "Waspada (sedang+tinggi)", "Lolos kritis"],
+          [...byEvidence].sort(([a], [b]) => EVIDENCE_ORDER.indexOf(a) - EVIDENCE_ORDER.indexOf(b)).map(([evidence, rows]) => [
+            evidence,
             rows.length,
             short(rate(rows.filter((r) => r.prediction === "tinggi").length, rows.length)),
             short(rate(rows.filter((r) => r.prediction === "tinggi" || r.prediction === "sedang").length, rows.length)),
@@ -213,6 +236,24 @@ function main() {
   const variants: string[] = config.variants.filter((variant: string) => existsSync(join(runDir, `${variant}.jsonl`)));
   const recordsByVariant = new Map(variants.map((variant) => [variant, readRecords(join(runDir, `${variant}.jsonl`))]));
 
+  // Runs made before bukti_terlihat existed take the annotation from the current dataset.
+  const datasetPath = resolve(config.dataset.path);
+  let evidenceNote = "";
+  if (existsSync(datasetPath)) {
+    const { rows } = loadDataset(datasetPath, join(dirname(datasetPath), "images"));
+    const evidence = new Map(rows.map((row) => [row.id, row.visibleEvidence]));
+    let filled = 0;
+    for (const records of recordsByVariant.values()) {
+      for (const record of records) {
+        if (record.visibleEvidence === undefined && evidence.get(record.id)) {
+          record.visibleEvidence = evidence.get(record.id);
+          filled++;
+        }
+      }
+    }
+    if (filled) evidenceNote = `Kolom \`${VISIBLE_EVIDENCE_COLUMN}\` diambil dari dataset saat laporan dibuat, bukan saat run.`;
+  }
+
   const overview = variants.map((variant) => {
     const records = recordsByVariant.get(variant)!;
     const s = classificationSummary(records.filter(isScored));
@@ -255,6 +296,7 @@ function main() {
     ),
     "",
     "Lolos kritis = penipuan dinilai rendah. Deteksi = penipuan dinilai tinggi. Alarm palsu = asli dinilai tinggi. Ketat: hanya tinggi dihitung penipuan; longgar: sedang dan tinggi.",
+    ...(evidenceNote ? ["", evidenceNote] : []),
     "",
     ...variants.map((variant) => `${variantDetail(variant, recordsByVariant.get(variant)!)}\n`),
   ].join("\n");
