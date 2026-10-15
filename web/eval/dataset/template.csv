@@ -1,3 +1,3 @@
-id,split,label,modus,kasus_sulit,input_type,text,image_file,platform,sumber_label,sumber_asli,tanggal_kasus,pasangan_id,dikumpulkan_oleh,diverifikasi_oleh,catatan
-P001,dev,penipuan,impersonasi,tanpa_biaya;email_gratis,teks,"<tempel teks dari bagian Narasi artikel cek fakta>",,tiktok,https://www.komdigi.go.id/berita/berita-hoaks/detail/hoaks-tautan-email-rekrutmen-pt-indonesia-weda-bay-industrial-park,https://archive.ph/Q1MXl,2026-08,A001,,,"Mencatut PT IWIP, lamaran diarahkan ke email Gmail"
-A001,dev,asli,,,teks,"<tempel teks lowongan dari kanal resmi perusahaan>",,website,https://recruitment-iwip.com,,2026-09,P001,,,"Pasangan resmi dari P001"
+id,split,label,modus,kasus_sulit,input_type,text,image_file,platform,sumber_label,sumber_asli,tanggal_kasus,pasangan_id,dikumpulkan_oleh,diverifikasi_oleh,catatan,bukti_terlihat
+P001,dev,penipuan,impersonasi,tanpa_biaya;email_gratis,teks,"<tempel teks dari bagian Narasi artikel cek fakta>",,tiktok,https://www.komdigi.go.id/berita/berita-hoaks/detail/hoaks-tautan-email-rekrutmen-pt-indonesia-weda-bay-industrial-park,https://archive.ph/Q1MXl,2026-08,A001,,,"Mencatut PT IWIP, lamaran diarahkan ke email Gmail",ya
+A001,dev,asli,,,teks,"<tempel teks lowongan dari kanal resmi perusahaan>",,website,https://recruitment-iwip.com,,2026-09,P001,,,"Pasangan resmi dari P001",

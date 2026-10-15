@@ -107,6 +107,7 @@ function baseRecord(row: DatasetRow, variant: string): Omit<EvalRecord, "predict
     hardCaseTags: row.hardCaseTags,
     inputType: row.inputType,
     pairId: row.pairId,
+    visibleEvidence: row.visibleEvidence,
     injected: isInjectedVariant(row),
     variant,
     riskTypes: [],

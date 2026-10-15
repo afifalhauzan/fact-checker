@@ -9,6 +9,14 @@ export const COLUMNS = [
   "sumber_label", "sumber_asli", "tanggal_kasus", "pasangan_id", "dikumpulkan_oleh", "diverifikasi_oleh", "catatan",
 ] as const;
 
+/**
+ * Annotated after the first test run, so older CSVs may not have it (bagian 6, analisis tambahan).
+ * For penipuan rows: does the material itself show the red flag ("ya"), or does the fraud only
+ * show outside it, e.g. behind a "link di bio" ("tidak")?
+ */
+export const VISIBLE_EVIDENCE_COLUMN = "bukti_terlihat";
+export const VISIBLE_EVIDENCE = ["ya", "tidak"] as const;
+
 export const SPLITS = ["dev", "test", "injeksi"] as const;
 export const LABELS = ["penipuan", "asli"] as const;
 export const MODUS = ["impersonasi", "biaya", "tugas_deposit", "data_sensitif", "tppo", "gaji_tidak_wajar", "lainnya"] as const;
@@ -36,6 +44,8 @@ export interface DatasetRow {
   platform: string;
   labelSource: string;
   pairId: string;
+  /** "ya", "tidak", or "" when not annotated. */
+  visibleEvidence: string;
   collectedBy: string;
   verifiedBy: string;
 }
@@ -112,6 +122,12 @@ export function loadDataset(csvPath: string, imagesDir: string): { rows: Dataset
       else if (!existsSync(join(imagesDir, file))) errors.push(`lampiran ${file} tidak ditemukan di ${imagesDir}`);
     }
 
+    const visibleEvidence = record[VISIBLE_EVIDENCE_COLUMN] ?? "";
+    if (visibleEvidence && !isOneOf(VISIBLE_EVIDENCE, visibleEvidence)) {
+      errors.push(`${VISIBLE_EVIDENCE_COLUMN} "${visibleEvidence}" tidak dikenal (ya/tidak)`);
+    }
+    if (visibleEvidence && record.label === "asli") warnings.push(`${VISIBLE_EVIDENCE_COLUMN} hanya dipakai untuk baris penipuan`);
+
     if (!record.sumber_label) {
       (record.split === "test" ? errors : warnings).push("sumber_label kosong");
     }
@@ -136,6 +152,7 @@ export function loadDataset(csvPath: string, imagesDir: string): { rows: Dataset
       platform: record.platform,
       labelSource: record.sumber_label,
       pairId: record.pasangan_id,
+      visibleEvidence: record.label === "penipuan" ? visibleEvidence : "",
       collectedBy: record.dikumpulkan_oleh,
       verifiedBy: record.diverifikasi_oleh,
     });

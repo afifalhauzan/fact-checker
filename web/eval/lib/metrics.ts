@@ -12,6 +12,8 @@ export interface EvalRecord {
   hardCaseTags: string[];
   inputType: string;
   pairId: string;
+  /** bukti_terlihat annotation; runs made before the column existed get it from the dataset in report.ts. */
+  visibleEvidence?: string;
   injected: boolean;
   variant: string;
   prediction: Prediction;
