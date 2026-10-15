@@ -298,8 +298,8 @@ function applyRiskFloor(result: AnalysisResult, signals: DetectedSignal[]): stri
   if (current && compareRiskLevels(current.riskLevel, floor.level) >= 0) {
     return null;
   }
-  // Without a verdict there is no posting to judge. Only direct evidence of fraud (fee or
-  // sensitive-data requests) justifies creating one; a manipulation attempt alone does not.
+  // Without a verdict there is no posting to judge. Only a "tinggi" floor (direct evidence such
+  // as a fee request) justifies creating one; a manipulation attempt or a hidden link alone does not.
   if (!current && floor.level !== "tinggi") {
     return null;
   }
