@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-10-15T09:11:16.390Z",
+  "commit": "11364d5",
+  "uncommittedChanges": false,
+  "dataset": {
+    "path": "eval/dataset/dataset.csv",
+    "sha256": "6b33497acb811bbb019a8c55c053dd76a3920eab5302bf00bde71de7dcea34fd"
+  },
+  "splits": [
+    "test"
+  ],
+  "variants": [
+    "lengkap",
+    "aturan_saja",
+    "llm_saja",
+    "llm_pencarian"
+  ],
+  "models": {
+    "extraction": "gemini-2.5-flash",
+    "analysis": "gemini-2.5-flash"
+  },
+  "envOverrides": [],
+  "caseCount": 100
+}
