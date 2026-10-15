@@ -165,6 +165,19 @@ Pemetaan ke aturan:
 
 Kasus yang memang wajar tetap `sedang` dan tidak dikejar: hanya bit.ly, puskesmas + nomor HP, hanya gaji tinggi. Contoh positif dan negatif tiap pola ada di `web/eval/signals.test.ts` (`pnpm test:signals`).
 
+### Iterasi 2 pada set `test`
+
+Iterasi 1 (15 Okt 2026, `eval/results/2026-10-15T09-11-08`) tetap menjadi angka utama yang dilaporkan. Iterasi 2 dijalankan sekali setelah perbaikan di atas dan dilaporkan **di sampingnya**, dengan tiga catatan:
+
+1. **Rubrik disusun setelah melihat kesalahan di `test`.** Penyetelan aturan memakai `dev`, tetapi pola yang dikejar berasal dari analisis kesalahan iterasi 1. Karena itu kenaikan pada iterasi 2 kemungkinan lebih besar daripada kinerja pada lowongan yang benar-benar baru.
+2. **Pembersihan jejak artikel di 12 baris.** Sebagian teks `test` masih membawa tulisan pemeriksa fakta, sesuatu yang tidak akan ditempel pengguna sungguhan. Sebelum iterasi 2, jejak itu dibersihkan secara mekanis tanpa melihat hasil model:
+   - `[dot]` pada tautan diganti titik (P020, P024, P030, P037, P051, P066, P067, P074);
+   - kalimat "Dari pengamatan Tim Pemeriksa Fakta Mafindo (TurnBackHoax) …" dihapus (P021, P022, P055);
+   - kalimat bingkai artikel ("Tautan yang tertera pada profil akun TikTok … yakni:", "Berikut narasi lengkapnya:") dan tanda kutip pembungkusnya dihapus (P020, P058, P074).
+
+   Label, gambar, dan baris lain tidak berubah. Salinan dataset sebelum pembersihan disimpan di `web/eval/dataset/dataset.iterasi1.csv` (teks `test`-nya sama dengan yang dipakai iterasi 1). P060 di `dev` memiliki jejak serupa dan belum dibersihkan.
+3. **Pembanding yang adil.** Untuk memisahkan efek perbaikan engine dari efek pembersihan data, bandingkan juga hasil per `bukti_terlihat` dan per baris yang dibersihkan. Bila perlu, ke-12 baris itu dapat dijalankan ulang dengan engine iterasi 1 (commit `a9e21f8`) memakai `--ids`.
+
 ---
 
 ## 7. Format Data
