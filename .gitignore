@@ -81,5 +81,7 @@ docs/draft-adopsi-lisensi-gemastik.md
 docs/daftar-komponen-dan-lisensi-gemastik.md
 docs/frontend-architecture.md
 
-# Evaluation outputs (per-case predictions; numbers go into the docs)
-web/eval/results/
+# Evaluation outputs (per-case predictions); only official runs are tracked
+web/eval/results/*
+!web/eval/results/2026-10-15T09-11-08/
+!web/eval/results/2026-10-15T09-11-08/*.md
