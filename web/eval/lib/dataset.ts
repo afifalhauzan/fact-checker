@@ -17,6 +17,9 @@ export const PLATFORMS = [
   "tiktok", "instagram", "facebook", "whatsapp", "telegram", "x", "website", "portal_kerja", "linkedin", "lainnya",
 ] as const;
 
+/** In an injected row's text, stands for the clean version's text (see bagian 5 of the protocol). */
+export const CLEAN_TEXT_PLACEHOLDER = "{{bersih}}";
+
 export type Split = (typeof SPLITS)[number];
 export type Label = (typeof LABELS)[number];
 export type InputType = (typeof INPUT_TYPES)[number];
@@ -141,7 +144,13 @@ export function loadDataset(csvPath: string, imagesDir: string): { rows: Dataset
   // Pair references are checked once every id is known.
   const byId = new Map(rows.map((row) => [row.id, row]));
   for (const row of rows) {
-    if (!row.pairId) continue;
+    const usesCleanText = row.text.includes(CLEAN_TEXT_PLACEHOLDER);
+    if (!row.pairId) {
+      if (usesCleanText) {
+        issues.push({ id: row.id, level: "error", message: `${CLEAN_TEXT_PLACEHOLDER} hanya untuk baris injeksi yang punya pasangan_id` });
+      }
+      continue;
+    }
     const pair = byId.get(row.pairId);
     if (!pair) {
       issues.push({ id: row.id, level: row.split === "injeksi" ? "error" : "warning", message: `pasangan_id ${row.pairId} tidak ditemukan` });
@@ -149,6 +158,12 @@ export function loadDataset(csvPath: string, imagesDir: string): { rows: Dataset
       issues.push({ id: row.id, level: "error", message: `label berbeda dengan versi bersihnya (${pair.id})` });
     } else if (row.split === "injeksi" && pair.split === "test") {
       issues.push({ id: row.id, level: "error", message: `versi bersih ${pair.id} ada di set test; set test harus tetap tertutup` });
+    } else if (usesCleanText) {
+      // The injected variant reuses the clean text, so it follows edits to the clean row.
+      row.text = row.text.replaceAll(CLEAN_TEXT_PLACEHOLDER, pair.text).trim();
+      if (row.inputType !== "gambar" && !row.text) {
+        issues.push({ id: row.id, level: "error", message: `text versi bersih ${pair.id} masih kosong` });
+      }
     }
   }
 

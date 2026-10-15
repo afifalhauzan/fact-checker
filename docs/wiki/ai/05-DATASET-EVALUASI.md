@@ -81,6 +81,8 @@ Ambil 10 lowongan penipuan dan 10 lowongan asli, lalu buat versi bersih dan vers
 
 Di CSV, versi tersuntik ditulis dengan `split = injeksi` dan `pasangan_id` berisi `id` versi bersihnya. Versi bersih tidak mengisi `pasangan_id`, boleh berada di `injeksi` atau `dev`, tetapi **tidak boleh** di `test`, karena set itu harus tetap tertutup.
 
+Kolom `text` versi tersuntik boleh memakai `{{bersih}}` untuk mewakili teks versi bersihnya, misalnya `{{bersih}}` lalu baris baru berisi sisipan. Dengan begitu teks lowongan cukup disalin sekali, dan perbaikan pada versi bersih ikut terbawa. Untuk injeksi di dalam gambar, `text` dikosongkan dan `image_file` menunjuk ke gambar yang sudah disisipi.
+
 ---
 
 ## 6. Protokol Metrik (ditetapkan sebelum evaluasi)
