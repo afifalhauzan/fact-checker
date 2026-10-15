@@ -125,6 +125,21 @@ Metrik pendukung:
 - Kutipan palsu: `meta.droppedEvidence`.
 - Latensi p50/p95 dan biaya per analisis (`meta.tokenUsage`).
 
+### Analisis tambahan: apakah tanda bahayanya terlihat (ditambahkan setelah run `test` pertama, 15 Okt 2026)
+
+Label dataset menyatakan sebuah lowongan penipuan, tetapi tidak menyatakan apakah penipuannya **terlihat dari materi** yang diterima sistem. Ketiga lolos kritis pada run pertama berupa unggahan yang teksnya mirip lowongan resmi, sedangkan penipuannya ada di tautan "link di bio". Untuk membedakan "sistem kurang tegas" dari "bahannya memang tidak ada", baris penipuan diberi kolom `bukti_terlihat`:
+
+| Nilai | Syarat (dinilai hanya dari `text` dan lampiran, bukan dari artikel cek fakta) |
+|---|---|
+| `ya` | Materi memuat minimal satu tanda bahaya yang bisa ditunjuk: permintaan uang/transfer/deposit, permintaan OTP/kode verifikasi/KTP/data sensitif, lamaran hanya ke nomor WA/DM/email gratis yang mengaku perusahaan besar atau instansi, tugas berbayar/like-subscribe, gaji jelas tidak wajar untuk syaratnya, kerja luar negeri tanpa jalur resmi (visa turis, tanpa P3MI), atau kanal pendaftaran yang terlihat bukan domain resmi. |
+| `tidak` | Materi tampak seperti lowongan wajar, dan penipuannya hanya bisa diketahui dari luar materi (isi tautan di bio, formulir di balik tautan, bantahan perusahaan). |
+
+Aturan anotasi:
+1. Diisi oleh anggota tim yang **belum melihat hasil run**, memakai kriteria di atas, sebelum membuka laporan.
+2. Ragu antara `ya` dan `tidak`: pilih `tidak` dan tulis alasannya di `catatan`.
+3. Kolom ini tidak mengubah metrik utama. Laporan menambahkan tabel "Penipuan per `bukti_terlihat`" dan menandainya sebagai analisis setelah evaluasi. Harapannya: penipuan `ya` seharusnya `tinggi`; penipuan `tidak` wajar `sedang`, tetapi `rendah` tetap kesalahan karena kanal pendaftaran tidak bisa diverifikasi.
+4. Run lama tidak perlu diulang: `pnpm eval:report` mengambil kolom ini dari dataset saat laporan dibuat.
+
 ---
 
 ## 7. Format Data
@@ -148,6 +163,7 @@ Kumpulkan di Google Sheet (bisa diisi bersama), lalu ekspor ke CSV dengan kolom 
 | `pasangan_id` | `id` pasangannya (palsu ↔ asli dari perusahaan yang sama) |
 | `dikumpulkan_oleh` / `diverifikasi_oleh` | Inisial. Setiap baris `test` dicek orang kedua terhadap `sumber_label`. |
 | `catatan` | Bebas |
+| `bukti_terlihat` | Opsional, hanya baris penipuan: `ya` / `tidak` (bagian 6, analisis tambahan) |
 
 ---
 
