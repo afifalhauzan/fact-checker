@@ -85,3 +85,5 @@ docs/frontend-architecture.md
 web/eval/results/*
 !web/eval/results/2026-10-15T09-11-08/
 !web/eval/results/2026-10-15T09-11-08/*.md
+!web/eval/results/2026-10-15T16-50-01/
+!web/eval/results/2026-10-15T16-50-01/*.md
