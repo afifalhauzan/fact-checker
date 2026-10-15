@@ -112,3 +112,32 @@ Dokumen ini mendokumentasikan secara rinci penemuan teknis (findings), batasan A
 - **Problem**: Prompt tidak memuat tanggal hari ini, sehingga model menganggap "sekarang" adalah akhir data latihannya (sekitar awal 2025). Pengumuman "rekrutmen dibuka 1 Desember 2026" dinilai "tanggal yang masih jauh perlu diperhatikan", bahkan sempat menaikkan verdict ke *Sedang*. Sebaliknya, lowongan dengan batas 30 Juni 2025 dinyatakan "masih terbuka". Hanya menuliskan tanggal hari ini di prompt tidak cukup: model tetap salah menghitung (3/3 uji tetap "masih terbuka").
 - **Solution**: perbandingan tanggal dihitung di kode (`dates.ts`). Tanggal lengkap di materi ("30 Juni 2025", "30/06/2025") dibandingkan dengan tanggal hari ini (WIB), lalu hasilnya dikirim ke model di blok `<catatan_waktu>`: hari ini, tanggal yang sudah lewat, dan tanggal yang akan datang. Tanggal tidak menaikkan risiko dengan sendirinya; batas yang sudah lewat disebut di ringkasan. Prompt aksi dan tanya-jawab juga diberi tanggal hari ini.
 - **Hasil uji**: 10 kasus parser lulus (format nama bulan/singkatan/angka, tanggal tidak valid, batas hari WIB). Uji langsung: batas 30 Juni 2025 disebut "sudah lewat" (3/3), pengumuman Desember 2026 tidak lagi dipersoalkan, dan lowongan "daftar hari ini, berangkat besok" tetap *Tinggi*.
+
+### N. Finding 14: Penipuan dengan Tanda Bahaya Terlihat Hanya Dinilai *Sedang*
+- **Problem**: Pada run `test` pertama (15 Okt 2026), 14 dari 26 penipuan yang tanda bahayanya terlihat di materi hanya dinilai *Sedang*: domain pendaftaran tidak resmi, email gratis atas nama instansi, tugas berbayar. Aturan juga hampir tidak berperan (risk floor tidak pernah terpicu; `fee_request` hanya menyala 1 dari 8 kasus biaya), dan dua lowongan "link di bio" dinilai *Rendah* dengan alasan "mengarah ke kanal resmi".
+- **Root Cause**:
+  1. Pola transfer butuh nominal ≤40 karakter setelah kata "transfer", sehingga gaya surat ("transfer ke Rekening Bank … a/n … sebesar Rp", "Transfer ke:" lalu rekening di baris berikutnya) lolos. "Biaya transport ditanggung sendiri" malah dibaca sebagai negasi karena kata "ditanggung".
+  2. Tidak ada aturan untuk domain gratisan, tugas like/subscribe, impersonasi instansi, maupun link di bio; gabungan dua tanda lemah hanya ada di prompt.
+  3. Definisi tingkat risiko di prompt tidak menyebut kanal yang tidak terlihat, sehingga model menganggap nama perusahaan terkenal sebagai kanal resmi.
+- **Solution** (rubrik lengkap di `05-DATASET-EVALUASI.md` bagian 6):
+  1. `fee_request` diperluas: transfer/setor ke rekening, rekening + "sebesar/total Rp", "selesaikan pembayaran", "tf-kan", "biaya … 50 rb", "ditanggung sendiri/oleh peserta", "akan diganti/direimburse", dana talangan/potong gaji. Gaji, tugas jabatan (transfer ke rekening vendor), BPJS/pajak, dan perjalanan dinas dikecualikan.
+  2. Aturan baru: `unofficial_domain`, `paid_task`, `institution_impersonation` (kuat, floor *Tinggi*), `link_in_bio` (sedang, floor *Sedang*, hanya jika tidak ada satu pun alamat di materi), dan `moderate_combination` (kontak informal + kanal tersembunyi → *Tinggi*). WA + Gmail saja sengaja tidak digabung karena lazim pada UMKM dan P3MI.
+  3. Prompt memakai rubrik tanda pasti / tanda lemah dan melarang kanal yang tidak terlihat disebut resmi atau dinilai *Rendah*.
+  4. 70 uji regresi sintetis di `web/eval/signals.test.ts` (`pnpm test:signals`), termasuk negasi, kalimat tanya, gaji, dan tugas jabatan.
+- **Data dev**: 10 baris cadangan yang dikeluarkan dari `test` sebelum run resmi dipindah ke `dev`, ditambah 4 kasus biaya berbentuk teks dari artikel turnbackhoax 2021–2022 yang tidak ada di dataset (P101–P104; dua di antaranya ringkasan penulis cek fakta, bukan teks asli). Penulisan `[dot]` pada dua tautan dev diganti titik. Dev menjadi 39 kasus (28 penipuan, 11 asli); baseline diulang di commit yang sama sebelum kode diubah.
+- **Hasil dev** (varian `lengkap`, Gemini 2.5 Flash; 2 run baseline, 2 run sesudah):
+
+  | Metrik | Sebelum | Sesudah |
+  |---|---|---|
+  | Deteksi (penipuan → *Tinggi*) | 9/28 (kedua run) | 18/28 (kedua run) |
+  | Lolos kritis (penipuan → *Rendah*) | 1–2/28 | 1/28 |
+  | Alarm palsu (asli → *Tinggi*) | 1–2/11 | 1/11 |
+  | Asli dinilai *Rendah* | 6/11 | 3–4/11 |
+  | Deteksi varian `aturan_saja` | 1/28 | 7/28, alarm palsu 0/11 |
+
+  Kenaikan terbesar datang dari prompt: risk floor tidak terpicu di run sesudah karena model sudah sependapat dengan aturan, dan 5 penipuan yang naik ke *Tinggi* tidak memicu aturan apa pun. Aturan tetap berguna sebagai jaring pengaman dan pada mode tanpa LLM (1 → 7 deteksi).
+- **Keterbatasan**:
+  1. Asli yang dinilai *Rendah* turun dari 6 ke 3–4 (menjadi *Sedang*). Menurut protokol ini "kehati-hatian", bukan alarm palsu, tetapi lowongan resmi yang teksnya disalin tanpa tautan kini cenderung *Sedang*.
+  2. Alarm palsu yang tersisa (A008, P3MI ke Korea yang mencantumkan biaya penempatan ditanggung pekerja) dinilai *Tinggi* di semua run, sebelum maupun sesudah. Belum diputuskan apakah rincian biaya resmi P3MI perlu dibedakan dari permintaan uang.
+  3. n dev kecil (11 asli), sehingga satu kasus = 9 poin persen. Angka ini hanya untuk penyetelan; angka resmi menunggu run `test` iterasi kedua.
+  4. P027 (Unilever palsu yang mengarahkan ke "LinkedIn/JobStreet/Kalibrr") tetap *Rendah*; tidak ada tanda yang bisa ditunjuk di materinya.
