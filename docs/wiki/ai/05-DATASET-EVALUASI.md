@@ -140,6 +140,31 @@ Aturan anotasi:
 3. Kolom ini tidak mengubah metrik utama. Laporan menambahkan tabel "Penipuan per `bukti_terlihat`" dan menandainya sebagai analisis setelah evaluasi. Harapannya: penipuan `ya` seharusnya `tinggi`; penipuan `tidak` wajar `sedang`, tetapi `rendah` tetap kesalahan karena kanal pendaftaran tidak bisa diverifikasi.
 4. Run lama tidak perlu diulang: `pnpm eval:report` mengambil kolom ini dari dataset saat laporan dibuat.
 
+### Rubrik tingkat risiko (ditetapkan 15 Okt 2026, setelah run `test` pertama)
+
+Rubrik ini menjadi acuan prompt analisis (`prompts.ts`) dan aturan (`signals.ts`). Penyetelannya hanya memakai split `dev`; run `test` berikutnya dilaporkan sebagai iterasi kedua (finding 14 di `04-FINDINGS-AND-LESSONS-LEARNED.md`).
+
+| Tingkat | Syarat |
+|---|---|
+| `tinggi` | Minimal satu **tanda pasti**: (a) minta uang dalam bentuk apa pun, yaitu biaya, deposit, transfer ke rekening, termasuk yang dijanjikan "nanti diganti/direimburse" atau dana talangan potong gaji; (b) minta OTP/kode verifikasi/PIN/kata sandi/selfie KTP; (c) tugas like/follow/subscribe berbayar atau penghasilan harian yang dijamin dari tugas online; (d) mengaku perusahaan besar/BUMN/instansi tetapi kanalnya jelas bukan milik mereka (email gratis, WA pribadi, domain gratisan); (e) kerja luar negeri non-resmi bergaji fantastis. **Atau** dua tanda lemah berbeda jenis sekaligus. |
+| `sedang` | Hanya tanda lemah, atau materi tidak bisa diverifikasi: link di bio, shortlink saja, gaji agak tinggi, WA/Gmail pada UMKM atau P3MI, identitas tidak jelas, desakan waktu. |
+| `rendah` | Identitas jelas, kanal pendaftaran terlihat dan bisa diverifikasi resmi, tidak ada indikator. Kanal yang tidak terlihat (link di bio, "klik link", DM) **tidak boleh** disebut resmi dan tidak boleh menghasilkan `rendah`. |
+
+Pemetaan ke aturan:
+
+| Aturan (`signals.ts`) | Jenis | Floor | Menangkap |
+|---|---|---|---|
+| `fee_request` | kuat | tinggi | Biaya dan transfer, termasuk gaya surat ("transfer ke Rekening … sebesar Rp"), "ditanggung sendiri/oleh peserta", "akan diganti/direimburse", dana talangan/potong gaji. Negasi ("tidak dipungut biaya", "ditanggung perusahaan"), kalimat tanya, gaji/tugas jabatan ("gaji ditransfer ke rekening", "transfer ke rekening vendor"), dan potongan resmi (BPJS, pajak, perjalanan dinas) tidak dihitung. |
+| `sensitive_data_request` | kuat | tinggi | OTP, PIN, kata sandi, selfie KTP. |
+| `paid_task` | kuat | tinggi | Tugas like/follow/subscribe berbayar, penghasilan per hari yang dijamin, "modal HP … per hari". "Follow up pelanggan" tidak dihitung. |
+| `unofficial_domain` | kuat | tinggi | Tautan di vercel.app, netlify.app, github.io, pages.dev, web.app, my.id, it.com, msha.ke, sidji.me, .site, .online, .xyz, dan sejenisnya. |
+| `institution_impersonation` | kuat (turunan) | tinggi | Klaim DPR/MPR/kementerian/BUMN/Persero/Tbk + email gratis atau nomor WA pribadi. Halaman P3MI (ada nomor SIP/SISKOP2MI) dikecualikan. |
+| `moderate_combination` | kuat (turunan) | tinggi | Kontak informal (WA pribadi/email gratis) **bersama** kanal tersembunyi (shortlink/link di bio). WA + Gmail saja tidak dihitung karena lazim pada UMKM dan P3MI. |
+| `link_in_bio` | sedang | sedang | "Link di bio", "klik link/daftar" tanpa satu pun alamat di materi. |
+| `personal_chat_contact`, `free_email_domain`, `shortlink` | sedang | - | Tanda lemah. |
+
+Kasus yang memang wajar tetap `sedang` dan tidak dikejar: hanya bit.ly, puskesmas + nomor HP, hanya gaji tinggi. Contoh positif dan negatif tiap pola ada di `web/eval/signals.test.ts` (`pnpm test:signals`).
+
 ---
 
 ## 7. Format Data
