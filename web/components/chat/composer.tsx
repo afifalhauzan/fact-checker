@@ -212,11 +212,6 @@ export function Composer({
             >
               <Plus className="h-4 w-4" />
             </button>
-            {!hasContent && (
-              <span className="hidden truncate text-xs text-muted-foreground sm:inline">
-                Tempel gambar dengan Ctrl+V · Shift+Enter untuk baris baru
-              </span>
-            )}
           </div>
 
           {isLoading && onStop ? (
