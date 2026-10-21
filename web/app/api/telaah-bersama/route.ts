@@ -6,7 +6,7 @@ import { redactSensitive } from "@/langchain/agents/analyzer/redaction";
 import { hasValidAttributes, type DraftAttributes } from "@/langchain/agents/telaah-bersama/draft";
 import { embedText, embeddingTextFor } from "@/langchain/agents/telaah-bersama/embeddings";
 import { findContacts } from "@/langchain/agents/telaah-bersama/identifiers";
-import { isSubsequence, readSignedShare, sha256OfBytes } from "@/langchain/agents/telaah-bersama/share-payload";
+import { isSubsequence, readSignedShare, sha256OfBytes, shareKeyOf } from "@/langchain/agents/telaah-bersama/share-payload";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_STORY_LENGTH = 1_500;
@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
       source_platform: sourcePlatform,
       source_account: sourceAccount,
       analyzed_at: payload.analyzedAt,
+      share_key: shareKeyOf(share.signature as string),
       attachments,
       embedding: await embedText(embeddingTextFor(materialLines)),
     })

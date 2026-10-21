@@ -24,7 +24,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     // Laravel's own messages are English and technical outside validation errors
     const message =
       FRIENDLY_ERRORS[response.status] ??
-      (response.status === 422 || response.status === 400 ? body?.message : null) ??
+      ([400, 409, 422].includes(response.status) ? body?.message : null) ??
       "Terjadi kesalahan. Coba lagi sebentar lagi.";
     throw new TelaahApiError(message, response.status);
   }
@@ -97,6 +97,10 @@ export interface DraftAttributes {
 
 export const draftPost = (share: TelaahSharePartData) =>
   request<{ attributes: DraftAttributes; attributesSignature: string }>("/api/telaah-bersama/draft", json("POST", share));
+
+/** The post already published from this analysis, or null. */
+export const findSharedPost = (share: TelaahSharePartData) =>
+  request<{ post: { id: number } | null }>("/api/telaah-bersama/shared", json("POST", share)).then((result) => result.post);
 
 export function publishPost(form: FormData): Promise<TelaahPost> {
   return request<TelaahPost>("/api/telaah-bersama", { method: "POST", body: form });

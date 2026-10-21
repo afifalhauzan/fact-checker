@@ -66,6 +66,11 @@ export function hasValidSignature(text: string, signature: string): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
+/** Identifies one signed analysis, so it can be published only once. */
+export function shareKeyOf(signature: string): string {
+  return createHash("sha256").update(signature).digest("hex");
+}
+
 export function sha256OfDataUrl(url: string): string | null {
   const match = /^data:[^;,]+;base64,([\s\S]*)$/.exec(url);
   return match ? createHash("sha256").update(Buffer.from(match[1], "base64")).digest("hex") : null;
