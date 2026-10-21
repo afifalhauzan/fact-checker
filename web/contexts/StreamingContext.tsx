@@ -24,6 +24,8 @@ interface StreamingContextType {
   stop: () => void;
   isLoading: boolean;
   isAuthReady: boolean;
+  // True until the session's saved messages are in, so an opened session never flashes the empty start page.
+  isHistoryLoading: boolean;
   handleRefresh: () => void;
   renderMessageContent: (message: MetabotUIMessage) => string;
   chatId: string;
@@ -53,6 +55,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
 
   // Local loading state to start immediately when message is sent
   const [isUserSending, setIsUserSending] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
   // Get conversationId from URL if available (for page refreshes/shared URLs)
   const urlConversationId = typeof window !== 'undefined'
@@ -143,6 +146,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
 
       // Mark this conversation as fetched
       fetchedConversationRef.current = activeConversationId;
+      setIsHistoryLoading(false);
     });
   }, [activeConversationId, fetchHistory, setMessages]);
 
@@ -200,6 +204,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     stop,
     isLoading,
     isAuthReady: shouldInitializeChat,
+    isHistoryLoading,
     handleRefresh,
     renderMessageContent,
     chatId,

@@ -163,6 +163,7 @@ export function Chat() {
     stop,
     isLoading,
     isAuthReady,
+    isHistoryLoading,
     handleRefresh,
     renderMessageContent,
     chatId,
@@ -680,6 +681,10 @@ export function Chat() {
                       <span className="ml-2 animate-pulse">Memulai percakapan...</span>
                     </div>
                   </div>
+                </div>
+              ) : messages.length === 0 && isHistoryLoading ? (
+                <div className="flex flex-1 items-center justify-center" aria-busy="true">
+                  <p className="animate-pulse text-sm text-muted-foreground">Memuat riwayat telaah…</p>
                 </div>
               ) : messages.length === 0 ? (
                 <ChatStart
