@@ -9,7 +9,7 @@ export type TelaahModus = "biaya" | "tugas_deposit" | "data_sensitif" | "tppo" |
 
 export type ContactKind = "phone" | "email" | "account" | "domain";
 
-export type ReportType = "data_pribadi" | "spam" | "lowongan_asli";
+export type ReportType = "data_pribadi" | "spam";
 
 export interface TelaahContact {
   kind: ContactKind;
@@ -67,7 +67,6 @@ export interface TelaahPost {
   reactionCount: number;
   matchCount: number;
   spamReports: number;
-  asliResponses: { count: number; reasons: string[] };
   comments: TelaahComment[];
   isSeed: boolean;
 }
@@ -145,7 +144,6 @@ export const posts: TelaahPost[] = [
     reactionCount: 23,
     matchCount: 41,
     spamReports: 0,
-    asliResponses: { count: 0, reasons: [] },
     isSeed: true,
     comments: [
       {
@@ -224,7 +222,6 @@ export const posts: TelaahPost[] = [
     reactionCount: 57,
     matchCount: 88,
     spamReports: 0,
-    asliResponses: { count: 0, reasons: [] },
     isSeed: true,
     comments: [
       {
@@ -286,7 +283,6 @@ export const posts: TelaahPost[] = [
     reactionCount: 12,
     matchCount: 19,
     spamReports: 0,
-    asliResponses: { count: 0, reasons: [] },
     isSeed: true,
     comments: [
       {
@@ -332,13 +328,13 @@ export const posts: TelaahPost[] = [
     ],
     links: ["https://forms.gle/xxxxx"],
     attachments: [],
-    author: "Pencari Kerja #44c",
+    // Owned by the prototype's signed-in user, so "Post saya" has something to edit.
+    author: CURRENT_USER,
     createdAt: "2026-10-15T10:05:00+07:00",
     analyzedAt: "2026-10-15T10:01:00+07:00",
     reactionCount: 4,
     matchCount: 6,
     spamReports: 0,
-    asliResponses: { count: 0, reasons: [] },
     isSeed: true,
     comments: [],
   },
@@ -383,13 +379,6 @@ export const posts: TelaahPost[] = [
     reactionCount: 3,
     matchCount: 9,
     spamReports: 0,
-    asliResponses: {
-      count: 3,
-      reasons: [
-        "Saya bekerja di sini sejak 2025. HRD memang memakai Gmail karena kantornya masih kecil.",
-        "Saya sudah interview langsung di kantornya di Jl. Contoh No. 10, tidak ada biaya apa pun.",
-      ],
-    },
     isSeed: true,
     comments: [
       {
@@ -445,7 +434,6 @@ export const posts: TelaahPost[] = [
     reactionCount: 31,
     matchCount: 52,
     spamReports: 1,
-    asliResponses: { count: 0, reasons: [] },
     isSeed: true,
     comments: [],
   },

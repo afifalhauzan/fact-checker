@@ -13,7 +13,6 @@ import {
   Pencil,
   ShieldAlert,
   Trash2,
-  Users,
 } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { Button } from "@/components/ui/button";
@@ -111,7 +110,7 @@ export default function TelaahDetailPage() {
         <main className="mx-auto max-w-3xl px-4 py-16 text-center">
           <p className="text-sm text-muted-foreground">Telaah tidak ditemukan.</p>
           <Link href="/telaah-bersama" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-            Kembali ke Telaah Bersama
+            Kembali ke TelaahBareng
           </Link>
         </main>
       </div>
@@ -140,7 +139,7 @@ export default function TelaahDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Telaah Bersama
+          TelaahBareng
         </Link>
 
         <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -209,27 +208,6 @@ export default function TelaahDetailPage() {
                 )}
               </div>
             </div>
-
-            {post.asliResponses.count > 0 && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                  <Users className="h-4 w-4" />
-                  {post.asliResponses.count} orang menyatakan lowongan ini asli
-                </p>
-                {post.asliResponses.reasons.length > 0 && (
-                  <ul className="mt-2 space-y-1.5 text-sm text-emerald-900/85">
-                    {post.asliResponses.reasons.map((reason) => (
-                      <li key={reason} className="border-l-2 border-emerald-300 pl-3">
-                        &ldquo;{reason}&rdquo;
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="mt-2 text-xs text-emerald-900/70">
-                  Tanggapan ini tidak mengubah tingkat risiko. Timbang keduanya dan cek ke kanal resmi.
-                </p>
-              </div>
-            )}
 
             <Section title="Ringkasan">
               <p className="text-sm leading-relaxed text-foreground">{post.summary}</p>
@@ -343,7 +321,7 @@ export default function TelaahDetailPage() {
           removePost(post.id);
         }}
         title="Hapus Telaah ini?"
-        description="Telaah beserta diskusinya akan hilang dari Telaah Bersama. Tindakan ini tidak bisa dibatalkan."
+        description="Telaah beserta diskusinya akan hilang dari TelaahBareng. Tindakan ini tidak bisa dibatalkan."
         confirmText="Hapus"
         cancelText="Batal"
         isDestructive

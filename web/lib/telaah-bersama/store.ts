@@ -12,7 +12,7 @@ import {
 
 export type NewTelaah = Omit<
   TelaahPost,
-  "id" | "author" | "createdAt" | "reactionCount" | "matchCount" | "spamReports" | "asliResponses" | "comments" | "isSeed"
+  "id" | "author" | "createdAt" | "reactionCount" | "matchCount" | "spamReports" | "comments" | "isSeed"
 >;
 
 /** What the owner may change after publishing (design doc 5.2): free text, and removals only. */
@@ -30,7 +30,7 @@ interface TelaahBersamaState {
   loginPrompt: string | null;
   toggleReaction: (postId: number) => void;
   addComment: (postId: number, body: string) => void;
-  report: (postId: number, type: ReportType, note?: string) => void;
+  report: (postId: number, type: ReportType) => void;
   addPost: (draft: NewTelaah) => number;
   updatePost: (postId: number, edit: TelaahEdit) => void;
   removePost: (postId: number) => void;
@@ -81,23 +81,13 @@ export const useTelaahBersamaStore = create<TelaahBersamaState>((set, get) => ({
     }));
   },
 
-  report: (postId, type, note) => {
+  report: (postId, type) => {
     set((state) => ({
       reported: { ...state.reported, [postId]: type },
-      posts: updatePost(state.posts, postId, (post) => {
-        if (type === "spam") return { ...post, spamReports: post.spamReports + 1 };
-        if (type === "lowongan_asli") {
-          return {
-            ...post,
-            asliResponses: {
-              count: post.asliResponses.count + 1,
-              reasons: note ? [...post.asliResponses.reasons, note] : post.asliResponses.reasons,
-            },
-          };
-        }
-        // data_pribadi: the real flow re-scans the post first (design doc 5.3); nothing changes here.
-        return post;
-      }),
+      // data_pribadi: the real flow re-scans the post first (design doc 5.3); nothing changes here.
+      posts: updatePost(state.posts, postId, (post) =>
+        type === "spam" ? { ...post, spamReports: post.spamReports + 1 } : post
+      ),
     }));
   },
 
@@ -114,7 +104,6 @@ export const useTelaahBersamaStore = create<TelaahBersamaState>((set, get) => ({
           reactionCount: 0,
           matchCount: 0,
           spamReports: 0,
-          asliResponses: { count: 0, reasons: [] },
           comments: [],
           isSeed: false,
         },

@@ -4,7 +4,6 @@ import React from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
 import type { ReportType } from "@/lib/telaah-bersama/mock-data";
 import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
@@ -23,30 +22,22 @@ const OPTIONS: Array<{ type: ReportType; label: string; description: string; res
     description: "Bukan tentang lowongan kerja, atau iklan.",
     result: "Telaah ini akan diberi label jumlah laporan spam.",
   },
-  {
-    type: "lowongan_asli",
-    label: "Saya tahu lowongan ini asli",
-    description: "Misalnya kamu bekerja di sana atau sudah melalui prosesnya.",
-    result: "Tanggapanmu akan tampil di Telaah ini supaya pembaca bisa menimbang. Telaah tidak disembunyikan.",
-  },
 ];
 
 export function ReportModal({ postId, isOpen, onClose }: { postId: number; isOpen: boolean; onClose: () => void }) {
   const report = useTelaahBersamaStore((state) => state.report);
   const [selected, setSelected] = React.useState<ReportType | null>(null);
-  const [note, setNote] = React.useState("");
   const [submitted, setSubmitted] = React.useState<ReportType | null>(null);
 
   const handleClose = () => {
     setSelected(null);
-    setNote("");
     setSubmitted(null);
     onClose();
   };
 
   const handleSubmit = () => {
     if (!selected) return;
-    report(postId, selected, note.trim() || undefined);
+    report(postId, selected);
     setSubmitted(selected);
   };
 
@@ -87,21 +78,6 @@ export function ReportModal({ postId, isOpen, onClose }: { postId: number; isOpe
               </button>
             ))}
           </div>
-
-          {selected === "lowongan_asli" && (
-            <div className="space-y-1.5">
-              <label htmlFor="report-note" className="text-xs text-muted-foreground">
-                Alasan (opsional, akan tampil di Telaah)
-              </label>
-              <Textarea
-                id="report-note"
-                value={note}
-                maxLength={500}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Contoh: Saya sudah interview langsung di kantornya dan tidak ada biaya."
-              />
-            </div>
-          )}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={handleClose}>
