@@ -28,6 +28,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'telaah' => [
+        // Shared with the web app's server only; TelaahBareng writes are accepted from there, never
+        // straight from a browser. Local development gets a fixed key so no setup is needed.
+        'internal_key' => env('TELAAH_INTERNAL_KEY', env('APP_ENV') === 'local' ? 'dev-telaah-internal-key' : null),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
