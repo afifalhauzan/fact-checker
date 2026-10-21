@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['id', 'user_id', 'title'])]
+#[Fillable(['id', 'user_id', 'title', 'pinned_at'])]
 class Conversation extends Model
 {
     use HasUuids;
+
+    protected function casts(): array
+    {
+        return ['pinned_at' => 'datetime'];
+    }
 
     public function user(): BelongsTo
     {

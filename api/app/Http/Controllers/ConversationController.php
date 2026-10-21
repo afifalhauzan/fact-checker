@@ -18,9 +18,26 @@ class ConversationController extends Controller
         $conversations = $request->user()->conversations()
             ->latest('updated_at')
             ->limit(50)
-            ->get(['id', 'title', 'created_at', 'updated_at']);
+            ->get(['id', 'title', 'pinned_at', 'created_at', 'updated_at']);
 
         return response()->json(['data' => $conversations]);
+    }
+
+    /**
+     * Pin or unpin one of the user's conversations. Does not touch updated_at, so the order of the
+     * history list stays by last activity.
+     */
+    public function update(Request $request, string $conversation): JsonResponse
+    {
+        $conversation = $this->findOwned($request, $conversation);
+        abort_unless($conversation, 404);
+
+        $data = $request->validate(['pinned' => ['required', 'boolean']]);
+
+        $conversation->timestamps = false;
+        $conversation->update(['pinned_at' => $data['pinned'] ? now() : null]);
+
+        return response()->json(['id' => $conversation->id, 'pinned_at' => $conversation->pinned_at]);
     }
 
     /**

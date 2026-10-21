@@ -121,6 +121,30 @@ class ConversationTest extends TestCase
         $this->assertDatabaseCount('messages', 1);
     }
 
+    public function test_owner_can_pin_and_unpin_without_reordering_history(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+        $id = (string) Str::uuid();
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [['id' => 'msg-1', 'role' => 'user', 'content' => 'Halo']],
+        ])->assertCreated();
+        $updatedAt = $this->getJson('/api/conversations')->json('data.0.updated_at');
+
+        $this->travel(5)->minutes();
+        $this->patchJson("/api/conversations/{$id}", ['pinned' => true])->assertOk();
+        $this->getJson('/api/conversations')
+            ->assertJsonPath('data.0.updated_at', $updatedAt)
+            ->assertJsonPath('data.0.pinned_at', fn ($value) => $value !== null);
+
+        $this->patchJson("/api/conversations/{$id}", ['pinned' => false])->assertOk();
+        $this->getJson('/api/conversations')->assertJsonPath('data.0.pinned_at', null);
+
+        Sanctum::actingAs(User::factory()->create());
+        $this->patchJson("/api/conversations/{$id}", ['pinned' => true])->assertNotFound();
+    }
+
     public function test_owner_can_delete_a_conversation(): void
     {
         Sanctum::actingAs(User::factory()->create());
