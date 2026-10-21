@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Info, Search, ShieldCheck } from "lucide-react";
+import { Info, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { TelaahCard } from "@/components/telaah-bersama/telaah-card";
@@ -60,15 +60,42 @@ export default function TelaahBersamaPage() {
   const [risk, setRisk] = React.useState<TelaahRiskLevel | null>(null);
   const [modus, setModus] = React.useState<TelaahModus | null>(null);
   const [query, setQuery] = React.useState("");
+  const [year, setYear] = React.useState("");
+  const [from, setFrom] = React.useState("");
+  const [to, setTo] = React.useState("");
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+
+  const years = React.useMemo(
+    () => [...new Set(posts.map((post) => post.createdAt.slice(0, 4)))].sort().reverse(),
+    [posts]
+  );
+  const activeFilterCount = [risk, modus, year, from || to].filter(Boolean).length;
+
+  const resetFilters = () => {
+    setRisk(null);
+    setModus(null);
+    setYear("");
+    setFrom("");
+    setTo("");
+  };
 
   const visiblePosts = React.useMemo(() => {
-    const filtered = posts.filter(
-      (post) => (!risk || post.riskLevel === risk) && (!modus || post.modus === modus) && matchesQuery(post, query)
-    );
+    const filtered = posts.filter((post) => {
+      // createdAt carries its own +07:00 offset, so its first 10 characters are the WIB date
+      const day = post.createdAt.slice(0, 10);
+      return (
+        (!risk || post.riskLevel === risk) &&
+        (!modus || post.modus === modus) &&
+        (!year || day.startsWith(year)) &&
+        (!from || day >= from) &&
+        (!to || day <= to) &&
+        matchesQuery(post, query)
+      );
+    });
     return [...filtered].sort((a, b) =>
       sort === "ramai" ? hotScore(b) - hotScore(a) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [posts, risk, modus, query, sort]);
+  }, [posts, risk, modus, year, from, to, query, sort]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,17 +113,98 @@ export default function TelaahBersamaPage() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 border-b border-border pb-4">
-            <label className="relative block">
-              <span className="sr-only">Cari Telaah</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari perusahaan, posisi, nomor kontak, atau akun sumber"
-                className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
+            <div className="flex gap-2">
+              <label className="relative block min-w-0 flex-1">
+                <span className="sr-only">Cari Telaah</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Cari perusahaan, posisi, nomor kontak, atau akun sumber"
+                  className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((open) => !open)}
+                aria-expanded={isFilterOpen}
+                aria-controls="telaah-filters"
+                className={cn(
+                  "inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm transition-colors",
+                  isFilterOpen || activeFilterCount
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {isFilterOpen && (
+              <div id="telaah-filters" className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="w-16 text-xs text-muted-foreground">Risiko</span>
+                  <FilterChip active={risk === null} onClick={() => setRisk(null)}>Semua</FilterChip>
+                  <FilterChip active={risk === "tinggi"} onClick={() => setRisk("tinggi")}>Tinggi</FilterChip>
+                  <FilterChip active={risk === "sedang"} onClick={() => setRisk("sedang")}>Sedang</FilterChip>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="w-16 text-xs text-muted-foreground">Modus</span>
+                  <FilterChip active={modus === null} onClick={() => setModus(null)}>Semua</FilterChip>
+                  {(Object.keys(MODUS_LABELS) as TelaahModus[]).map((key) => (
+                    <FilterChip key={key} active={modus === key} onClick={() => setModus(key)}>
+                      {MODUS_LABELS[key]}
+                    </FilterChip>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+                  <span className="w-16">Dibagikan</span>
+                  <select
+                    value={year}
+                    onChange={(event) => setYear(event.target.value)}
+                    aria-label="Tahun dibagikan"
+                    className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                  >
+                    <option value="">Semua tahun</option>
+                    {years.map((item) => (
+                      <option key={item} value={item}>{item}</option>
+                    ))}
+                  </select>
+                  <label className="inline-flex items-center gap-1.5">
+                    dari
+                    <input
+                      type="date"
+                      value={from}
+                      max={to || undefined}
+                      onChange={(event) => setFrom(event.target.value)}
+                      className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                    />
+                  </label>
+                  <label className="inline-flex items-center gap-1.5">
+                    sampai
+                    <input
+                      type="date"
+                      value={to}
+                      min={from || undefined}
+                      onChange={(event) => setTo(event.target.value)}
+                      className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                    />
+                  </label>
+                </div>
+                {activeFilterCount > 0 && (
+                  <button type="button" onClick={resetFilters} className="text-xs font-medium text-primary hover:underline">
+                    Hapus semua filter
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-1" role="tablist" aria-label="Urutkan">
               {(["ramai", "terbaru"] as const).map((mode) => (
@@ -113,22 +221,6 @@ export default function TelaahBersamaPage() {
                 >
                   {mode === "ramai" ? "Ramai ditelaah" : "Terbaru"}
                 </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-xs text-muted-foreground">Risiko</span>
-              <FilterChip active={risk === null} onClick={() => setRisk(null)}>Semua</FilterChip>
-              <FilterChip active={risk === "tinggi"} onClick={() => setRisk("tinggi")}>Tinggi</FilterChip>
-              <FilterChip active={risk === "sedang"} onClick={() => setRisk("sedang")}>Sedang</FilterChip>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-xs text-muted-foreground">Modus</span>
-              <FilterChip active={modus === null} onClick={() => setModus(null)}>Semua</FilterChip>
-              {(Object.keys(MODUS_LABELS) as TelaahModus[]).map((key) => (
-                <FilterChip key={key} active={modus === key} onClick={() => setModus(key)}>
-                  {MODUS_LABELS[key]}
-                </FilterChip>
               ))}
             </div>
           </div>
