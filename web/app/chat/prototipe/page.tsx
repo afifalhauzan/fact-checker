@@ -130,7 +130,7 @@ function AnalysisResult({ analysis }: { analysis: MockAnalysis }) {
     <Appear>
       <AssistantText>{analysis.opening}</AssistantText>
       <SummaryCard summary={analysis.summary} />
-      <ClaimCard text={analysis.claim} confidence={analysis.confidence} />
+      <ClaimCard text={analysis.claim} />
       <div className="space-y-2">
         {analysis.risks.map((risk, index) => (
           <RiskCard key={index} type={risk.type} description={risk.description} evidence={risk.evidence} />
@@ -212,7 +212,7 @@ function ScenarioSecondPosting() {
       <UserBubble text={PLN_MESSAGE} attachment={{ label: "Surat panggilan tes", variant: "poster" }} />
       <Appear>
         <AssistantText>{PLN_ANALYSIS.opening}</AssistantText>
-        <ClaimCard text={PLN_ANALYSIS.claim} confidence={PLN_ANALYSIS.confidence} />
+        <ClaimCard text={PLN_ANALYSIS.claim} />
         <RiskCard {...PLN_ANALYSIS.risks[0]} />
       </Appear>
       <UserBubble text="Kalau saya cuma konfirmasi kehadiran ke WA itu, aman nggak?" />

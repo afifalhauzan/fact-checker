@@ -1,8 +1,8 @@
-import { Info, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { RISK_LEVELS, type Claim, type RiskLevel } from "@/langchain/agents/analyzer/schema";
 import { cn } from "@/utils/utils";
 
-interface ClaimCardProps extends Pick<Claim, "text" | "confidence"> {
+interface ClaimCardProps extends Pick<Claim, "text"> {
   riskLevel?: RiskLevel;
 }
 
@@ -53,9 +53,8 @@ function splitClaim(text: string, riskLevel?: RiskLevel): { level?: RiskLevel; r
   };
 }
 
-export function ClaimCard({ text, confidence, riskLevel }: ClaimCardProps) {
+export function ClaimCard({ text, riskLevel }: ClaimCardProps) {
   const { level, reason } = splitClaim(text, riskLevel);
-  const confidencePercent = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
 
   if (!level) {
     return (
@@ -99,16 +98,7 @@ export function ClaimCard({ text, confidence, riskLevel }: ClaimCardProps) {
       <div className="space-y-2 px-4 py-3">
         <p className={cn("text-sm font-semibold", style.title)}>{style.advice}</p>
         {reason && <p className="text-sm leading-relaxed text-foreground">{reason}</p>}
-        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-          <span
-            className="inline-flex cursor-help items-center gap-1"
-            title="Perkiraan yang diberikan model AI sendiri, bukan peluang yang sudah diukur. Dibatasi maksimal 95% karena penilaian ini tidak pernah mutlak."
-          >
-            Keyakinan model {confidencePercent}%
-            <Info className="h-3 w-3" />
-          </span>
-          <span>· Ini penilaian awal, bukan vonis.</span>
-        </p>
+        <p className="text-xs text-muted-foreground">Ini penilaian awal, bukan vonis.</p>
       </div>
     </div>
   );

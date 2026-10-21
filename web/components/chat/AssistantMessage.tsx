@@ -433,7 +433,6 @@ export function AssistantMessage({
             <ClaimCard
               key={`${item.key}-claim-${index}`}
               text={claim.text}
-              confidence={claim.confidence}
               riskLevel={claim.riskLevel}
             />
           ))}
