@@ -164,8 +164,7 @@ export default function TelaahDetailPage() {
                 {post.title}
               </h1>
               <p className="text-xs text-muted-foreground">
-                Dibagikan oleh <span className="text-foreground">{post.author}</span> · {formatRelative(post.createdAt)} ·
-                ditelaah {post.matchCount}× di TelaahKarier
+                Dibagikan oleh <span className="text-foreground">{post.author}</span> · {formatRelative(post.createdAt)}
               </p>
             </header>
 

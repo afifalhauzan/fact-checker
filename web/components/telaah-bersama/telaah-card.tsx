@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HandHelping, MessageCircle, ScanSearch } from "lucide-react";
+import { HandHelping, MessageCircle } from "lucide-react";
 import { formatPeriod, formatRelative, type TelaahPost } from "@/lib/telaah-bersama/mock-data";
 import { ModusBadge, RiskLevelBadge, SeedBadge } from "./badges";
 
@@ -39,10 +39,6 @@ export function TelaahCard({ post }: { post: TelaahPost }) {
           <span className="inline-flex items-center gap-1.5">
             <MessageCircle className="h-3.5 w-3.5" />
             {post.comments.length} diskusi
-          </span>
-          <span className="inline-flex items-center gap-1.5" title="Berapa kali lowongan serupa ditelaah di TelaahKarier">
-            <ScanSearch className="h-3.5 w-3.5" />
-            ditelaah {post.matchCount}×
           </span>
         </div>
         <span>
