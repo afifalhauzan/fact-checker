@@ -27,5 +27,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(6)->by(
             Str::lower((string) $request->input('email')).'|'.$request->ip(),
         ));
+
+        // TelaahBareng flood limits per account (design doc 5.5)
+        RateLimiter::for('telaah-post', fn (Request $request) => Limit::perDay(5)->by($request->user()?->id));
+        RateLimiter::for('telaah-comment', fn (Request $request) => Limit::perHour(20)->by($request->user()?->id));
     }
 }
