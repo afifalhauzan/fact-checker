@@ -1,33 +1,55 @@
 "use client";
 
+import React from "react";
+import toast from "react-hot-toast";
 import { HandHelping } from "lucide-react";
 import { cn } from "@/utils/utils";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { toggleReaction } from "@/lib/telaah-bersama/api";
+import type { TelaahPost } from "@/lib/telaah-bersama/types";
+import { useLoginPrompt } from "./login-prompt";
 
-export function ReactionButton({ postId, size = "default" }: { postId: number; size?: "default" | "sm" }) {
-  const post = useTelaahBersamaStore((state) => state.posts.find((item) => item.id === postId));
-  const isReacted = useTelaahBersamaStore((state) => !!state.reacted[postId]);
-  const toggleReaction = useTelaahBersamaStore((state) => state.toggleReaction);
-  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
+export function ReactionButton({
+  post,
+  isSignedIn,
+  onChange,
+}: {
+  post: TelaahPost;
+  isSignedIn: boolean;
+  onChange: (state: { reacted: boolean; reactionCount: number }) => void;
+}) {
+  const openLoginPrompt = useLoginPrompt((state) => state.open);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const isReacted = post.viewer.reacted;
 
-  if (!post) return null;
+  const handleClick = async () => {
+    if (!isSignedIn) {
+      openLoginPrompt("Masuk untuk menandai bahwa kamu juga menerima lowongan ini.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      onChange(await toggleReaction(post.id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan reaksi.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => {
-        if (requireLogin("Masuk untuk menandai bahwa kamu juga menerima lowongan ini.")) toggleReaction(postId);
-      }}
+      onClick={handleClick}
+      disabled={isSaving}
       aria-pressed={isReacted}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border font-medium transition-colors",
-        size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm",
+        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-70",
         isReacted
           ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
           : "border-primary/40 bg-background text-foreground hover:bg-primary/10"
       )}
     >
-      <HandHelping className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
+      <HandHelping className="h-4 w-4" />
       <span>{isReacted ? "Kamu juga menerima ini" : "Saya juga menerima ini"}</span>
       <span
         className={cn(

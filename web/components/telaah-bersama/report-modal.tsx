@@ -5,8 +5,8 @@ import { CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import type { ReportType } from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { reportPost } from "@/lib/telaah-bersama/api";
+import type { ReportType } from "@/lib/telaah-bersama/types";
 
 const OPTIONS: Array<{ type: ReportType; label: string; description: string; result: string }> = [
   {
@@ -24,21 +24,42 @@ const OPTIONS: Array<{ type: ReportType; label: string; description: string; res
   },
 ];
 
-export function ReportModal({ postId, isOpen, onClose }: { postId: number; isOpen: boolean; onClose: () => void }) {
-  const report = useTelaahBersamaStore((state) => state.report);
+export function ReportModal({
+  postId,
+  isOpen,
+  onClose,
+  onReported,
+}: {
+  postId: number;
+  isOpen: boolean;
+  onClose: () => void;
+  onReported: () => void;
+}) {
   const [selected, setSelected] = React.useState<ReportType | null>(null);
   const [submitted, setSubmitted] = React.useState<ReportType | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSending, setIsSending] = React.useState(false);
 
   const handleClose = () => {
     setSelected(null);
     setSubmitted(null);
+    setError(null);
     onClose();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selected) return;
-    report(postId, selected);
-    setSubmitted(selected);
+    setIsSending(true);
+    setError(null);
+    try {
+      await reportPost(postId, selected);
+      setSubmitted(selected);
+      onReported();
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : "Laporan gagal dikirim.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const submittedOption = OPTIONS.find((option) => option.type === submitted);
@@ -78,13 +99,14 @@ export function ReportModal({ postId, isOpen, onClose }: { postId: number; isOpe
               </button>
             ))}
           </div>
+          {error && <p className="text-sm text-red-700">{error}</p>}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={handleClose}>
               Batal
             </Button>
-            <Button onClick={handleSubmit} disabled={!selected}>
-              Kirim laporan
+            <Button onClick={handleSubmit} disabled={!selected || isSending}>
+              {isSending ? "Mengirim…" : "Kirim laporan"}
             </Button>
           </div>
         </div>

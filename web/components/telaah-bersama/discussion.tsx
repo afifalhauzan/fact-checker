@@ -1,11 +1,14 @@
 "use client";
 
 import React from "react";
+import toast from "react-hot-toast";
 import { AlertTriangle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CURRENT_USER, formatRelative, hasNikLikeNumber, type TelaahComment } from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { addComment } from "@/lib/telaah-bersama/api";
+import { formatRelative, type TelaahComment } from "@/lib/telaah-bersama/types";
+import { hasSensitiveData } from "@/langchain/agents/analyzer/redaction";
+import { useLoginPrompt } from "./login-prompt";
 
 const MAX_COMMENT_LENGTH = 1000;
 
@@ -30,19 +33,36 @@ function CommentItem({ comment }: { comment: TelaahComment }) {
   );
 }
 
-export function Discussion({ postId, comments }: { postId: number; comments: TelaahComment[] }) {
-  const addComment = useTelaahBersamaStore((state) => state.addComment);
-  const isGuest = useTelaahBersamaStore((state) => state.viewer === "tamu");
-  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
+export function Discussion({
+  postId,
+  comments,
+  viewerName,
+  onAdded,
+}: {
+  postId: number;
+  comments: TelaahComment[];
+  // Pseudonym of the signed-in viewer; null for guests.
+  viewerName: string | null;
+  onAdded: (comment: TelaahComment) => void;
+}) {
+  const openLoginPrompt = useLoginPrompt((state) => state.open);
   const [draft, setDraft] = React.useState("");
+  const [isSending, setIsSending] = React.useState(false);
   const trimmed = draft.trim();
-  const hasNik = hasNikLikeNumber(draft);
+  const hasSensitive = hasSensitiveData(draft);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!trimmed) return;
-    addComment(postId, trimmed);
-    setDraft("");
+    if (!trimmed || isSending) return;
+    setIsSending(true);
+    try {
+      onAdded(await addComment(postId, trimmed));
+      setDraft("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Komentar gagal dikirim.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -51,14 +71,14 @@ export function Discussion({ postId, comments }: { postId: number; comments: Tel
         Diskusi <span className="font-normal text-muted-foreground">({comments.length})</span>
       </h2>
 
-      {isGuest ? (
+      {!viewerName ? (
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">Menerima lowongan yang sama? Masuk untuk menceritakan pengalamanmu.</p>
           <Button
             size="sm"
             variant="outline"
             className="shrink-0"
-            onClick={() => requireLogin("Masuk untuk ikut berdiskusi di Telaah ini.")}
+            onClick={() => openLoginPrompt("Masuk untuk ikut berdiskusi di Telaah ini.")}
           >
             Masuk untuk berkomentar
           </Button>
@@ -66,7 +86,7 @@ export function Discussion({ postId, comments }: { postId: number; comments: Tel
       ) : (
         <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-border bg-card p-3">
           <label htmlFor="comment" className="text-xs text-muted-foreground">
-            Berkomentar sebagai <span className="font-medium text-foreground">{CURRENT_USER}</span>
+            Berkomentar sebagai <span className="font-medium text-foreground">{viewerName}</span>
           </label>
           <Textarea
             id="comment"
@@ -77,14 +97,14 @@ export function Discussion({ postId, comments }: { postId: number; comments: Tel
             className="min-h-20 resize-y"
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className={hasNik ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
-              {hasNik
-                ? "Komentarmu tampaknya memuat NIK. NIK akan disensor otomatis saat dikirim."
+            <p className={hasSensitive ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
+              {hasSensitive
+                ? "Komentarmu tampaknya memuat NIK atau kode OTP. Bagian itu akan disensor otomatis saat dikirim."
                 : "Jangan menulis NIK, OTP, atau data pribadimu."}
             </p>
-            <Button type="submit" size="sm" disabled={!trimmed}>
+            <Button type="submit" size="sm" disabled={!trimmed || isSending}>
               <Send />
-              Kirim
+              {isSending ? "Mengirim…" : "Kirim"}
             </Button>
           </div>
         </form>

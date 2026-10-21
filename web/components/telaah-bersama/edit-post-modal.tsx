@@ -7,24 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
-import { hasAccusatoryWord, hasNikLikeNumber, type TelaahPost } from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
-import { MockAttachment } from "./mock-attachment";
+import { updatePost } from "@/lib/telaah-bersama/api";
+import { attachmentUrl, hasAccusatoryWord, type TelaahPost } from "@/lib/telaah-bersama/types";
+import { hasSensitiveData } from "@/langchain/agents/analyzer/redaction";
+import { PostAttachment } from "./post-attachment";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_STORY_LENGTH = 1500;
 
 /** Owner edits (design doc 5.2): title and story are free text; material, attachments, and links can only be removed. */
-function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) {
-  const updatePost = useTelaahBersamaStore((state) => state.updatePost);
+function EditForm({ post, onClose, onSaved }: { post: TelaahPost; onClose: () => void; onSaved: (post: TelaahPost) => void }) {
   const [title, setTitle] = React.useState(post.title);
   const [story, setStory] = React.useState(post.story ?? "");
   const [removedLines, setRemovedLines] = React.useState<Set<number>>(new Set());
   const [attachmentIds, setAttachmentIds] = React.useState(post.attachments.map((item) => item.id));
   const [links, setLinks] = React.useState(post.links);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const keptLines = post.materialLines.filter((_, index) => !removedLines.has(index));
-  const canSave = title.trim().length > 0 && keptLines.length > 0;
+  const canSave = title.trim().length > 0 && keptLines.length > 0 && !isSaving;
 
   const toggleLine = (index: number) => {
     setRemovedLines((current) => {
@@ -35,19 +37,28 @@ function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) 
     });
   };
 
-  const handleSave = () => {
-    updatePost(post.id, {
-      title: title.trim(),
-      story: story.trim() || undefined,
-      materialLines: keptLines,
-      attachments: post.attachments.filter((item) => attachmentIds.includes(item.id)),
-      links,
-    });
-    onClose();
+  const handleSave = async () => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      onSaved(await updatePost(post.id, { title: title.trim(), story: story.trim(), materialLines: keptLines, links, attachmentIds }));
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Perubahan gagal disimpan.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+      {post.status === "hidden_pending_edit" && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Telaah ini disembunyikan karena laporan data pribadi terkonfirmasi. Hapus baris yang memuat NIK atau kode,
+          lalu simpan agar Telaah tampil lagi.
+        </p>
+      )}
+
       <div className="space-y-1.5">
         <label htmlFor="edit-title" className="text-sm font-semibold text-foreground">
           Judul
@@ -69,8 +80,8 @@ function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) 
           onChange={(event) => setStory(event.target.value)}
           className="min-h-20"
         />
-        {hasNikLikeNumber(story) && (
-          <p className="text-xs text-red-700">Ceritamu tampaknya memuat NIK. NIK akan disensor otomatis saat disimpan.</p>
+        {hasSensitiveData(story) && (
+          <p className="text-xs text-red-700">Ceritamu tampaknya memuat NIK atau kode OTP. Bagian itu disensor otomatis saat disimpan.</p>
         )}
       </div>
 
@@ -86,7 +97,14 @@ function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) 
           {post.materialLines.map((line, index) => {
             const isRemoved = removedLines.has(index);
             return (
-              <li key={index} className={cn("flex items-start gap-2 px-3 py-1.5 text-sm", isRemoved && "bg-muted/50")}>
+              <li
+                key={index}
+                className={cn(
+                  "flex items-start gap-2 px-3 py-1.5 text-sm",
+                  isRemoved && "bg-muted/50",
+                  !isRemoved && hasSensitiveData(line) && "bg-amber-50"
+                )}
+              >
                 <p className={cn("flex-1 leading-relaxed", isRemoved && "text-muted-foreground line-through")}>{line}</p>
                 <button
                   type="button"
@@ -110,7 +128,7 @@ function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) 
               .filter((item) => attachmentIds.includes(item.id))
               .map((attachment) => (
                 <div key={attachment.id} className="relative">
-                  <MockAttachment label={attachment.label} variant={attachment.variant} url={attachment.url} />
+                  <PostAttachment url={attachmentUrl(attachment)} label={attachment.label} />
                   <button
                     type="button"
                     onClick={() => setAttachmentIds((ids) => ids.filter((id) => id !== attachment.id))}
@@ -148,24 +166,35 @@ function EditForm({ post, onClose }: { post: TelaahPost; onClose: () => void }) 
         <Lock className="h-3 w-3" />
         Tingkat risiko dan bukti berasal dari hasil telaah, sehingga tidak bisa disunting.
       </p>
+      {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={onClose}>
           Batal
         </Button>
         <Button onClick={handleSave} disabled={!canSave}>
-          Simpan perubahan
+          {isSaving ? "Menyimpan…" : "Simpan perubahan"}
         </Button>
       </div>
     </div>
   );
 }
 
-export function EditPostModal({ post, isOpen, onClose }: { post: TelaahPost; isOpen: boolean; onClose: () => void }) {
+export function EditPostModal({
+  post,
+  isOpen,
+  onClose,
+  onSaved,
+}: {
+  post: TelaahPost;
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: (post: TelaahPost) => void;
+}) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Sunting Telaah">
       {/* Remounted on every open so the form starts from the saved post. */}
-      {isOpen && <EditForm post={post} onClose={onClose} />}
+      {isOpen && <EditForm post={post} onClose={onClose} onSaved={onSaved} />}
     </Modal>
   );
 }
