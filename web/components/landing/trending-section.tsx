@@ -1,13 +1,25 @@
+"use client";
+
+import React from "react";
 import Link from "next/link";
 import { ArrowRight, HandHelping } from "lucide-react";
 import { RiskLevelBadge } from "@/components/telaah-bersama/badges";
-import { hotScore, posts } from "@/lib/telaah-bersama/mock-data";
+import { listPosts } from "@/lib/telaah-bersama/api";
+import type { TelaahPost } from "@/lib/telaah-bersama/types";
 
 const MAX_TRENDING = 3;
 
 export function TrendingSection() {
-  // shortcut: ranked from prototype data at render time; switch to the Laravel list endpoint (sort=ramai).
-  const trending = [...posts].sort((a, b) => hotScore(b) - hotScore(a)).slice(0, MAX_TRENDING);
+  const [trending, setTrending] = React.useState<TelaahPost[]>([]);
+
+  React.useEffect(() => {
+    listPosts({ sort: "ramai", limit: MAX_TRENDING })
+      .then((result) => setTrending(result.data))
+      .catch(() => setTrending([]));
+  }, []);
+
+  // Nothing to show yet (or the API is down): the landing page simply goes without this section.
+  if (trending.length === 0) return null;
 
   return (
     <section id="telaah-bersama" className="mx-auto mb-24 w-full max-w-7xl px-4 sm:mb-32 sm:px-8">
