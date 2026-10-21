@@ -1,6 +1,7 @@
 /**
  * Matching check for "sudah ditelaah sebelumnya" (design doc 7.2), run against the seed posts in
- * a local database (php artisan db:seed --class=TelaahSeeder, then pnpm telaah:embed).
+ * a local database (php artisan db:seed --class=TelaahSeeder; the seed file carries the embeddings).
+ * Never seed production: TelaahBareng starts empty there.
  * Synthetic queries only, never the test split. Reports, per query, the best candidate's cosine
  * and whether it would be offered, then precision, recall, and the official-posting false referrals.
  *

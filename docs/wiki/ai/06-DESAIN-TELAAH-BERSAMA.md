@@ -461,7 +461,7 @@ Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute N
 | 6.2 Ambang | `cosine ≥ 0,92`, atau ada pengenal yang sama dengan `cosine ≥ 0,6`. Pengaman lowongan resmi diperluas: materi punya situs resmi sendiri yang berbeda dari situs di Telaah, dan tidak ada kontak yang sama → dibatalkan, walaupun Telaah tidak menyebut nama perusahaan (kasus pencatutan kementerian) |
 | 6.6 Judul | Model hanya mengekstrak atribut. Judul **disusun di kode** dari atribut (perusahaan · posisi · lokasi · periode), karena keluaran terstruktur Gemini sempat merusak karakter "·" dan "–" |
 | 6.11 Router | Prompt router lama **tidak diubah**. Pemeriksaan lanjutan vs lowongan baru adalah klasifikasi terpisah (`classifyNewMaterial`) yang hanya dipanggil jika router sudah memutuskan "materi" dan sesi sudah punya telaah |
-| 7.5 Data awal | 6 Telaah **fiktif** (`api/database/seeders/data/telaah-seed.json`), bukan dari `dev`/`ambigu` |
+| 7.5 Data awal | **Tidak ada data awal**: aplikasi dimulai kosong. 6 Telaah fiktif (`api/database/seeders/data/telaah-seed.json`) hanya dipakai untuk uji pencocokan lokal |
 | 5.2 Nama samaran | Format "Pencari Kerja #a3f9" (4 karakter hex) |
 
 **Uji yang sudah ada:** `php artisan test` (Laravel), `pnpm test:redaction`, `test:identifiers`, `test:telaah` (unit), `pnpm eval:similar` dan `eval:continuation` (memanggil model sungguhan).
@@ -471,7 +471,7 @@ Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute N
 **Operasional:**
 - Server butuh `TELAAH_INTERNAL_KEY` dan `TELAAH_SIGNING_KEY` di `.env` root (lihat `.env.example`).
 - `deploy.ps1` kini juga membangun dan mengirim image Postgres + pgvector.
-- Data awal: `php artisan db:seed --class=TelaahSeeder`, lalu `pnpm telaah:embed` dari `web/` untuk mengisi embedding.
+- **TelaahBareng dimulai kosong** (keputusan tim, 23 Okt 2026); isinya datang dari pengguna yang menguji aplikasi. Jangan menjalankan `TelaahSeeder` di produksi. Seeder itu hanya untuk uji pencocokan lokal (`pnpm eval:similar`).
 
 ## 12. Hal yang Masih Terbuka
 

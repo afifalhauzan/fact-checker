@@ -8,12 +8,12 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Example TelaahBareng posts for the demo, shown with a "Contoh awal" badge (design doc 7.5).
- * Every company, number, account, and domain in data/telaah-seed.json is fictitious.
- * The JSON carries each post's embedding (Gemini, 768 dimensions), so production needs no extra
- * step; regenerate them with pnpm telaah:embed if the embedding model changes.
+ * Fictitious TelaahBareng posts for the local matching check (web: pnpm eval:similar) only.
+ * Not run by DatabaseSeeder and never in production: the app starts empty and is filled by its
+ * testers. Every company, number, account, and domain in data/telaah-seed.json is fictitious, and
+ * the JSON carries each post's embedding (Gemini, 768 dimensions).
  *
- *   php artisan db:seed --class=TelaahSeeder
+ *   php artisan db:seed --class=TelaahSeeder        (local database only)
  */
 class TelaahSeeder extends Seeder
 {

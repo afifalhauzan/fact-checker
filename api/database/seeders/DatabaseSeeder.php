@@ -23,7 +23,5 @@ class DatabaseSeeder extends Seeder
             // Model events are off while seeding, so the pseudonym is not generated on its own
             'pseudonym' => User::newPseudonym(),
         ]);
-
-        $this->call(TelaahSeeder::class);
     }
 }
