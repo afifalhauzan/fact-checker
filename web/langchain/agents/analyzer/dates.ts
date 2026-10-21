@@ -57,6 +57,21 @@ function toDayKey(year: number, month: number, day: number): string | null {
  */
 export function classifyMaterialDates(text: string, now: Date = new Date()): MaterialDates {
   const todayKey = DAY_KEY_FORMAT.format(now);
+  const sorted = [...collectDates(text).entries()].sort(([a], [b]) => a.localeCompare(b));
+  return {
+    today: formatToday(now),
+    past: sorted.filter(([key]) => key < todayKey).map(([, label]) => label).slice(0, MAX_DATES_PER_GROUP),
+    upcoming: sorted.filter(([key]) => key >= todayKey).map(([, label]) => label).slice(0, MAX_DATES_PER_GROUP),
+  };
+}
+
+/** Every full date written in the material, as sorted YYYY-MM-DD keys. */
+export function materialDayKeys(text: string): string[] {
+  return [...collectDates(text).keys()].sort();
+}
+
+// Day key -> readable label, for each full date in the text.
+function collectDates(text: string): Map<string, string> {
   const found = new Map<string, string>();
 
   for (const match of text.matchAll(NAMED_DATE_PATTERN)) {
@@ -74,12 +89,7 @@ export function classifyMaterialDates(text: string, now: Date = new Date()): Mat
     }
   }
 
-  const sorted = [...found.entries()].sort(([a], [b]) => a.localeCompare(b));
-  return {
-    today: formatToday(now),
-    past: sorted.filter(([key]) => key < todayKey).map(([, label]) => label).slice(0, MAX_DATES_PER_GROUP),
-    upcoming: sorted.filter(([key]) => key >= todayKey).map(([, label]) => label).slice(0, MAX_DATES_PER_GROUP),
-  };
+  return found;
 }
 
 export function formatDatesForPrompt(dates: MaterialDates): string {
