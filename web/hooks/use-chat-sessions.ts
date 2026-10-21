@@ -4,6 +4,7 @@ import { SESSION_SAVED_EVENT } from "@/lib/chat-persistence";
 export interface ChatSession {
   id: string;
   title: string | null;
+  pinned_at: string | null;
   updated_at: string;
 }
 
@@ -34,6 +35,22 @@ export function useChatSessions() {
     return response.ok;
   }, []);
 
+  // Optimistic: the pin shows at once and is rolled back if saving fails.
+  const setPinned = useCallback(async (id: string, pinned: boolean): Promise<boolean> => {
+    const apply = (value: boolean) =>
+      setSessions((current) =>
+        current.map((session) => (session.id === id ? { ...session, pinned_at: value ? new Date().toISOString() : null } : session))
+      );
+    apply(pinned);
+    const response = await fetch(`/api/chat/sessions/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned }),
+    }).catch(() => null);
+    if (!response?.ok) apply(!pinned);
+    return !!response?.ok;
+  }, []);
+
   useEffect(() => {
     void refresh();
     const handleSaved = () => void refresh();
@@ -41,5 +58,5 @@ export function useChatSessions() {
     return () => window.removeEventListener(SESSION_SAVED_EVENT, handleSaved);
   }, [refresh]);
 
-  return { sessions, isGuest, isLoading, remove };
+  return { sessions, isGuest, isLoading, remove, setPinned };
 }
