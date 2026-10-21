@@ -4,37 +4,18 @@ import React from "react";
 import Link from "next/link";
 import { Info, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
-import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { TelaahCard } from "@/components/telaah-bersama/telaah-card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import { MODUS_LABELS, hotScore, type TelaahModus, type TelaahPost, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { listPosts } from "@/lib/telaah-bersama/api";
+import { MODUS_LABELS, type TelaahModus, type TelaahPost, type TelaahRiskLevel } from "@/lib/telaah-bersama/types";
 
 type SortMode = "ramai" | "terbaru";
 
-// A number typed as "0812-0000" should still find "+62 812 0000...", so digits are matched on their own.
-function matchesQuery(post: TelaahPost, query: string): boolean {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return true;
-
-  const fields = [
-    post.title,
-    post.summary,
-    post.company,
-    post.position,
-    post.location,
-    post.source.platform,
-    post.source.account,
-    ...post.contacts.map((contact) => contact.value),
-  ].filter((field): field is string => !!field);
-  const text = fields.join(" ").toLowerCase();
-  const digits = fields.map((field) => field.replace(/\D/g, "").replace(/^62(8)/, "0$1")).join(" ");
-
-  return words.every((word) => {
-    const wordDigits = word.replace(/\D/g, "").replace(/^62(8)/, "0$1");
-    return text.includes(word) || (wordDigits.length >= 4 && digits.includes(wordDigits));
-  });
-}
+const PAGE_SIZE = 20;
+const SEARCH_DELAY_MS = 300;
+// TelaahBareng started in 2026, so the year filter offers this year back to then.
+const FIRST_YEAR = 2026;
 
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -55,7 +36,10 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 }
 
 export default function TelaahBersamaPage() {
-  const posts = useTelaahBersamaStore((state) => state.posts);
+  const [posts, setPosts] = React.useState<TelaahPost[]>([]);
+  const [hasMore, setHasMore] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [sort, setSort] = React.useState<SortMode>("ramai");
   const [risk, setRisk] = React.useState<TelaahRiskLevel | null>(null);
   const [modus, setModus] = React.useState<TelaahModus | null>(null);
@@ -65,11 +49,49 @@ export default function TelaahBersamaPage() {
   const [to, setTo] = React.useState("");
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
-  const years = React.useMemo(
-    () => [...new Set(posts.map((post) => post.createdAt.slice(0, 4)))].sort().reverse(),
-    [posts]
-  );
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const years = React.useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: Math.max(1, current - FIRST_YEAR + 1) }, (_, index) => String(current - index));
+  }, []);
   const activeFilterCount = [risk, modus, year, from || to].filter(Boolean).length;
+
+  // The search waits for a pause in typing instead of firing on every key.
+  React.useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(query.trim()), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Ignores responses to filters that have since changed.
+  const requestIdRef = React.useRef(0);
+  const load = React.useCallback(
+    async (append: boolean) => {
+      const requestId = ++requestIdRef.current;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const page = append ? Math.floor(posts.length / PAGE_SIZE) + 1 : 1;
+        const result = await listPosts({ sort, risk, modus, q: searchQuery, year, from, to, limit: PAGE_SIZE, page });
+        if (requestId !== requestIdRef.current) return;
+        setPosts((current) => (append ? [...current, ...result.data] : result.data));
+        setHasMore(result.hasMore);
+      } catch (loadError) {
+        if (requestId !== requestIdRef.current) return;
+        setError(loadError instanceof Error ? loadError.message : "Telaah gagal dimuat.");
+      } finally {
+        if (requestId === requestIdRef.current) setIsLoading(false);
+      }
+    },
+    [sort, risk, modus, searchQuery, year, from, to, posts.length]
+  );
+
+  // Re-runs only when a filter changes, not when more posts were appended.
+  const loadRef = React.useRef(load);
+  loadRef.current = load;
+  React.useEffect(() => {
+    void loadRef.current(false);
+  }, [sort, risk, modus, searchQuery, year, from, to]);
 
   const resetFilters = () => {
     setRisk(null);
@@ -79,28 +101,9 @@ export default function TelaahBersamaPage() {
     setTo("");
   };
 
-  const visiblePosts = React.useMemo(() => {
-    const filtered = posts.filter((post) => {
-      // createdAt carries its own +07:00 offset, so its first 10 characters are the WIB date
-      const day = post.createdAt.slice(0, 10);
-      return (
-        (!risk || post.riskLevel === risk) &&
-        (!modus || post.modus === modus) &&
-        (!year || day.startsWith(year)) &&
-        (!from || day >= from) &&
-        (!to || day <= to) &&
-        matchesQuery(post, query)
-      );
-    });
-    return [...filtered].sort((a, b) =>
-      sort === "ramai" ? hotScore(b) - hotScore(a) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [posts, risk, modus, year, from, to, query, sort]);
-
   return (
     <div className="min-h-screen bg-background">
       <ProtectedTopNavbar />
-      <PrototypeBanner />
 
       <main className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
@@ -225,14 +228,27 @@ export default function TelaahBersamaPage() {
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            {visiblePosts.map((post) => (
+          <div className="mt-4 space-y-3" aria-busy={isLoading}>
+            {posts.map((post) => (
               <TelaahCard key={post.id} post={post} />
             ))}
-            {visiblePosts.length === 0 && (
+            {isLoading && posts.length === 0 && (
+              <p className="p-8 text-center text-sm text-muted-foreground">Memuat Telaah…</p>
+            )}
+            {error && (
+              <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-800">{error}</p>
+            )}
+            {!isLoading && !error && posts.length === 0 && (
               <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                {query.trim() ? `Belum ada Telaah yang cocok dengan "${query.trim()}".` : "Belum ada Telaah dengan filter ini."}
+                {searchQuery ? `Belum ada Telaah yang cocok dengan "${searchQuery}".` : "Belum ada Telaah dengan filter ini."}
               </p>
+            )}
+            {hasMore && (
+              <div className="flex justify-center pt-2">
+                <Button variant="outline" onClick={() => void load(true)} disabled={isLoading}>
+                  {isLoading ? "Memuat…" : "Muat lebih banyak"}
+                </Button>
+              </div>
             )}
           </div>
         </section>
@@ -266,16 +282,6 @@ export default function TelaahBersamaPage() {
               sebelum mengambil keputusan.
             </p>
           </div>
-
-          <Link
-            href="/chat/prototipe"
-            className="block rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900 transition-colors hover:bg-violet-100"
-          >
-            <span className="font-semibold">Coba alur di chat →</span>
-            <span className="mt-1 block text-violet-900/80">
-              Prototipe: tombol Buat post, kartu Telaah serupa, dan peringatan lowongan kedua.
-            </span>
-          </Link>
         </aside>
       </main>
     </div>

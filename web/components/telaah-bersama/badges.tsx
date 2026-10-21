@@ -1,5 +1,5 @@
 import { cn } from "@/utils/utils";
-import { MODUS_LABELS, type TelaahModus, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";
+import { MODUS_LABELS, type TelaahModus, type TelaahRiskLevel } from "@/lib/telaah-bersama/types";
 
 const RISK_STYLES: Record<TelaahRiskLevel, string> = {
   tinggi: "border-red-200 bg-red-50 text-red-700",
@@ -32,7 +32,7 @@ export function ModusBadge({ modus }: { modus: TelaahModus }) {
 export function SeedBadge() {
   return (
     <span
-      title="Diisi dari dataset pengembangan untuk demo, bukan dari pengguna nyata."
+      title="Contoh fiktif untuk demo, bukan kiriman pengguna nyata."
       className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs text-sky-700"
     >
       Contoh awal

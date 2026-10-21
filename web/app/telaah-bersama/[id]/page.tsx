@@ -3,37 +3,30 @@
 import React from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowLeft,
-  Check,
-  CheckCircle2,
-  Copy,
-  Flag,
-  Link2,
-  Pencil,
-  ShieldAlert,
-  Trash2,
-} from "lucide-react";
+import toast from "react-hot-toast";
+import { ArrowLeft, Check, CheckCircle2, Copy, EyeOff, Flag, Link2, Pencil, ShieldAlert, Trash2 } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/modal";
 import { RiskCard } from "@/components/cards/RiskCard";
 import { ModusBadge, RiskLevelBadge, SeedBadge } from "@/components/telaah-bersama/badges";
-import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { ReactionButton } from "@/components/telaah-bersama/reaction-button";
 import { Discussion } from "@/components/telaah-bersama/discussion";
 import { ReportModal } from "@/components/telaah-bersama/report-modal";
-import { MockAttachment } from "@/components/telaah-bersama/mock-attachment";
+import { PostAttachment } from "@/components/telaah-bersama/post-attachment";
+import { EditPostModal } from "@/components/telaah-bersama/edit-post-modal";
+import { LoginPromptHost, useLoginPrompt } from "@/components/telaah-bersama/login-prompt";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { deletePost, getPost } from "@/lib/telaah-bersama/api";
 import {
   CONTACT_LABELS,
-  CURRENT_USER,
+  attachmentUrl,
   formatDate,
   formatPeriod,
   formatRelative,
   type TelaahContact,
-} from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
-import { EditPostModal } from "@/components/telaah-bersama/edit-post-modal";
+  type TelaahPost,
+} from "@/lib/telaah-bersama/types";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -90,34 +83,54 @@ function NewPostBanner() {
   );
 }
 
+function PageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <ProtectedTopNavbar />
+      {children}
+      <LoginPromptHost />
+    </div>
+  );
+}
+
 export default function TelaahDetailPage() {
   const params = useParams<{ id: string }>();
-  const postId = Number(params.id);
-  const post = useTelaahBersamaStore((state) => state.posts.find((item) => item.id === postId));
-  const hasReported = useTelaahBersamaStore((state) => !!state.reported[postId]);
-  const removePost = useTelaahBersamaStore((state) => state.removePost);
-  const isGuest = useTelaahBersamaStore((state) => state.viewer === "tamu");
-  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const openLoginPrompt = useLoginPrompt((state) => state.open);
+  const [post, setPost] = React.useState<TelaahPost | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = React.useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    getPost(params.id)
+      .then((result) => !cancelled && setPost(result))
+      .catch((error) => !cancelled && setLoadError(error instanceof Error ? error.message : "Telaah gagal dimuat."));
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
+
   if (!post) {
     return (
-      <div className="min-h-screen bg-background">
-        <ProtectedTopNavbar />
+      <PageShell>
         <main className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <p className="text-sm text-muted-foreground">Telaah tidak ditemukan.</p>
-          <Link href="/telaah-bersama" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-            Kembali ke TelaahBareng
-          </Link>
+          <p className="text-sm text-muted-foreground">{loadError ?? "Memuat Telaah…"}</p>
+          {loadError && (
+            <Link href="/telaah-bersama" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+              Kembali ke TelaahBareng
+            </Link>
+          )}
         </main>
-      </div>
+      </PageShell>
     );
   }
 
-  const isOwner = !isGuest && post.author === CURRENT_USER;
+  const isOwner = post.viewer.isOwner;
+  const comments = post.comments ?? [];
   const period = formatPeriod(post.openDate, post.closeDate);
   const details = [
     { label: "Perusahaan / instansi", value: post.company },
@@ -128,11 +141,18 @@ export default function TelaahDetailPage() {
     { label: "Sumber lowongan", value: [post.source.platform, post.source.account].filter(Boolean).join(" · ") },
   ].filter((item) => item.value);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <ProtectedTopNavbar />
-      <PrototypeBanner />
+  const handleDelete = async () => {
+    try {
+      await deletePost(post.id);
+      toast.success("Telaah dihapus.");
+      router.push("/telaah-bersama");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Telaah gagal dihapus.");
+    }
+  };
 
+  return (
+    <PageShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
         <Link
           href="/telaah-bersama"
@@ -147,6 +167,16 @@ export default function TelaahDetailPage() {
             <React.Suspense fallback={null}>
               <NewPostBanner />
             </React.Suspense>
+
+            {post.status === "hidden_pending_edit" && (
+              <div className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  Telaah ini disembunyikan dari publik karena laporan data pribadi terkonfirmasi. Sunting dan hapus bagian
+                  yang memuat NIK atau kode, lalu simpan agar tampil lagi.
+                </p>
+              </div>
+            )}
 
             <header className="space-y-3">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -179,7 +209,13 @@ export default function TelaahDetailPage() {
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-                <ReactionButton postId={post.id} />
+                <ReactionButton
+                  post={post}
+                  isSignedIn={!!user}
+                  onChange={({ reacted, reactionCount }) =>
+                    setPost((current) => current && { ...current, reactionCount, viewer: { ...current.viewer, reacted } })
+                  }
+                />
                 {isOwner ? (
                   <>
                     <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="text-muted-foreground">
@@ -195,14 +231,12 @@ export default function TelaahDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      if (requireLogin("Masuk untuk melaporkan Telaah ini.")) setIsReportOpen(true);
-                    }}
-                    disabled={hasReported}
+                    onClick={() => (user ? setIsReportOpen(true) : openLoginPrompt("Masuk untuk melaporkan Telaah ini."))}
+                    disabled={post.viewer.reported}
                     className="text-muted-foreground"
                   >
                     <Flag />
-                    {hasReported ? "Sudah dilaporkan" : "Laporkan"}
+                    {post.viewer.reported ? "Sudah dilaporkan" : "Laporkan"}
                   </Button>
                 )}
               </div>
@@ -212,25 +246,29 @@ export default function TelaahDetailPage() {
               <p className="text-sm leading-relaxed text-foreground">{post.summary}</p>
             </Section>
 
-            <Section title="Bukti dari telaah">
-              <div className="space-y-2">
-                {post.evidence.map((item, index) => (
-                  <RiskCard key={index} type={item.type} description={item.description} evidence={item.evidence} />
-                ))}
-              </div>
-            </Section>
+            {post.evidence.length > 0 && (
+              <Section title="Bukti dari telaah">
+                <div className="space-y-2">
+                  {post.evidence.map((item, index) => (
+                    <RiskCard key={index} type={item.type} description={item.description} evidence={item.evidence ?? undefined} />
+                  ))}
+                </div>
+              </Section>
+            )}
 
             <Section title="Materi lowongan">
               <div className="space-y-1 rounded-xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-foreground">
                 {post.materialLines.map((line, index) => (
-                  <p key={index}>{line}</p>
+                  <p key={index} className="break-words">
+                    {line}
+                  </p>
                 ))}
               </div>
             </Section>
 
             {post.story && (
               <Section title={`Cerita ${post.author}`}>
-                <p className="rounded-xl border-l-2 border-primary/40 bg-card py-1 pl-4 text-sm italic leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap rounded-xl border-l-2 border-primary/40 bg-card py-1 pl-4 text-sm italic leading-relaxed text-foreground">
                   {post.story}
                 </p>
               </Section>
@@ -240,12 +278,7 @@ export default function TelaahDetailPage() {
               <Section title="Lampiran">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {post.attachments.map((attachment) => (
-                    <MockAttachment
-                      key={attachment.id}
-                      label={attachment.label}
-                      variant={attachment.variant}
-                      url={attachment.url}
-                    />
+                    <PostAttachment key={attachment.id} url={attachmentUrl(attachment)} label={attachment.label} />
                   ))}
                 </div>
               </Section>
@@ -268,29 +301,43 @@ export default function TelaahDetailPage() {
             )}
 
             <div className="border-t border-border pt-6">
-              <Discussion postId={post.id} comments={post.comments} />
+              <Discussion
+                postId={post.id}
+                comments={comments}
+                viewerName={user ? user.pseudonym ?? "kamu" : null}
+                onAdded={(comment) =>
+                  setPost(
+                    (current) =>
+                      current && {
+                        ...current,
+                        commentCount: current.commentCount + 1,
+                        comments: [...(current.comments ?? []), comment],
+                      }
+                  )
+                }
+              />
             </div>
           </article>
 
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-foreground">Info lowongan</h2>
-              <dl className="mt-2 divide-y divide-border">
-                {details.map((item) => (
-                  <div key={item.label} className="py-2">
-                    <dt className="text-[11px] text-muted-foreground">{item.label}</dt>
-                    <dd className="text-sm text-foreground">{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            {details.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-foreground">Info lowongan</h2>
+                <dl className="mt-2 divide-y divide-border">
+                  {details.map((item) => (
+                    <div key={item.label} className="py-2">
+                      <dt className="text-[11px] text-muted-foreground">{item.label}</dt>
+                      <dd className="text-sm text-foreground">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
 
             {post.contacts.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-foreground">Kontak di lowongan</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Cocokkan dengan nomor atau rekening yang menghubungimu.
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Cocokkan dengan nomor atau rekening yang menghubungimu.</p>
                 <ul className="mt-1 divide-y divide-border">
                   {post.contacts.map((contact) => (
                     <ContactRow key={`${contact.kind}-${contact.value}`} contact={contact} />
@@ -310,21 +357,28 @@ export default function TelaahDetailPage() {
         </div>
       </main>
 
-      <ReportModal postId={post.id} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
-      <EditPostModal post={post} isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} />
+      <ReportModal
+        postId={post.id}
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        onReported={() => setPost((current) => current && { ...current, viewer: { ...current.viewer, reported: true } })}
+      />
+      <EditPostModal
+        post={post}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSaved={(saved) => setPost((current) => current && { ...saved, comments: current.comments })}
+      />
       <ConfirmModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
-        onConfirm={() => {
-          router.push("/telaah-bersama");
-          removePost(post.id);
-        }}
+        onConfirm={handleDelete}
         title="Hapus Telaah ini?"
         description="Telaah beserta diskusinya akan hilang dari TelaahBareng. Tindakan ini tidak bisa dibatalkan."
         confirmText="Hapus"
         cancelText="Batal"
         isDestructive
       />
-    </div>
+    </PageShell>
   );
 }
