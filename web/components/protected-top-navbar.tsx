@@ -11,21 +11,19 @@ import { TelaahNav } from "@/components/telaah-bersama/telaah-nav";
 export function ProtectedTopNavbar() {
     return (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-                <div className="flex min-w-0 items-center gap-3 sm:gap-6">
-                    <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="TelaahKarier, ke beranda">
-                        <Image
-                            src={Logo}
-                            alt="TelaahKarier"
-                            width={132}
-                            height={24}
-                            className="h-8 w-auto"
-                            priority
-                        />
-                    </Link>
-                    <TelaahNav className="hidden md:flex" />
-                </div>
-                <div className="flex items-center">
+            <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6">
+                <Link href="/" className="flex shrink-0 items-center gap-2 justify-self-start" aria-label="TelaahKarier, ke beranda">
+                    <Image
+                        src={Logo}
+                        alt="TelaahKarier"
+                        width={132}
+                        height={24}
+                        className="h-8 w-auto"
+                        priority
+                    />
+                </Link>
+                <TelaahNav className="hidden md:flex" />
+                <div className="flex items-center justify-self-end">
                     <AuthButton logoutRedirectTo="/" />
                 </div>
             </div>
