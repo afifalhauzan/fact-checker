@@ -566,7 +566,7 @@ export function AssistantMessage({
     if (item.kind === "telaah-share") {
       return (
         <motion.div key={item.key} {...fadeUp}>
-          <BuatPostPrompt onCreate={() => onTelaahChoice?.({ kind: "share", messageId: message.id, share: item.share })} />
+          <BuatPostPrompt share={item.share} onCreate={() => onTelaahChoice?.({ kind: "share", messageId: message.id, share: item.share })} />
         </motion.div>
       );
     }

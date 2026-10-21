@@ -1,14 +1,46 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { ArrowRightLeft, HandHelping, Megaphone, MessageCircle, ScanSearch, ShieldAlert } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, HandHelping, Megaphone, MessageCircle, ScanSearch, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { findSharedPost } from "@/lib/telaah-bersama/api";
 import { formatDate } from "@/lib/telaah-bersama/types";
-import type { SimilarTelaahPartData } from "@/types/streaming";
+import type { SimilarTelaahPartData, TelaahSharePartData } from "@/types/streaming";
 import { RiskLevelBadge } from "./badges";
 
-/** Shown under a Sedang/Tinggi verdict: the only entry point for creating a post (design doc 5.1). */
-export function BuatPostPrompt({ onCreate }: { onCreate: () => void }) {
+/**
+ * Shown under a Sedang/Tinggi verdict: the only entry point for creating a post (design doc 5.1).
+ * Once the analysis has been posted it links to that post instead: one analysis, one post.
+ */
+export function BuatPostPrompt({ share, onCreate }: { share: TelaahSharePartData; onCreate: () => void }) {
+  const [postedId, setPostedId] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    findSharedPost(share)
+      .then((post) => !cancelled && setPostedId(post?.id ?? null))
+      // On failure the button stays; publishing itself still refuses a second post.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [share]);
+
+  if (postedId) {
+    return (
+      <section className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-2 text-sm font-medium text-emerald-900">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Hasil telaah ini sudah kamu bagikan ke TelaahBareng.
+        </p>
+        <Button variant="outline" size="sm" className="shrink-0 bg-background" asChild>
+          <Link href={`/telaah-bersama/${postedId}`}>Lihat Telaah #{postedId}</Link>
+        </Button>
+      </section>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex gap-3">

@@ -13,7 +13,7 @@ import { RiskCard } from "@/components/cards/RiskCard";
 import { ModusBadge, RiskLevelBadge } from "@/components/telaah-bersama/badges";
 import { cn } from "@/utils/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { draftPost, publishPost, type DraftAttributes } from "@/lib/telaah-bersama/api";
+import { draftPost, findSharedPost, publishPost, type DraftAttributes } from "@/lib/telaah-bersama/api";
 import {
   clearShareDraft,
   dataUrlToFile,
@@ -125,6 +125,7 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
   const [attributes, setAttributes] = React.useState<DraftAttributes | null>(null);
   const [attributesSignature, setAttributesSignature] = React.useState("");
   const [isDrafting, setIsDrafting] = React.useState(true);
+  const [postedId, setPostedId] = React.useState<number | null>(null);
   const [title, setTitle] = React.useState("");
   const [platform, setPlatform] = React.useState("");
   const [account, setAccount] = React.useState("");
@@ -142,9 +143,19 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
 
   React.useEffect(() => {
     let cancelled = false;
-    draftPost(share)
+    // One analysis, one post: an already-published analysis is not drafted again.
+    findSharedPost(share)
+      .catch(() => null)
+      .then((posted) => {
+        if (cancelled) return null;
+        if (posted) {
+          setPostedId(posted.id);
+          return null;
+        }
+        return draftPost(share);
+      })
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || !result) return;
         setAttributes(result.attributes);
         setAttributesSignature(result.attributesSignature);
         setTitle(result.attributes.title);
@@ -232,6 +243,22 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
       setIsPublishing(false);
     }
   };
+
+  if (postedId) {
+    return (
+      <PageShell>
+        <main className="mx-auto max-w-md px-4 py-16 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Hasil telaah ini sudah diposting</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Satu hasil telaah hanya bisa dijadikan satu post. Kamu bisa menyunting post yang sudah ada.
+          </p>
+          <Button className="mt-5" asChild>
+            <Link href={`/telaah-bersama/${postedId}`}>Lihat Telaah #{postedId}</Link>
+          </Button>
+        </main>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
