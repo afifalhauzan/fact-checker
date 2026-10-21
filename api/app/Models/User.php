@@ -32,6 +32,25 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            $user->pseudonym ??= static::newPseudonym();
+        });
+    }
+
+    /**
+     * A public name that does not reveal the account, e.g. "Pencari Kerja #a3f9".
+     */
+    public static function newPseudonym(): string
+    {
+        do {
+            $pseudonym = 'Pencari Kerja #'.bin2hex(random_bytes(2));
+        } while (static::where('pseudonym', $pseudonym)->exists());
+
+        return $pseudonym;
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);
