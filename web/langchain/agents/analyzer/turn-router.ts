@@ -1,8 +1,15 @@
+import { z } from "zod";
 import { getLLMModel } from "./llm";
 import { LLMRouterOutputSchema } from "./schema";
-import { buildRouterUserPrompt, routerSystemPrompt } from "./prompts";
+import {
+  buildPostingContinuationUserPrompt,
+  buildRouterUserPrompt,
+  postingContinuationSystemPrompt,
+  routerSystemPrompt,
+} from "./prompts";
 import { preprocessJobInput } from "./preprocessor";
 import type { PostingContext } from "./conversation-context";
+import { findContacts } from "../telaah-bersama/identifiers";
 
 export type TurnMode = "analysis" | "follow_up";
 
@@ -62,5 +69,53 @@ export async function decideTurnMode({
   } catch (error) {
     console.error("[TurnRouter] Classification failed, using heuristic:", error instanceof Error ? error.message : error);
     return { mode: trimmed.endsWith("?") ? "follow_up" : "analysis", reason: "classifier_fallback" };
+  }
+}
+
+export interface ContinuationDecision {
+  isNewPosting: boolean;
+  reason: "shared_contact" | "classifier" | "classifier_fallback";
+}
+
+const ContinuationSchema = z.object({ hubungan: z.enum(["materi_lanjutan", "lowongan_baru"]) });
+const SESSION_DESCRIPTION_LENGTH = 800;
+const NEW_MATERIAL_LENGTH = 1_500;
+
+/**
+ * One session holds one posting (design doc 6.11). When new material arrives in a session that
+ * already has an analysis, decides whether it is a later stage of that posting or another one.
+ * Errs toward "same posting": a wrong warning interrupts someone working through one posting.
+ */
+export async function classifyNewMaterial({
+  materialText,
+  context,
+}: {
+  materialText: string;
+  context: PostingContext;
+}): Promise<ContinuationDecision> {
+  // A number, account, email, or link the session posting also has settles it without a model call.
+  const sessionValues = new Set(findContacts(context.postingText).identifiers.map((item) => `${item.kind}|${item.value}`));
+  if (findContacts(materialText).identifiers.some((item) => sessionValues.has(`${item.kind}|${item.value}`))) {
+    return { isNewPosting: false, reason: "shared_contact" };
+  }
+
+  const session = [context.analysis.summary, context.postingText].filter(Boolean).join("\n").slice(0, SESSION_DESCRIPTION_LENGTH);
+
+  try {
+    const classifier = getLLMModel({ temperature: 0, stage: "router" }).withStructuredOutput(ContinuationSchema);
+    const { hubungan } = await classifier.invoke(
+      [
+        { role: "system", content: postingContinuationSystemPrompt },
+        {
+          role: "user",
+          content: buildPostingContinuationUserPrompt({ session, material: materialText.slice(0, NEW_MATERIAL_LENGTH) }),
+        },
+      ],
+      { signal: AbortSignal.timeout(ROUTER_TIMEOUT_MS) }
+    );
+    return { isNewPosting: hubungan === "lowongan_baru", reason: "classifier" };
+  } catch (error) {
+    console.error("[TurnRouter] Continuation check failed, treating as the same posting:", error instanceof Error ? error.message : error);
+    return { isNewPosting: false, reason: "classifier_fallback" };
   }
 }
