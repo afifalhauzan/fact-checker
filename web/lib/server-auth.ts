@@ -22,7 +22,8 @@ export function backendFetch(path: string, init: RequestInit & { token?: string 
     ...rest,
     headers: {
       Accept: 'application/json',
-      ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
+      // A FormData body sets its own multipart boundary
+      ...(typeof rest.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
