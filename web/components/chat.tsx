@@ -22,7 +22,7 @@ import {
   type LandingChatDraft,
 } from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, SquarePen } from "lucide-react";
+import { ChevronDown, List, PanelLeft, SquarePen } from "lucide-react";
 import { openSession } from "@/components/sidebar/session-history";
 import { ContextPanel, collectSessionContext, countSessionContext } from "@/components/sidebar/context-panel";
 import toast, { Toaster } from 'react-hot-toast';
@@ -611,16 +611,16 @@ export function Chat() {
             onClick={toggleHistory}
             className={TOOLBAR_BUTTON}
             aria-expanded={isSidebarOpen}
-            aria-label={isSidebarOpen ? "Tutup riwayat telaah" : "Buka riwayat telaah"}
-            title={isSidebarOpen ? "Tutup riwayat" : "Buka riwayat"}
+            aria-label={isSidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
+            title={isSidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
           >
-            {isSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-            <span className="hidden sm:inline">Riwayat</span>
+            <PanelLeft className="h-4 w-4" />
           </button>
-          {!isSidebarOpen && (
-            <button type="button" onClick={() => openSession()} className={TOOLBAR_BUTTON} title="Telaah baru">
+          {/* Phones have no icon rail, so the closed sidebar's "new" button lives here */}
+          {isMobile && !isSidebarOpen && (
+            <button type="button" onClick={() => openSession()} className={TOOLBAR_BUTTON} title="TelaahLoker baru">
               <SquarePen className="h-4 w-4" />
-              <span className="hidden sm:inline">Telaah baru</span>
+              <span>TelaahLoker Baru</span>
             </button>
           )}
         </div>
@@ -636,7 +636,7 @@ export function Chat() {
           {contextCount > 0 && (
             <span className="rounded-full bg-primary/10 px-1.5 text-[11px] font-medium tabular-nums text-primary">{contextCount}</span>
           )}
-          {isContextOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+          <List className="h-4 w-4" />
         </button>
       </div>
 
@@ -646,9 +646,14 @@ export function Chat() {
           isOpen={isSidebarOpen}
           isMobile={isMobile}
           label="Riwayat telaah"
+          hasRail
           onClose={() => setIsSidebarOpen(false)}
         >
-          <HistoryPanel activeConversationId={conversationId} />
+          <HistoryPanel
+            activeConversationId={conversationId}
+            collapsed={!isSidebarOpen && !isMobile}
+            onExpand={() => setIsSidebarOpen(true)}
+          />
         </SidePanel>
 
         <div className="flex min-h-0 w-full min-w-0 flex-1 items-stretch justify-center">
