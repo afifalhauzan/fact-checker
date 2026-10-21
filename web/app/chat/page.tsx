@@ -6,6 +6,7 @@ import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { StreamingProvider } from "@/contexts/StreamingContext";
 import { generateUUID } from "@/utils/browser-uuid";
 import { ImagePlus } from "lucide-react";
+import { ATTACHMENT_LIMITS_TEXT } from "@/lib/attachments";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,10 @@ export default function ChatPage() {
     dragDepthRef.current = 0;
     setIsDraggingPhoto(false);
 
-    // Dropzone ini sengaja dibatasi ke 1 foto — kalau lebih dari satu di-drop, sisanya diabaikan.
-    const droppedPhoto = Array.from(event.dataTransfer.files).find((file) => file.type.startsWith("image/"));
-    if (droppedPhoto) {
-      window.dispatchEvent(new CustomEvent<File>("telaahkarier:dropped-photo", { detail: droppedPhoto }));
+    // The chat validates type, size, and count, and explains anything it skips.
+    const droppedFiles = Array.from(event.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      window.dispatchEvent(new CustomEvent<File[]>("telaahkarier:dropped-files", { detail: droppedFiles }));
     }
   }, []);
 
@@ -72,8 +73,8 @@ export default function ChatPage() {
             <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm animate-in fade-in duration-150">
               <div className="flex w-[min(92%,640px)] flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary bg-card px-8 py-14 text-center shadow-lg">
                 <ImagePlus className="h-14 w-14 text-primary" />
-                <p className="text-lg font-semibold text-foreground">Lepas untuk unggah poster lowongan</p>
-                <p className="text-sm text-muted-foreground">Hanya mendukung 1 foto per pesan.</p>
+                <p className="text-lg font-semibold text-foreground">Lepas untuk melampirkan</p>
+                <p className="text-sm text-muted-foreground">Poster, screenshot, atau PDF · {ATTACHMENT_LIMITS_TEXT}.</p>
               </div>
             </div>
           )}

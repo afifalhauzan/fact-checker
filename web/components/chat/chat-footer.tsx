@@ -2,9 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React from "react";
-import { Paperclip, X, File as FileIcon } from "lucide-react";
-import { formatMediaTypeLabel } from "@/utils/formatters";
+import { ArrowUp, FileText, Plus, Square, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { cn } from "@/utils/utils";
+import { ACCEPTED_ATTACHMENT_TYPES, MAX_ATTACHMENTS, filesFromClipboard } from "@/lib/attachments";
 
 export interface ComposerAttachment {
   type: "file";
@@ -19,17 +20,68 @@ interface ChatFooterProps {
   input: string;
   setInput: (value: string) => void;
   onSubmit: (event?: { preventDefault?: () => void }) => void;
+  // True while a reply is on its way or the session is starting; sending is blocked, typing is not.
   isLoading: boolean;
   attachments: ComposerAttachment[];
-  onSelectFiles: (files: FileList | null) => void;
+  onSelectFiles: (files: File[]) => void;
   onRemoveAttachment: (id: string) => void;
+  onStop?: () => void;
 }
+
+const MAX_TEXTAREA_HEIGHT = 240;
 
 function formatFileSize(size?: number): string {
   if (!size || Number.isNaN(size)) return "";
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentPreview({
+  attachment,
+  onOpen,
+  onRemove,
+}: {
+  attachment: ComposerAttachment;
+  onOpen: () => void;
+  onRemove: () => void;
+}) {
+  const isImage = attachment.mediaType.startsWith("image/");
+  const name = attachment.filename || (isImage ? "Gambar" : "Dokumen");
+
+  return (
+    <div className="group relative">
+      {isImage ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block h-16 w-16 cursor-zoom-in overflow-hidden rounded-lg border border-border bg-muted"
+          aria-label={`Lihat ${name}`}
+        >
+          <img src={attachment.url} alt={name} className="h-full w-full object-cover" />
+        </button>
+      ) : (
+        <div className="flex h-16 w-48 items-center gap-2.5 rounded-lg border border-border bg-muted/60 px-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+            <FileText className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-foreground">{name}</p>
+            <p className="text-[11px] text-muted-foreground">PDF · {formatFileSize(attachment.size)}</p>
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Hapus ${name}`}
+        title="Hapus lampiran"
+        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-opacity hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
 }
 
 export function ChatFooter({
@@ -40,130 +92,164 @@ export function ChatFooter({
   attachments,
   onSelectFiles,
   onRemoveAttachment,
+  onStop,
 }: ChatFooterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [previewImage, setPreviewImage] = React.useState<ComposerAttachment | null>(null);
 
+  const hasContent = input.trim().length > 0 || attachments.length > 0;
+  const canSend = hasContent && !isLoading;
+  const isFull = attachments.length >= MAX_ATTACHMENTS;
+
+  // Grow with the text, like the Claude composer, up to a cap after which the box scrolls.
+  React.useLayoutEffect(() => {
+    const element = textareaRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }, [input]);
+
+  // Desktop keeps the cursor in the box; on touch screens this would pop the keyboard open.
+  React.useEffect(() => {
+    if (window.matchMedia("(pointer: fine)").matches) {
+      textareaRef.current?.focus();
+    }
+  }, []);
+
+  const submit = () => {
+    if (!canSend) return;
+    onSubmit();
+    textareaRef.current?.focus();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      submit();
+    }
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = filesFromClipboard(event.clipboardData);
+    if (files.length === 0) return;
+    // Pasting a screenshot attaches it instead of inserting its file name as text.
+    event.preventDefault();
+    onSelectFiles(files);
+  };
+
   return (
-    <footer className="sticky bottom-0 left-0 right-0 w-full md:relative md:shrink-0 p-4 pt-0 bg-background border-t border-border md:border-t-0">
-      <div className="pt-3">
+    <footer className="sticky bottom-0 left-0 right-0 w-full bg-background px-4 pb-3 pt-2 md:relative md:shrink-0">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+        onClick={(event) => {
+          // Clicking the empty part of the box focuses the text, as in Claude.
+          if (event.target === event.currentTarget) textareaRef.current?.focus();
+        }}
+        className="rounded-2xl border border-border bg-card shadow-[0_2px_12px_rgba(23,35,44,0.06)] transition-colors focus-within:border-primary/50 focus-within:shadow-[0_2px_16px_rgba(23,35,44,0.09)]"
+      >
         {attachments.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {attachments.map((attachment) => {
-              const isImage = attachment.mediaType.startsWith("image/");
-
-              return (
-                <div
-                  key={attachment.id}
-                  className="group relative rounded-lg border border-border bg-muted/60 p-1.5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isImage) {
-                        setPreviewImage(attachment);
-                      }
-                    }}
-                    className={`block text-left ${isImage ? "cursor-zoom-in" : "cursor-default"}`}
-                  >
-                    {isImage ? (
-                      <img
-                        src={attachment.url}
-                        alt={attachment.filename || "image attachment"}
-                        className="h-16 w-16 rounded-md object-cover"
-                      />
-                    ) : (
-                      <div className="flex min-h-16 min-w-40 items-center gap-2 rounded-md px-2 py-1.5">
-                        <FileIcon className="h-4 w-4 text-muted-foreground" />
-                        <div className="overflow-hidden">
-                          <p className="truncate text-xs font-medium text-foreground">
-                            {attachment.filename || "file"}
-                          </p>
-                          <p className="truncate text-[11px] text-muted-foreground">
-                            {formatMediaTypeLabel(attachment.mediaType)}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {formatFileSize(attachment.size)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onRemoveAttachment(attachment.id)}
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground"
-                    title="Hapus lampiran"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
+          <div className="flex flex-wrap gap-2.5 px-3 pt-3">
+            {attachments.map((attachment) => (
+              <AttachmentPreview
+                key={attachment.id}
+                attachment={attachment}
+                onOpen={() => setPreviewImage(attachment)}
+                onRemove={() => onRemoveAttachment(attachment.id)}
+              />
+            ))}
           </div>
         )}
 
-        <form
-          onSubmit={onSubmit}
-          className="flex items-center gap-2 rounded-xl border-2 border-input bg-muted p-1.5 pl-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/100 transition-all"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            onChange={(event) => {
-              onSelectFiles(event.target.files);
-              event.currentTarget.value = "";
-            }}
-          />
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder="Tempel teks lowongan, link, atau screenshot di sini..."
+          aria-label="Pesan"
+          className="block max-h-60 w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
+        />
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Tambah gambar atau file"
-          >
-            <Paperclip className="h-4 w-4" />
-          </button>
+        <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPTED_ATTACHMENT_TYPES}
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                onSelectFiles(Array.from(event.target.files ?? []));
+                event.currentTarget.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isFull}
+              title={isFull ? `Maksimal ${MAX_ATTACHMENTS} lampiran per pesan` : "Lampirkan gambar atau PDF"}
+              aria-label="Lampirkan gambar atau PDF"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            {!hasContent && (
+              <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                Tempel gambar dengan Ctrl+V · Shift+Enter untuk baris baru
+              </span>
+            )}
+          </div>
 
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={isLoading ? "Sedang menganalisis risiko..." : "Tempel lowongan, link pendaftaran, atau pertanyaan verifikasi..."}
-            autoComplete="off"
-            disabled={isLoading}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <button
-            type="submit"
-            disabled={isLoading || (!input.trim() && attachments.length === 0)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-sm transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-            </svg>
-          </button>
-        </form>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Ini analisis risiko awal, bukan vonis final. Selalu verifikasi ke kanal resmi sebelum kirim data atau membayar biaya.
-        </p>
-      </div>
+          {isLoading && onStop ? (
+            <button
+              type="button"
+              onClick={onStop}
+              title="Hentikan jawaban"
+              aria-label="Hentikan jawaban"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-transform hover:scale-105 active:scale-95"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSend}
+              title="Kirim (Enter)"
+              aria-label="Kirim"
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
+                canSend
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                  : "cursor-not-allowed bg-muted text-muted-foreground"
+              )}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </form>
+
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Ini analisis risiko awal, bukan vonis final. Selalu verifikasi ke kanal resmi sebelum kirim data atau membayar biaya.
+      </p>
 
       <Modal
         isOpen={!!previewImage}
         onClose={() => setPreviewImage(null)}
-        title={previewImage?.filename || "Image preview"}
+        title={previewImage?.filename || "Pratinjau gambar"}
         showCloseButton={true}
       >
         {previewImage ? (
           <div className="flex items-center justify-center">
             <img
               src={previewImage.url}
-              alt={previewImage.filename || "preview"}
+              alt={previewImage.filename || "pratinjau"}
               className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain"
             />
           </div>

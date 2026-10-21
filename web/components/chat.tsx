@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatFooter, type ComposerAttachment } from "@/components/chat/chat-footer";
+import { prepareAttachments } from "@/lib/attachments";
 import { ChatStart } from "@/components/chat/chat-start";
 import { ConfirmModal } from "@/components/ui/modal";
 import { UserMessage } from "@/components/chat/UserMessage";
@@ -119,23 +120,6 @@ function extractLatestAttachmentMetadata(messages: MetabotUIMessage[]): UIAction
   }
 
   return undefined;
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function createAttachmentId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function Chat() {
@@ -395,25 +379,21 @@ export function Chat() {
     }
   };
 
-  const handleSelectFiles = React.useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) {
+  // Read inside the callback so pastes in quick succession still count earlier attachments.
+  const attachmentCountRef = React.useRef(0);
+  attachmentCountRef.current = attachments.length;
+
+  const handleSelectFiles = React.useCallback(async (files: File[]) => {
+    if (files.length === 0) {
       return;
     }
 
     try {
-      const selectedFiles = Array.from(files);
-      const nextAttachments = await Promise.all(
-        selectedFiles.map(async (file): Promise<ComposerAttachment> => ({
-          type: "file",
-          id: createAttachmentId(),
-          filename: file.name,
-          mediaType: file.type || "application/octet-stream",
-          url: await fileToDataUrl(file),
-          size: file.size,
-        }))
-      );
-
-      setAttachments((prev) => [...prev, ...nextAttachments]);
+      const { attachments: prepared, rejections } = await prepareAttachments(files, attachmentCountRef.current);
+      rejections.forEach((message) => toast.error(message));
+      if (prepared.length > 0) {
+        setAttachments((prev) => [...prev, ...prepared.map((item) => ({ type: "file" as const, ...item }))]);
+      }
     } catch (error) {
       console.error("[Chat] Failed to prepare attachments:", error);
       toast.error("Gagal membaca lampiran. Coba lagi ya.");
@@ -423,19 +403,15 @@ export function Chat() {
   // Bridges the page-level drag-and-drop dropzone (app/chat/page.tsx) into the
   // existing attachment pipeline without prop-drilling the file input state up.
   React.useEffect(() => {
-    const handlePageDroppedPhoto = (event: Event) => {
-      const file = (event as CustomEvent<File>).detail;
-      if (!file) {
-        return;
+    const handlePageDroppedFiles = (event: Event) => {
+      const files = (event as CustomEvent<File[]>).detail;
+      if (files?.length) {
+        handleSelectFiles(files);
       }
-
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      handleSelectFiles(dataTransfer.files);
     };
 
-    window.addEventListener("telaahkarier:dropped-photo", handlePageDroppedPhoto);
-    return () => window.removeEventListener("telaahkarier:dropped-photo", handlePageDroppedPhoto);
+    window.addEventListener("telaahkarier:dropped-files", handlePageDroppedFiles);
+    return () => window.removeEventListener("telaahkarier:dropped-files", handlePageDroppedFiles);
   }, [handleSelectFiles]);
 
   const handleRemoveAttachment = React.useCallback((id: string) => {
@@ -632,6 +608,7 @@ export function Chat() {
             attachments={attachments}
             onSelectFiles={handleSelectFiles}
             onRemoveAttachment={handleRemoveAttachment}
+            onStop={isLoading ? stop : undefined}
           />
 
           {/* Scroll to Bottom FAB */}
