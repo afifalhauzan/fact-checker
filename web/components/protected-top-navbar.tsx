@@ -7,21 +7,13 @@ import { AuthButton } from "@/components/auth/auth-button";
 import Logo from "@/assets/logo.svg";
 import { TelaahNav } from "@/components/telaah-bersama/telaah-nav";
 
+/** The one top bar of the site, on the homepage and every app page, so navigation stays the same everywhere. */
 export function ProtectedTopNavbar() {
-    const [hasMounted, setHasMounted] = React.useState(false);
-
-    // Use fallback state during SSR and initial hydration
-    const currentStatus = hasMounted ? 'online' : 'initializing';
-
-    React.useEffect(() => {
-        setHasMounted(true);
-    }, []);
-
     return (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex h-14 items-center justify-between px-4 sm:px-6">
                 <div className="flex min-w-0 items-center gap-3 sm:gap-6">
-                    <Link href="/chat" className="flex shrink-0 items-center gap-2">
+                    <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="TelaahKarier, ke beranda">
                         <Image
                             src={Logo}
                             alt="TelaahKarier"
@@ -34,7 +26,7 @@ export function ProtectedTopNavbar() {
                     <TelaahNav className="hidden md:flex" />
                 </div>
                 <div className="flex items-center">
-                    <AuthButton />
+                    <AuthButton logoutRedirectTo="/" />
                 </div>
             </div>
             <TelaahNav className="no-scrollbar flex overflow-x-auto border-t border-border px-2 py-1 md:hidden" />

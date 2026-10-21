@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/utils/utils";
 
 const NAV_ITEMS = [
+  { label: "Beranda", href: "/" },
   { label: "Mulai Telaah", href: "/chat" },
   { label: "Telaah Bersama", href: "/telaah-bersama" },
-  { label: "Rujukan", href: "/rujukan" },
 ];
 
 /** Links between the main areas: inline in the top bar on wider screens, a second row on phones. */
@@ -15,9 +15,9 @@ export function TelaahNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className={cn("items-center gap-1", className)}>
+    <nav aria-label="Navigasi utama" className={cn("items-center gap-1", className)}>
       {NAV_ITEMS.map((item) => {
-        const isActive = item.href === "/chat" ? pathname === "/chat" : pathname.startsWith(item.href);
+        const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
