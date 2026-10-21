@@ -5,6 +5,7 @@ import Image from "next/image";
 import React from "react";
 import { AuthButton } from "@/components/auth/auth-button";
 import Logo from "@/assets/logo.svg";
+import { TelaahNav } from "@/components/telaah-bersama/telaah-nav";
 
 export function ProtectedTopNavbar() {
     const [hasMounted, setHasMounted] = React.useState(false);
@@ -19,16 +20,19 @@ export function ProtectedTopNavbar() {
     return (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex h-14 items-center justify-between px-4 sm:px-6">
-                <Link href="/chat" className="flex min-w-0 items-center gap-2">
-                    <Image
-                        src={Logo}
-                        alt="TelaahKarier"
-                        width={132}
-                        height={24}
-                        className="h-8 w-auto"
-                        priority
-                    />
-                </Link>
+                <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+                    <Link href="/chat" className="flex shrink-0 items-center gap-2">
+                        <Image
+                            src={Logo}
+                            alt="TelaahKarier"
+                            width={132}
+                            height={24}
+                            className="h-8 w-auto"
+                            priority
+                        />
+                    </Link>
+                    <TelaahNav />
+                </div>
                 <div className="flex items-center">
                     <AuthButton />
                 </div>
