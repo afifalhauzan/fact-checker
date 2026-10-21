@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, User } from "lucide-react";
+import { FileText, LogOut, User } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -97,8 +97,15 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
             </div>
           </div>
 
-          {/* Logout Option */}
           <div className="p-1">
+            <Link
+              href="/telaah-bersama/saya"
+              onClick={() => setIsOpen(false)}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              Post saya
+            </Link>
             <button
               onClick={handleLogoutClick}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors"
