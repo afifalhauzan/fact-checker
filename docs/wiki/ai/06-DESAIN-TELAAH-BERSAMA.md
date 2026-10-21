@@ -1,6 +1,6 @@
 # 🤝 06. Dokumen Desain: Telaah Bersama
 
-Status: **draf revisi 5, siap diimplementasikan** (21 Okt 2026). Semua keputusan tim tercatat di bagian 10.
+Status: **revisi 6, terimplementasi** (22 Okt 2026). Keputusan tim di bagian 10, perbedaan implementasi di bagian 11.
 
 Telaah Bersama adalah ruang publik berisi hasil telaah lowongan berisiko yang dibagikan pengguna. Pengguna lain bisa melihat Telaah, menandai bahwa mereka menerima lowongan atau chat yang sama, dan berdiskusi.
 
@@ -451,6 +451,29 @@ Setelah langkah 3, fitur sudah bisa didemokan sebagai forum. Langkah 4–6 menam
 | 14 | Artikel cek fakta eksternal ikut dicari **setelah MVP** |
 | 15 | Lowongan kedua di satu sesi: **turn router diperluas menjadi orkestrator** yang memutuskan apakah materi itu lanjutan lowongan yang sama atau lowongan lain. Jika lain, pipeline ditahan dan muncul peringatan. *Ya* memindahkan input ke sesi baru lalu pipeline dimulai dari awal; *Tidak* menjalankan pipeline di sesi yang sama (bagian 6.11) |
 
-## 11. Hal yang Masih Terbuka
+## 11. Catatan Implementasi (22 Okt 2026)
 
-Tidak ada untuk saat ini. Keputusan baru dicatat di bagian 10.
+Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute Next, chat, dan halaman). Perbedaan dari rancangan di atas:
+
+| Bagian | Yang diimplementasikan |
+|---|---|
+| 5.3 Laporan | Hanya **data pribadi** dan **spam**. Tanggapan "lowongan ini asli" dihapus atas keputusan tim; halaman Rujukan juga dihapus |
+| 6.2 Ambang | `cosine ≥ 0,92`, atau ada pengenal yang sama dengan `cosine ≥ 0,6`. Pengaman lowongan resmi diperluas: materi punya situs resmi sendiri yang berbeda dari situs di Telaah, dan tidak ada kontak yang sama → dibatalkan, walaupun Telaah tidak menyebut nama perusahaan (kasus pencatutan kementerian) |
+| 6.6 Judul | Model hanya mengekstrak atribut. Judul **disusun di kode** dari atribut (perusahaan · posisi · lokasi · periode), karena keluaran terstruktur Gemini sempat merusak karakter "·" dan "–" |
+| 6.11 Router | Prompt router lama **tidak diubah**. Pemeriksaan lanjutan vs lowongan baru adalah klasifikasi terpisah (`classifyNewMaterial`) yang hanya dipanggil jika router sudah memutuskan "materi" dan sesi sudah punya telaah |
+| 7.5 Data awal | 6 Telaah **fiktif** (`api/database/seeders/data/telaah-seed.json`), bukan dari `dev`/`ambigu` |
+| 5.2 Nama samaran | Format "Pencari Kerja #a3f9" (4 karakter hex) |
+
+**Uji yang sudah ada:** `php artisan test` (Laravel), `pnpm test:redaction`, `test:identifiers`, `test:telaah` (unit), `pnpm eval:similar` dan `eval:continuation` (memanggil model sungguhan).
+
+**Hasil awal, belum bisa dipakai sebagai metrik laporan:** ambang 7.2 dan prompt 6.11 dikalibrasi pada set sintetis kecil (11 dan 9 kasus), dan diuji pada set yang sama. Keduanya lolos 100%, tetapi itu baru bukti logikanya benar. Sebelum final, jalankan uji pencocokan 7.2 pada set `dev`/`ambigu` yang lebih besar.
+
+**Operasional:**
+- Server butuh `TELAAH_INTERNAL_KEY` dan `TELAAH_SIGNING_KEY` di `.env` root (lihat `.env.example`).
+- `deploy.ps1` kini juga membangun dan mengirim image Postgres + pgvector.
+- Data awal: `php artisan db:seed --class=TelaahSeeder`, lalu `pnpm telaah:embed` dari `web/` untuk mengisi embedding.
+
+## 12. Hal yang Masih Terbuka
+
+- Uji pencocokan 7.2 pada set `dev`/`ambigu` (lihat bagian 11).
+- Notifikasi, verifikasi perwakilan perusahaan, dan dashboard moderasi tetap ditunda (bagian 3).
