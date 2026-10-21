@@ -134,6 +134,7 @@ class TelaahBersamaTest extends TestCase
         $this->getJson('/api/telaah-bersama')->assertOk()->assertJsonCount(2, 'data');
         $this->getJson('/api/telaah-bersama?risk=sedang')->assertJsonCount(1, 'data')->assertJsonPath('data.0.title', 'Kasir Surabaya');
         $this->getJson('/api/telaah-bersama?q=0812-0000-4471')->assertJsonCount(1, 'data')->assertJsonPath('data.0.company', 'PT Contoh');
+        $this->getJson('/api/telaah-bersama?q='.urlencode('+62 812 0000 4471'))->assertJsonCount(1, 'data');
         $this->getJson('/api/telaah-bersama?q=pt%20contoh')->assertJsonCount(1, 'data');
         $this->getJson('/api/telaah-bersama?q=tidakada')->assertJsonCount(0, 'data');
         $this->getJson('/api/telaah-bersama?from=2099-01-01')->assertJsonCount(0, 'data');

@@ -252,6 +252,12 @@ class TelaahPostController extends Controller
      */
     private function applySearch(Builder $query, string $search): void
     {
+        // A phone number typed with spaces ("+62 812 0000 4471") is one word, not four
+        $search = preg_replace_callback(
+            '/(?:\+?62|0)[\s.-]?8(?:[\s.-]?\d){6,11}/',
+            fn (array $match) => preg_replace('/\D/', '', $match[0]),
+            $search,
+        );
         $words = preg_split('/\s+/', mb_strtolower(trim($search)), -1, PREG_SPLIT_NO_EMPTY);
 
         foreach ($words as $word) {
