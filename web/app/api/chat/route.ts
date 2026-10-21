@@ -7,6 +7,8 @@ import { decideTurnMode } from "@/langchain/agents/analyzer/turn-router";
 import { findPostingContext, recentTurns, toMessageList } from "@/langchain/agents/analyzer/conversation-context";
 import { isSupportedAttachment } from "@/langchain/agents/analyzer/extraction";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
+import { generateSessionTitle } from "@/langchain/agents/session-title";
+import { getAccessToken } from "@/lib/server-auth";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const SECTION_STEP_DELAY_MS = 220;
@@ -110,12 +112,22 @@ async function streamTextBlock({
   writer.write({ type: "text-end", id });
 }
 
+/** Names the session for the history list. Sent last so it never delays the answer itself. */
+async function writeSessionTitle(writer: any, question: string, answer: string) {
+  const title = await generateSessionTitle({ question, answer });
+  if (title) {
+    writer.write({ type: "data-session-title", data: { title } });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const actionPayload = extractUIActionPayload(body);
     const input = extractLatestUserText(body);
     const { attachments, unsupportedCount } = extractLatestFileParts(body);
+    // Only signed-in sessions are saved, so only they need a title, and only once.
+    const shouldTitleSession = toMessageList(body?.messages).length === 1 && !!getAccessToken(req);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -192,6 +204,9 @@ export async function POST(req: NextRequest) {
           if (result.suggestedQuestions.length) {
             await sleep(SECTION_STEP_DELAY_MS);
             writer.write({ type: "data-suggested-questions", data: result.suggestedQuestions });
+          }
+          if (shouldTitleSession) {
+            await writeSessionTitle(writer, input, result.answer);
           }
           return;
         }
@@ -296,6 +311,14 @@ export async function POST(req: NextRequest) {
 
         // Keep compatibility for existing consumers and historical parsing paths.
         writer.write({ type: "data-analysis", data: analysis });
+
+        if (shouldTitleSession) {
+          await writeSessionTitle(
+            writer,
+            input || analysis.material?.transcript || "",
+            [analysis.claims[0]?.text, analysis.summary, analysis.conversationText].filter(Boolean).join("\n")
+          );
+        }
       },
 
       onError: (error) => (error instanceof Error ? error.message : "Unknown stream error"),

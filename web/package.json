@@ -11,7 +11,8 @@
     "eval": "jiti eval/run.ts",
     "eval:check": "jiti eval/check-dataset.ts",
     "eval:report": "jiti eval/report.ts",
-    "test:signals": "jiti eval/signals.test.ts"
+    "test:signals": "jiti eval/signals.test.ts",
+    "test:session-title": "jiti eval/session-title.test.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.148",

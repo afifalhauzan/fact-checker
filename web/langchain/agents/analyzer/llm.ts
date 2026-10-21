@@ -27,7 +27,7 @@ export function readTokenUsage(raw: unknown): TokenUsage | undefined {
   };
 }
 
-export type ModelStage = "analysis" | "extraction" | "router" | "follow_up" | "action";
+export type ModelStage = "analysis" | "extraction" | "router" | "follow_up" | "action" | "title";
 
 // Each pipeline stage can run on its own Gemini model, e.g. GEMINI_ROUTER_MODEL=gemini-2.5-flash-lite,
 // so stages can be compared and tuned independently during evaluation.
@@ -37,6 +37,7 @@ const STAGE_MODEL_ENV: Record<ModelStage, string> = {
   router: "GEMINI_ROUTER_MODEL",
   follow_up: "GEMINI_FOLLOW_UP_MODEL",
   action: "GEMINI_ACTION_MODEL",
+  title: "GEMINI_TITLE_MODEL",
 };
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
