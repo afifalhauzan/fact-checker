@@ -39,7 +39,11 @@ function toStoredMessage(message: MetabotUIMessage) {
  * Save the latest exchange (last user message and everything after it) to the backend.
  * Guests get a 401 here, which is expected: their chats are not stored.
  */
-export async function persistLatestExchange(conversationId: string, messages: MetabotUIMessage[]): Promise<void> {
+export async function persistLatestExchange(
+  conversationId: string,
+  messages: MetabotUIMessage[],
+  replacedIds: string[] = []
+): Promise<void> {
   if (!UUID_PATTERN.test(conversationId)) return
 
   let start = messages.length - 1
@@ -51,6 +55,13 @@ export async function persistLatestExchange(conversationId: string, messages: Me
 
   if (exchange.length === 0) return
 
+  // A "move to a new session?" warning waits for the user's choice (design doc 6.11): moving
+  // discards the pair, and staying regenerates the answer, which is then saved as usual.
+  const awaitsSessionMove = exchange.some((message) =>
+    ((message.parts || []) as any[]).some((part) => part?.type === 'data-session-move')
+  )
+  if (awaitsSessionMove) return
+
   // The chat route names a session on its first exchange (data-session-title); the backend stores it.
   const titlePart = exchange
     .flatMap((message) => (message.parts || []) as any[])
@@ -60,7 +71,11 @@ export async function persistLatestExchange(conversationId: string, messages: Me
     const response = await fetch(`/api/chat/session/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: exchange.map(toStoredMessage), title: titlePart?.data.title }),
+      body: JSON.stringify({
+        messages: exchange.map(toStoredMessage),
+        title: titlePart?.data.title,
+        replaced_ids: replacedIds.length ? replacedIds : undefined,
+      }),
     })
     if (response.ok) {
       // Lets the session history pick up a new or updated session without polling.

@@ -80,6 +80,31 @@ class ConversationTest extends TestCase
         $this->assertDatabaseHas('messages', ['client_id' => 'msg-1', 'content' => 'final']);
     }
 
+    public function test_a_replaced_answer_is_removed_when_its_replacement_is_saved(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $id = (string) Str::uuid();
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [
+                ['id' => 'msg-1', 'role' => 'user', 'content' => 'Cek lowongan ini'],
+                ['id' => 'msg-2', 'role' => 'assistant', 'content' => 'Sudah ditelaah sebelumnya'],
+            ],
+        ])->assertCreated();
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [
+                ['id' => 'msg-1', 'role' => 'user', 'content' => 'Cek lowongan ini'],
+                ['id' => 'msg-3', 'role' => 'assistant', 'content' => 'Hasil telaah sendiri'],
+            ],
+            'replaced_ids' => ['msg-2'],
+        ])->assertOk();
+
+        $this->getJson("/api/conversations/{$id}/messages")
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.1.id', 'msg-3');
+    }
+
     public function test_users_cannot_read_or_write_each_others_conversations(): void
     {
         $id = (string) Str::uuid();
