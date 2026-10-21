@@ -154,6 +154,7 @@ export function Chat() {
 
   // Create refs at top level to use in multiple hooks
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
+  const composerRef = React.useRef<HTMLTextAreaElement>(null);
 
   // === Focus Scroll Engine (Highlight Navigation) ===
   const {
@@ -439,6 +440,16 @@ export function Chat() {
     }
   };
 
+  // Starter suggestions are drafts: the user adds the posting before sending.
+  const handleStarterClick = (suggestion: string) => {
+    setInput(suggestion);
+    requestAnimationFrame(() => {
+      const element = composerRef.current;
+      element?.focus();
+      element?.setSelectionRange(suggestion.length, suggestion.length);
+    });
+  };
+
   const handleActionClick = (action: AnalysisAction, sourceMessageId?: string) => {
     if (!conversationId || isInitializing || isLoading) {
       return;
@@ -607,7 +618,7 @@ export function Chat() {
                 </div>
               ) : messages.length === 0 ? (
                 <ChatStart
-                  onSuggestionClick={handleSuggestionClick}
+                  onSuggestionClick={handleStarterClick}
                   isLoading={isLoading || isInitializing || !isAuthReady}
                 />
               ) : (
@@ -644,6 +655,7 @@ export function Chat() {
               onSelectFiles={handleSelectFiles}
               onRemoveAttachment={handleRemoveAttachment}
               onStop={isLoading ? stop : undefined}
+            inputRef={composerRef}
             />
 
             {/* Scroll to Bottom FAB */}
