@@ -11,10 +11,11 @@
 .EXAMPLE
     .\deploy.ps1                 # build + deploy web and api
     .\deploy.ps1 -Service web    # frontend only (much faster upload)
+    .\deploy.ps1 -Service api    # backend only, when the postgres image is already on the server
     .\deploy.ps1 -SkipBuild      # re-ship the images that are already built
 #>
 param(
-    [ValidateSet('all', 'web', 'api')]
+    [ValidateSet('all', 'web', 'api', 'postgres')]
     [string]$Service = 'all',
     [string]$Server = 'personal@139.190.101.245',
     [string]$RemoteDir = 'telaahkarier',
@@ -25,7 +26,8 @@ param(
 
 Set-Location $PSScriptRoot
 
-$services = if ($Service -eq 'all') { @('api', 'web') } else { @($Service) }
+# postgres is built here too (it adds pgvector), and must be up before the api migrates
+$services = if ($Service -eq 'all') { @('postgres', 'api', 'web') } else { @($Service) }
 $images = $services | ForEach-Object { "gemastik-$_`:latest" }
 $ssh = @('-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=15', $Server)
 
