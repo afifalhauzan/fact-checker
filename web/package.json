@@ -12,6 +12,8 @@
     "eval:check": "jiti eval/check-dataset.ts",
     "eval:report": "jiti eval/report.ts",
     "eval:continuation": "jiti eval/posting-continuation.ts",
+    "eval:similar": "jiti eval/similar-match.ts",
+    "telaah:embed": "jiti scripts/telaah-embed.ts",
     "test:signals": "jiti eval/signals.test.ts",
     "test:session-title": "jiti eval/session-title.test.ts",
     "test:redaction": "jiti eval/redaction.test.ts",

@@ -108,6 +108,16 @@ test("the official posting is never referred to a fake one that uses the same co
   assert.equal(scoreCandidate(fake, features), null);
 });
 
+test("an official site is never referred to a fake on another site, even without a company name", () => {
+  const features = materialFeatures("Program Magang Nasional dibuka, daftar gratis di magangnasional.kemnaker.go.id");
+  const fake = candidate({ cosine: 0.95, identifiers: [{ kind: "domain", value: "pendaftaran-magangnasional.example" }] });
+  assert.equal(scoreCandidate(fake, features), null);
+
+  // ...unless they share a contact, which the official site would not
+  const sharesNumber = candidate({ ...fake, sharedIdentifiers: [{ kind: "phone", value: "6281200004471" }] });
+  assert.ok(scoreCandidate(sharesNumber, features));
+});
+
 test("a template reposted for another period is shown as an earlier version", () => {
   const features = materialFeatures("Pendaftaran sampai 20 Maret 2027");
   const match = scoreCandidate(candidate({ cosine: 0.95, post: { openDate: "2026-10-01", closeDate: "2026-10-30" } }), features);

@@ -11,9 +11,9 @@ import { toMaterialLines } from "./share-payload";
 // existing post before web search and the model run, purely to save their cost. A match never
 // feeds into a verdict. Laravel returns candidates; they are scored here.
 
-// Calibrated with eval/similar-match.ts on the seed posts (design doc 7.2). Unrelated job postings
-// already sit around 0.75-0.80 with this embedding model, so the bar for "same posting" is high.
-export const COSINE_THRESHOLD = 0.9;
+// Calibrated with eval/similar-match.ts on the seed posts (design doc 7.2): unrelated postings
+// reached 0.896 there and reworded copies of a seed post 0.965+, so the bar sits between them.
+export const COSINE_THRESHOLD = 0.92;
 // A shared phone, account, email, or link is strong evidence on its own; the text only has to be related.
 export const COSINE_WITH_SHARED_CONTACT = 0.6;
 const SHARED_CONTACT_BONUS = 0.3;
@@ -87,16 +87,18 @@ function periodOverlaps(post: TelaahPost, dayKeys: string[]): boolean | null {
 export function scoreCandidate(candidate: SimilarCandidate, material: MaterialFeatures): SimilarMatch | null {
   const { post } = candidate;
 
-  // Official posting vs. a fake one using the same company name: the material carries the
-  // company's own domain and the post does not, so they are not the same posting (6.2 step 5).
+  // Official posting vs. a fake one copying it (6.2 step 5). The material carries its own site and
+  // the post does not share it: either the post names the same company, or it points to another
+  // site of its own. Fakes that impersonate a ministry often name no company at all.
+  const shared = candidate.sharedIdentifiers;
   const ownDomains = officialDomains(material.identifiers);
   const postDomains = officialDomains(candidate.identifiers);
+  const sharesDomain = [...ownDomains].some((domain) => postDomains.has(domain));
   const sameCompany = !!post.company && material.text.toLowerCase().includes(normalizeCompany(post.company));
-  if (sameCompany && ownDomains.size && ![...ownDomains].some((domain) => postDomains.has(domain))) {
+  if (ownDomains.size && !sharesDomain && (sameCompany || (postDomains.size && !shared.length))) {
     return null;
   }
 
-  const shared = candidate.sharedIdentifiers;
   const cosine = candidate.cosine;
   const isMatch = shared.length
     ? cosine === null || cosine >= COSINE_WITH_SHARED_CONTACT
