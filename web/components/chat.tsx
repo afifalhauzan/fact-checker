@@ -17,16 +17,20 @@ import {
   type LandingChatDraft,
 } from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, SquarePen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, SquarePen } from "lucide-react";
 import { openSession } from "@/components/sidebar/session-history";
+import { ContextPanel, collectSessionContext, countSessionContext } from "@/components/sidebar/context-panel";
 import toast, { Toaster } from 'react-hot-toast';
 import React from "react";
 import { useStreaming } from "@/contexts/StreamingContext";
-import { Sidebar } from "@/components/sidebar/sidebar";
+import { HistoryPanel, SidePanel } from "@/components/sidebar/sidebar";
 import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
 import { AnalysisSchema } from "@/langchain/agents/analyzer/schema";
 import type { FileUIPart } from "ai";
 import type { AnalysisAction, UIActionId, UIActionPayload } from "@/types/ui-actions";
+
+const TOOLBAR_BUTTON =
+  "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 function mapReferencesToSidebarSources(
   references: Array<{ title?: string; url?: string; citations?: Array<{ id?: string }> }>
@@ -172,6 +176,7 @@ export function Chat() {
   const [pendingLandingDraft, setPendingLandingDraft] = React.useState<LandingChatDraft | null>(null);
   const [showResetModal, setShowResetModal] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isContextOpen, setIsContextOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [pendingActionId, setPendingActionId] = React.useState<UIActionId | null>(null);
   const hasHydratedLandingDraftRef = React.useRef(false);
@@ -326,6 +331,9 @@ export function Chat() {
     return [];
   }, [messages]);
 
+  const sessionContext = React.useMemo(() => collectSessionContext(messages), [messages]);
+  const contextCount = countSessionContext(sessionContext, sidebarSources);
+
   const completedStepSelections = React.useMemo(() => {
     const completed = new Map<string, string>();
 
@@ -476,8 +484,16 @@ export function Chat() {
     setShowResetModal(false);
   };
 
-  const sidebarMode = isSidebarOpen ? "expanded" : "collapsed";
-  const shouldRenderSidebar = !isMobile || isSidebarOpen;
+  const toggleHistory = () => {
+    setIsSidebarOpen((open) => !open);
+    // Phones show one overlay at a time.
+    if (isMobile) setIsContextOpen(false);
+  };
+
+  const toggleContext = () => {
+    setIsContextOpen((open) => !open);
+    if (isMobile) setIsSidebarOpen(false);
+  };
 
   const renderMessage = (message: MetabotUIMessage, index: number) => {
     const isUser = message.role === "user";
@@ -511,139 +527,161 @@ export function Chat() {
   };
 
   return (
-    <div className="relative flex bg-background h-full w-full flex-col overflow-x-hidden md:flex-row">
-      {shouldRenderSidebar && (
-        <Sidebar
-          sources={sidebarSources}
-          mode={sidebarMode}
-          onExpand={() => setIsSidebarOpen(true)}
-          onCollapse={() => setIsSidebarOpen(false)}
-          activeConversationId={conversationId}
-          isMobileOverlay={isMobile && isSidebarOpen}
-          className={isMobile ? "absolute inset-0 z-30 h-full w-full border-b-0" : ""}
-        />
-      )}
-
-      <div className={`flex min-h-0 w-full min-w-0 flex-1 items-stretch justify-center ${isMobile && isSidebarOpen ? "hidden" : ""}`}>
-        <aside className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background md:max-w-3xl lg:w-full">
-
-          <Toaster />
-
-          <div className="flex items-center justify-between px-4 py-2 md:hidden">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card/90 px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-expanded={isSidebarOpen}
-              aria-label={isSidebarOpen ? "Sembunyikan riwayat dan konteks" : "Tampilkan riwayat dan konteks"}
-            >
-              {isSidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4 shrink-0" />
-              ) : (
-                <PanelLeftOpen className="h-4 w-4 shrink-0" />
-              )}
-              <span>Riwayat & konteks</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openSession()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <SquarePen className="h-4 w-4" />
-              Telaah baru
-            </button>
-          </div>
-
-          {/* Chat Box */}
-          <div
-            ref={messagesContainerRef}
-            className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 flex flex-col gap-3.5 "
+    <div className="flex h-full w-full flex-col bg-background">
+      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border px-2 sm:px-3">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={toggleHistory}
+            className={TOOLBAR_BUTTON}
+            aria-expanded={isSidebarOpen}
+            aria-label={isSidebarOpen ? "Tutup riwayat telaah" : "Buka riwayat telaah"}
+            title={isSidebarOpen ? "Tutup riwayat" : "Buka riwayat"}
           >
-            {!isAuthReady ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Memuat autentikasi...</p>
-                </div>
-              </div>
-            ) : isInitializing ? (
-              <div className="flex gap-2 items-end animate-in fade-in duration-500">
-                <div className="max-w-full md:max-w-[80%] rounded-xl rounded-bl-sm border border-border bg-secondary p-3 text-sm leading-relaxed text-secondary-foreground">
-                  <div className="flex gap-1 items-center">
-                    <div className="flex gap-1">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-duration:1.4s]"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0.2s] [animation-duration:1.4s]"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0.4s] [animation-duration:1.4s]"></span>
-                    </div>
-                    <span className="ml-2 animate-pulse">Memulai percakapan...</span>
+            {isSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+            <span className="hidden sm:inline">Riwayat</span>
+          </button>
+          {!isSidebarOpen && (
+            <button type="button" onClick={() => openSession()} className={TOOLBAR_BUTTON} title="Telaah baru">
+              <SquarePen className="h-4 w-4" />
+              <span className="hidden sm:inline">Telaah baru</span>
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={toggleContext}
+          className={TOOLBAR_BUTTON}
+          aria-expanded={isContextOpen}
+          aria-label={isContextOpen ? "Tutup konteks sesi" : "Buka konteks sesi"}
+          title={isContextOpen ? "Tutup konteks sesi" : "Buka konteks sesi"}
+        >
+          <span>Konteks</span>
+          {contextCount > 0 && (
+            <span className="rounded-full bg-primary/10 px-1.5 text-[11px] font-medium tabular-nums text-primary">{contextCount}</span>
+          )}
+          {isContextOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+        </button>
+      </div>
+
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <SidePanel
+          side="left"
+          isOpen={isSidebarOpen}
+          isMobile={isMobile}
+          label="Riwayat telaah"
+          onClose={() => setIsSidebarOpen(false)}
+        >
+          <HistoryPanel activeConversationId={conversationId} />
+        </SidePanel>
+
+        <div className="flex min-h-0 w-full min-w-0 flex-1 items-stretch justify-center">
+          <section className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background md:max-w-3xl lg:w-full">
+
+            <Toaster />
+
+            {/* Chat Box */}
+            <div
+              ref={messagesContainerRef}
+              className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 flex flex-col gap-3.5 "
+            >
+              {!isAuthReady ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Memuat autentikasi...</p>
                   </div>
                 </div>
-              </div>
-            ) : messages.length === 0 ? (
-              <ChatStart
-                onSuggestionClick={handleSuggestionClick}
-                isLoading={isLoading || isInitializing || !isAuthReady}
-              />
-            ) : (
-              <>
-                {messages.map((message: MetabotUIMessage, index: number) => {
-                  const isLastUserMessage = message.role === 'user' && index === messages.length - 1;
-
-                  return (
-                    <div key={message.id} data-message-id={message.id}>
-                      {renderMessage(message, index)}
-
-                      {/* Show typing indicator below user message when loading */}
-                      {isLoading && isLastUserMessage && (
-                        <TypingIndicator />
-                      )}
+              ) : isInitializing ? (
+                <div className="flex gap-2 items-end animate-in fade-in duration-500">
+                  <div className="max-w-full md:max-w-[80%] rounded-xl rounded-bl-sm border border-border bg-secondary p-3 text-sm leading-relaxed text-secondary-foreground">
+                    <div className="flex gap-1 items-center">
+                      <div className="flex gap-1">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-duration:1.4s]"></span>
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0.2s] [animation-duration:1.4s]"></span>
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0.4s] [animation-duration:1.4s]"></span>
+                      </div>
+                      <span className="ml-2 animate-pulse">Memulai percakapan...</span>
                     </div>
-                  );
-                })}
-              </>
+                  </div>
+                </div>
+              ) : messages.length === 0 ? (
+                <ChatStart
+                  onSuggestionClick={handleSuggestionClick}
+                  isLoading={isLoading || isInitializing || !isAuthReady}
+                />
+              ) : (
+                <>
+                  {messages.map((message: MetabotUIMessage, index: number) => {
+                    const isLastUserMessage = message.role === 'user' && index === messages.length - 1;
+
+                    return (
+                      <div key={message.id} data-message-id={message.id}>
+                        {renderMessage(message, index)}
+
+                        {/* Show typing indicator below user message when loading */}
+                        {isLoading && isLastUserMessage && (
+                          <TypingIndicator />
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              <div
+                ref={messagesEndRef}
+                className="shrink-0 min-w-[24px] min-h-[10px]"
+              />
+            </div>
+
+            <ChatFooter
+              input={input}
+              setInput={setInput}
+              onSubmit={handleSubmit}
+              isLoading={isLoading || isInitializing}
+              attachments={attachments}
+              onSelectFiles={handleSelectFiles}
+              onRemoveAttachment={handleRemoveAttachment}
+              onStop={isLoading ? stop : undefined}
+            />
+
+            {/* Scroll to Bottom FAB */}
+            {!isAtBottom && (
+              <div className="absolute bottom-30 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+                <button
+                  onClick={scrollToBottom}
+                  className="flex items-center justify-center h-8 px-[6px] bg-white border border-border text-gray-800 rounded-full shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in zoom-in-75 duration-200"
+                  title="Scroll to latest message"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
             )}
 
-            <div
-              ref={messagesEndRef}
-              className="shrink-0 min-w-[24px] min-h-[10px]"
-            />
-          </div>
+            {/* <ConfirmModal
+            isOpen={showResetModal}
+            onClose={() => setShowResetModal(false)}
+            onConfirm={handleConfirmReset}
+            title="Reset Percakapan"
+            description="Apakah anda yakin untuk menghapus sesi percakapan ini? Ini akan menghapus semua pesan dan riwayat percakapan."
+            confirmText="Reset"
+            cancelText="Cancel"
+            isDestructive={true}
+          /> */}
+          </section>
+        </div>
 
-          <ChatFooter
-            input={input}
-            setInput={setInput}
-            onSubmit={handleSubmit}
-            isLoading={isLoading || isInitializing}
-            attachments={attachments}
-            onSelectFiles={handleSelectFiles}
-            onRemoveAttachment={handleRemoveAttachment}
-            onStop={isLoading ? stop : undefined}
-          />
-
-          {/* Scroll to Bottom FAB */}
-          {!isAtBottom && (
-            <div className="absolute bottom-30 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
-              <button
-                onClick={scrollToBottom}
-                className="flex items-center justify-center h-8 px-[6px] bg-white border border-border text-gray-800 rounded-full shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in zoom-in-75 duration-200"
-                title="Scroll to latest message"
-              >
-                <ChevronDown className="h-5 w-5" />
-              </button>
-            </div>
-          )}
-
-          {/* <ConfirmModal
-          isOpen={showResetModal}
-          onClose={() => setShowResetModal(false)}
-          onConfirm={handleConfirmReset}
-          title="Reset Percakapan"
-          description="Apakah anda yakin untuk menghapus sesi percakapan ini? Ini akan menghapus semua pesan dan riwayat percakapan."
-          confirmText="Reset"
-          cancelText="Cancel"
-          isDestructive={true}
-        /> */}
-        </aside>
+        <SidePanel
+          side="right"
+          isOpen={isContextOpen}
+          isMobile={isMobile}
+          label="Konteks sesi"
+          onClose={() => setIsContextOpen(false)}
+        >
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Konteks sesi</h2>
+          <ContextPanel context={sessionContext} sources={sidebarSources} />
+        </SidePanel>
       </div>
     </div>
   );
