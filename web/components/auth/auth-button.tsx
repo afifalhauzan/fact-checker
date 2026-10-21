@@ -58,6 +58,10 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
     );
   }
 
+  // "Pencari Kerja #3d9a" -> "#3d9a": the name others see in TelaahBareng, shown next to the account name
+  const publicTag = user.pseudonym?.match(/#\w+$/)?.[0];
+  const displayName = publicTag ? `${user.name} (${publicTag})` : user.name;
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* User Profile Button */}
@@ -74,7 +78,7 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
             </div>
           </div>
           <div className="hidden md:flex flex-col items-start text-left">
-            <span className="text-sm font-medium leading-none text-foreground">{user.name}</span>
+            <span className="text-sm font-medium leading-none text-foreground">{displayName}</span>
           </div>
         </div>
       </Button>
@@ -91,8 +95,11 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{user.name}</p>
+                <p className="text-sm font-medium text-foreground">{displayName}</p>
                 <p className="text-xs text-muted-foreground break-all">{user.email}</p>
+                {user.pseudonym && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">Tampil di TelaahBareng sebagai {user.pseudonym}</p>
+                )}
               </div>
             </div>
           </div>
