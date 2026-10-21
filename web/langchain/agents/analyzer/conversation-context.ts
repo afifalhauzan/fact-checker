@@ -77,6 +77,27 @@ function parseAnalysis(data: unknown): Partial<AnalysisResult> | null {
 }
 
 /**
+ * A TelaahBareng post offered as "sudah ditelaah sebelumnya" becomes the posting under discussion
+ * for follow-up questions (design doc decision 11). It is labeled as someone else's earlier
+ * analysis and never reaches runAnalysis.
+ */
+function similarTelaahAsAnalysis(message: LooseMessage): Partial<AnalysisResult> | null {
+  const data = partsOf(message).find((part) => part.type === "data-similar-telaah")?.data as
+    | { post?: { id?: number; claim?: string; riskLevel?: string; summary?: string; evidence?: AnalysisResult["risks"]; analyzedAt?: string } }
+    | undefined;
+  const post = data?.post;
+  if (!post?.claim || (post.riskLevel !== "sedang" && post.riskLevel !== "tinggi")) {
+    return null;
+  }
+
+  return {
+    claims: [{ text: post.claim, confidence: 0, riskLevel: post.riskLevel }],
+    summary: `Dari Telaah #${post.id} di TelaahBareng, dibagikan pengguna lain dan dinilai pada ${post.analyzedAt?.slice(0, 10) ?? "tanggal tidak diketahui"}. ${post.summary ?? ""}`.trim(),
+    risks: Array.isArray(post.evidence) ? post.evidence : [],
+  };
+}
+
+/**
  * Walks back from `fromIndex` to the nearest analysis that reached a verdict and returns it with
  * the user message (text + images) that produced it. Analyses without a verdict (greetings,
  * questions) are skipped: there is no posting to discuss in them.
@@ -87,7 +108,7 @@ export function findPostingContext(messages: LooseMessage[], fromIndex: number):
       continue;
     }
     const analysisPart = partsOf(messages[i]).find((part) => part.type === "data-analysis");
-    const analysis = analysisPart ? parseAnalysis(analysisPart.data) : null;
+    const analysis = analysisPart ? parseAnalysis(analysisPart.data) : (similarTelaahAsAnalysis(messages[i]) ?? null);
     if (!analysis?.claims?.length) {
       continue;
     }
