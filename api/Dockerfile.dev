@@ -12,5 +12,6 @@ RUN echo "opcache.enable_cli=1" > /usr/local/etc/php/conf.d/opcache-cli.ini
 
 EXPOSE 8000
 
-# Source is bind-mounted, so dependencies and migrations are handled at start
-CMD ["sh", "-c", "composer install --no-interaction && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+# Source is bind-mounted, so dependencies and migrations are handled at start.
+# --no-reload is what lets PHP_CLI_SERVER_WORKERS take effect; restart the container after editing .env
+CMD ["sh", "-c", "composer install --no-interaction && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000 --no-reload"]
