@@ -146,10 +146,10 @@ export default function BuatPostPage() {
         <main className="mx-auto max-w-md px-4 py-16 text-center">
           <h1 className="text-xl font-semibold text-foreground">Masuk untuk membuat post</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Post di Telaah Bersama dibuat dari hasil telaahmu sendiri, jadi kamu perlu masuk dulu. Namamu tetap tampil
+            Post di TelaahBareng dibuat dari hasil telaahmu sendiri, jadi kamu perlu masuk dulu. Namamu tetap tampil
             sebagai nama samaran.
           </p>
-          <Button className="mt-5" onClick={() => requireLogin("Masuk untuk membuat post di Telaah Bersama.")}>
+          <Button className="mt-5" onClick={() => requireLogin("Masuk untuk membuat post di TelaahBareng.")}>
             Masuk
           </Button>
         </main>
@@ -171,7 +171,7 @@ export default function BuatPostPage() {
           Kembali ke percakapan
         </Link>
 
-        <h1 className="mt-4 text-2xl font-semibold text-foreground">Buat post di Telaah Bersama</h1>
+        <h1 className="mt-4 text-2xl font-semibold text-foreground">Buat post di TelaahBareng</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Bagikan hasil telaahmu supaya orang lain yang menerima lowongan serupa bisa waspada.
         </p>
@@ -482,7 +482,7 @@ export default function BuatPostPage() {
       <Modal
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
-        title="Posting ke Telaah Bersama?"
+        title="Posting ke TelaahBareng?"
         description="Post akan langsung terlihat publik. Kamu tetap bisa menyunting atau menghapusnya nanti."
       >
         <div className="space-y-4">

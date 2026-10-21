@@ -55,7 +55,7 @@ export function PrototypeBanner() {
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-violet-200 bg-violet-50 px-4 py-1.5 text-center text-xs text-violet-800">
         <span className="inline-flex items-center gap-1.5">
           <FlaskConical className="h-3.5 w-3.5 shrink-0" />
-          Prototipe UX Telaah Bersama. Semua data adalah contoh dan tidak tersimpan.
+          Prototipe UX TelaahBareng. Semua data adalah contoh dan tidak tersimpan.
         </span>
         <span className="inline-flex items-center gap-1" role="radiogroup" aria-label="Lihat sebagai">
           <span>Lihat sebagai</span>

@@ -51,7 +51,7 @@ export default function TelaahBersamaPage() {
       <main className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
           <h1 className="font-[var(--font-instrument-serif)] text-4xl leading-tight text-[#17232c] sm:text-5xl">
-            Telaah Bersama
+            TelaahBareng
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Lowongan berisiko yang sudah ditelaah dan dibagikan pengguna. Cek apakah kamu menerima lowongan atau chat
@@ -110,7 +110,7 @@ export default function TelaahBersamaPage() {
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Info className="h-4 w-4 text-primary" />
-              Cara kerja Telaah Bersama
+              Cara kerja TelaahBareng
             </div>
             <ol className="mt-3 list-decimal space-y-2 pl-4 text-sm leading-relaxed text-muted-foreground">
               <li>Telaah lowonganmu di chat.</li>
@@ -121,7 +121,7 @@ export default function TelaahBersamaPage() {
               href="/chat"
               className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Mulai Telaah
+              TelaahLoker
             </Link>
           </div>
 

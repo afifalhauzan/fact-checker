@@ -17,14 +17,14 @@ export function TrendingSection() {
             Ramai ditelaah minggu ini.
           </h2>
           <p className="mt-4 text-base leading-relaxed text-[#5a6a76]">
-            Lowongan berisiko yang dibagikan pengguna di Telaah Bersama. Menerima yang mirip? Kamu tidak sendirian.
+            Lowongan berisiko yang dibagikan pengguna di TelaahBareng. Menerima yang mirip? Kamu tidak sendirian.
           </p>
         </div>
         <Link
           href="/telaah-bersama"
           className="group inline-flex shrink-0 items-center gap-2 text-sm font-medium text-[#2b6f95] transition-colors hover:text-[#215875] sm:text-base"
         >
-          Lihat Telaah Bersama
+          Lihat TelaahBareng
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>

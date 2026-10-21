@@ -23,7 +23,7 @@ export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: strin
         <div>
           <p className="text-sm font-semibold text-foreground">Bantu orang lain waspada</p>
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            Bagikan hasil telaah ini ke Telaah Bersama. Kamu bisa memeriksa dan menghapus data pribadi sebelum diposting.
+            Bagikan hasil telaah ini ke TelaahBareng. Kamu bisa memeriksa dan menghapus data pribadi sebelum diposting.
           </p>
         </div>
       </div>
@@ -32,7 +32,7 @@ export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: strin
         size="sm"
         className="shrink-0"
         onClick={() => {
-          if (requireLogin("Masuk untuk membagikan hasil telaah ke Telaah Bersama.")) router.push(href);
+          if (requireLogin("Masuk untuk membagikan hasil telaah ke TelaahBareng.")) router.push(href);
         }}
       >
         Buat post?
