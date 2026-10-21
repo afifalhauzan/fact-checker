@@ -26,6 +26,8 @@ export interface TelaahAttachment {
   id: string;
   label: string;
   variant: "poster" | "chat";
+  // A real image the user re-uploaded; seed attachments are drawn placeholders instead.
+  url?: string;
   // Set when the transcript of this image matched a personal-data pattern.
   sensitiveWarning?: string;
 }

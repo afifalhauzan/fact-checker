@@ -15,15 +15,29 @@ export type NewTelaah = Omit<
   "id" | "author" | "createdAt" | "reactionCount" | "matchCount" | "spamReports" | "asliResponses" | "comments" | "isSeed"
 >;
 
+/** What the owner may change after publishing (design doc 5.2): free text, and removals only. */
+export type TelaahEdit = Pick<TelaahPost, "title" | "story" | "materialLines" | "attachments" | "links">;
+
+// The prototype toggles between a signed-in user and a guest to try both experiences.
+export type Viewer = "pengguna" | "tamu";
+
 interface TelaahBersamaState {
   posts: TelaahPost[];
   reacted: Record<number, boolean>;
   reported: Record<number, ReportType>;
+  viewer: Viewer;
+  // Set when a guest tries an action that needs an account; shown by LoginPromptHost.
+  loginPrompt: string | null;
   toggleReaction: (postId: number) => void;
   addComment: (postId: number, body: string) => void;
   report: (postId: number, type: ReportType, note?: string) => void;
   addPost: (draft: NewTelaah) => number;
+  updatePost: (postId: number, edit: TelaahEdit) => void;
   removePost: (postId: number) => void;
+  setViewer: (viewer: Viewer) => void;
+  /** Returns true when the viewer may act; otherwise opens the login prompt with `reason`. */
+  requireLogin: (reason: string) => boolean;
+  closeLoginPrompt: () => void;
 }
 
 function updatePost(posts: TelaahPost[], postId: number, update: (post: TelaahPost) => TelaahPost): TelaahPost[] {
@@ -34,6 +48,8 @@ export const useTelaahBersamaStore = create<TelaahBersamaState>((set, get) => ({
   posts: seedPosts,
   reacted: {},
   reported: {},
+  viewer: "pengguna",
+  loginPrompt: null,
 
   toggleReaction: (postId) => {
     const wasReacted = !!get().reacted[postId];
@@ -108,7 +124,27 @@ export const useTelaahBersamaStore = create<TelaahBersamaState>((set, get) => ({
     return id;
   },
 
+  updatePost: (postId, edit) => {
+    set((state) => ({
+      posts: updatePost(state.posts, postId, (post) => ({
+        ...post,
+        ...edit,
+        story: edit.story ? maskNik(edit.story) : undefined,
+      })),
+    }));
+  },
+
   removePost: (postId) => {
     set((state) => ({ posts: state.posts.filter((post) => post.id !== postId) }));
   },
+
+  setViewer: (viewer) => set({ viewer }),
+
+  requireLogin: (reason) => {
+    if (get().viewer === "pengguna") return true;
+    set({ loginPrompt: reason });
+    return false;
+  },
+
+  closeLoginPrompt: () => set({ loginPrompt: null }),
 }));
