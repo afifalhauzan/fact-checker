@@ -32,6 +32,8 @@ function CommentItem({ comment }: { comment: TelaahComment }) {
 
 export function Discussion({ postId, comments }: { postId: number; comments: TelaahComment[] }) {
   const addComment = useTelaahBersamaStore((state) => state.addComment);
+  const isGuest = useTelaahBersamaStore((state) => state.viewer === "tamu");
+  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
   const [draft, setDraft] = React.useState("");
   const trimmed = draft.trim();
   const hasNik = hasNikLikeNumber(draft);
@@ -49,30 +51,44 @@ export function Discussion({ postId, comments }: { postId: number; comments: Tel
         Diskusi <span className="font-normal text-muted-foreground">({comments.length})</span>
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-border bg-card p-3">
-        <label htmlFor="comment" className="text-xs text-muted-foreground">
-          Berkomentar sebagai <span className="font-medium text-foreground">{CURRENT_USER}</span>
-        </label>
-        <Textarea
-          id="comment"
-          value={draft}
-          maxLength={MAX_COMMENT_LENGTH}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Ceritakan pengalamanmu: apakah kamu menerima lowongan atau chat yang sama? Apa yang terjadi setelahnya?"
-          className="min-h-20 resize-y"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={hasNik ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
-            {hasNik
-              ? "Komentarmu tampaknya memuat NIK. NIK akan disensor otomatis saat dikirim."
-              : "Jangan menulis NIK, OTP, atau data pribadimu."}
-          </p>
-          <Button type="submit" size="sm" disabled={!trimmed}>
-            <Send />
-            Kirim
+      {isGuest ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">Menerima lowongan yang sama? Masuk untuk menceritakan pengalamanmu.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => requireLogin("Masuk untuk ikut berdiskusi di Telaah ini.")}
+          >
+            Masuk untuk berkomentar
           </Button>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-border bg-card p-3">
+          <label htmlFor="comment" className="text-xs text-muted-foreground">
+            Berkomentar sebagai <span className="font-medium text-foreground">{CURRENT_USER}</span>
+          </label>
+          <Textarea
+            id="comment"
+            value={draft}
+            maxLength={MAX_COMMENT_LENGTH}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Ceritakan pengalamanmu: apakah kamu menerima lowongan atau chat yang sama? Apa yang terjadi setelahnya?"
+            className="min-h-20 resize-y"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className={hasNik ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
+              {hasNik
+                ? "Komentarmu tampaknya memuat NIK. NIK akan disensor otomatis saat dikirim."
+                : "Jangan menulis NIK, OTP, atau data pribadimu."}
+            </p>
+            <Button type="submit" size="sm" disabled={!trimmed}>
+              <Send />
+              Kirim
+            </Button>
+          </div>
+        </form>
+      )}
 
       {comments.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">

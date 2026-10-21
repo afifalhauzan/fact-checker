@@ -2,13 +2,18 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRightLeft, CheckCircle2, HandHelping, Megaphone, MessageCircle, ScanSearch, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, type TelaahPost } from "@/lib/telaah-bersama/mock-data";
+import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
 import { RiskLevelBadge } from "./badges";
 
 /** Shown under a Sedang/Tinggi verdict: the only entry point for creating a post (design doc 5.1). */
 export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: string }) {
+  const router = useRouter();
+  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
+
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex gap-3">
@@ -22,8 +27,15 @@ export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: strin
           </p>
         </div>
       </div>
-      <Button variant="outline" size="sm" asChild className="shrink-0">
-        <Link href={href}>Buat post?</Link>
+      <Button
+        variant="outline"
+        size="sm"
+        className="shrink-0"
+        onClick={() => {
+          if (requireLogin("Masuk untuk membagikan hasil telaah ke Telaah Bersama.")) router.push(href);
+        }}
+      >
+        Buat post?
       </Button>
     </section>
   );

@@ -9,7 +9,7 @@ import { SummaryCard } from "@/components/cards/SummaryCard";
 import { RiskCard } from "@/components/cards/RiskCard";
 import { AnalysisActions } from "@/components/cards/AnalysisActions";
 import { ReasoningComponent } from "@/components/cards/ReasoningComponent";
-import { PrototypeBanner } from "@/components/telaah-bersama/badges";
+import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { MockAttachment } from "@/components/telaah-bersama/mock-attachment";
 import { BuatPostPrompt, SessionMoveCard, SimilarTelaahCard } from "@/components/telaah-bersama/chat-cards";
 import { cn } from "@/utils/utils";

@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Info, ShieldCheck } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
-import { PrototypeBanner } from "@/components/telaah-bersama/badges";
+import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { TelaahCard } from "@/components/telaah-bersama/telaah-card";
 import { cn } from "@/utils/utils";
 import { MODUS_LABELS, hotScore, type TelaahModus, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";

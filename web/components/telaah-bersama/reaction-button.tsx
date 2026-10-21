@@ -8,13 +8,16 @@ export function ReactionButton({ postId, size = "default" }: { postId: number; s
   const post = useTelaahBersamaStore((state) => state.posts.find((item) => item.id === postId));
   const isReacted = useTelaahBersamaStore((state) => !!state.reacted[postId]);
   const toggleReaction = useTelaahBersamaStore((state) => state.toggleReaction);
+  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
 
   if (!post) return null;
 
   return (
     <button
       type="button"
-      onClick={() => toggleReaction(postId)}
+      onClick={() => {
+        if (requireLogin("Masuk untuk menandai bahwa kamu juga menerima lowongan ini.")) toggleReaction(postId);
+      }}
       aria-pressed={isReacted}
       className={cn(
         "inline-flex items-center gap-2 rounded-full border font-medium transition-colors",
