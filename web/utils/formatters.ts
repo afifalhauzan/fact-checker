@@ -24,6 +24,19 @@ export const formatNumber = (value: number, format?: string): string => {
   }
 };
 
+const RELATIVE_TIME = new Intl.RelativeTimeFormat("id-ID", { numeric: "auto" });
+
+/** "5 menit yang lalu", "kemarin", "2 bulan yang lalu". */
+export function formatRelativeTime(iso: string, now = Date.now()): string {
+  const diffMinutes = Math.round((new Date(iso).getTime() - now) / 60_000);
+  if (Math.abs(diffMinutes) < 60) return RELATIVE_TIME.format(diffMinutes, "minute");
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) return RELATIVE_TIME.format(diffHours, "hour");
+  const diffDays = Math.round(diffHours / 24);
+  if (Math.abs(diffDays) < 30) return RELATIVE_TIME.format(diffDays, "day");
+  return RELATIVE_TIME.format(Math.round(diffDays / 30), "month");
+}
+
 export function formatMediaTypeLabel(mediaType: string): string {
   const normalized = mediaType.toLowerCase();
   if (normalized === "application/pdf") {

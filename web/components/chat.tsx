@@ -17,7 +17,8 @@ import {
   type LandingChatDraft,
 } from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, SquarePen } from "lucide-react";
+import { openSession } from "@/components/sidebar/session-history";
 import toast, { Toaster } from 'react-hot-toast';
 import React from "react";
 import { useStreaming } from "@/contexts/StreamingContext";
@@ -517,6 +518,7 @@ export function Chat() {
           mode={sidebarMode}
           onExpand={() => setIsSidebarOpen(true)}
           onCollapse={() => setIsSidebarOpen(false)}
+          activeConversationId={conversationId}
           isMobileOverlay={isMobile && isSidebarOpen}
           className={isMobile ? "absolute inset-0 z-30 h-full w-full border-b-0" : ""}
         />
@@ -527,21 +529,28 @@ export function Chat() {
 
           <Toaster />
 
-          <div className="flex justify-end px-4 py-2 md:hidden">
+          <div className="flex items-center justify-between px-4 py-2 md:hidden">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card/90 px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              title={isSidebarOpen ? "Sembunyikan bagian konteks" : "Buka bagian konteks"}
               aria-expanded={isSidebarOpen}
-              aria-label={isSidebarOpen ? "Sembunyikan panel konteks" : "Tampilkan panel konteks"}
+              aria-label={isSidebarOpen ? "Sembunyikan riwayat dan konteks" : "Tampilkan riwayat dan konteks"}
             >
-              <span>Konteks</span>
               {isSidebarOpen ? (
                 <PanelLeftClose className="h-4 w-4 shrink-0" />
               ) : (
                 <PanelLeftOpen className="h-4 w-4 shrink-0" />
               )}
+              <span>Riwayat & konteks</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openSession()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <SquarePen className="h-4 w-4" />
+              Telaah baru
             </button>
           </div>
 

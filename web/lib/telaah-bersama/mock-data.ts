@@ -516,17 +516,7 @@ export function hotScore(post: TelaahPost, now = Date.now()): number {
   return (2 * post.reactionCount + post.comments.length + post.matchCount) / Math.pow(hours + 2, 1.5);
 }
 
-const RELATIVE = new Intl.RelativeTimeFormat("id-ID", { numeric: "auto" });
-
-export function formatRelative(iso: string, now = Date.now()): string {
-  const diffMinutes = Math.round((new Date(iso).getTime() - now) / 60_000);
-  if (Math.abs(diffMinutes) < 60) return RELATIVE.format(diffMinutes, "minute");
-  const diffHours = Math.round(diffMinutes / 60);
-  if (Math.abs(diffHours) < 24) return RELATIVE.format(diffHours, "hour");
-  const diffDays = Math.round(diffHours / 24);
-  if (Math.abs(diffDays) < 30) return RELATIVE.format(diffDays, "day");
-  return RELATIVE.format(Math.round(diffDays / 30), "month");
-}
+export { formatRelativeTime as formatRelative } from "@/utils/formatters";
 
 const DATE = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
