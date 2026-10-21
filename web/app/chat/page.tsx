@@ -65,7 +65,8 @@ export default function ChatPage() {
         <ProtectedTopNavbar />
 
         <main className="relative flex min-h-0 flex-1">
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-center max-h-[calc(100vh-4rem)]">
+          {/* Phones get a second navigation row in the top bar (ProtectedTopNavbar), hence the taller offset. */}
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-center max-h-[calc(100vh-6.25rem)] md:max-h-[calc(100vh-4rem)]">
             <Chat />
           </div>
 

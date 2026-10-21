@@ -31,12 +31,13 @@ export function ProtectedTopNavbar() {
                             priority
                         />
                     </Link>
-                    <TelaahNav />
+                    <TelaahNav className="hidden md:flex" />
                 </div>
                 <div className="flex items-center">
                     <AuthButton />
                 </div>
             </div>
+            <TelaahNav className="no-scrollbar flex overflow-x-auto border-t border-border px-2 py-1 md:hidden" />
         </header>
     );
 }

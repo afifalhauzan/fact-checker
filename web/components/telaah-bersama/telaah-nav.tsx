@@ -5,29 +5,30 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/utils/utils";
 
 const NAV_ITEMS = [
-  { label: "Mulai Telaah", shortLabel: "Telaah", href: "/chat" },
-  { label: "Telaah Bersama", shortLabel: "Bersama", href: "/telaah-bersama" },
+  { label: "Mulai Telaah", href: "/chat" },
+  { label: "Telaah Bersama", href: "/telaah-bersama" },
+  { label: "Rujukan", href: "/rujukan" },
 ];
 
-/** Links between the two main areas; shown in the top bar next to the account button. */
-export function TelaahNav() {
+/** Links between the main areas: inline in the top bar on wider screens, a second row on phones. */
+export function TelaahNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className={cn("items-center gap-1", className)}>
       {NAV_ITEMS.map((item) => {
         const isActive = item.href === "/chat" ? pathname === "/chat" : pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
             href={item.href}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "whitespace-nowrap rounded-md px-2 py-1.5 text-sm transition-colors sm:px-3",
+              "whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors",
               isActive ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <span className="sm:hidden">{item.shortLabel}</span>
-            <span className="hidden sm:inline">{item.label}</span>
+            {item.label}
           </Link>
         );
       })}
