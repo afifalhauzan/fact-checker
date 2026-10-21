@@ -1,0 +1,430 @@
+[
+  {
+    "title": "Lowongan PT Listrik Nusantara (Persero) · Staff Admin · Jakarta · 1–30 Okt 2026",
+    "author_pseudonym": "Pencari Kerja #a3f",
+    "risk_level": "tinggi",
+    "claim": "Tingkat Risiko Awal: Tinggi. Surat panggilan tes meminta peserta mentransfer biaya akomodasi ke agen travel yang ditunjuk, padahal rekrutmen resmi tidak memungut biaya.",
+    "summary": "Surat panggilan tes tahap 2 untuk posisi Staff Admin. Peserta diminta memesan akomodasi dan tiket lewat agen travel tertentu dengan transfer Rp1.350.000 sebelum tes.",
+    "modus": "biaya",
+    "evidence": [
+      {
+        "type": "payment_request",
+        "description": "Peserta diminta membayar akomodasi dan tiket melalui agen travel yang ditunjuk panitia.",
+        "evidence": "wajib melakukan reservasi melalui Citra Wisata Travel sebesar Rp1.350.000"
+      },
+      {
+        "type": "suspicious_contact",
+        "description": "Konfirmasi kehadiran hanya lewat WhatsApp pribadi, bukan email berdomain perusahaan.",
+        "evidence": "konfirmasi kehadiran ke WA 0812-0000-4471"
+      }
+    ],
+    "material_lines": [
+      "SURAT PANGGILAN TES TAHAP II",
+      "PT Listrik Nusantara (Persero) mengundang Saudara untuk mengikuti tes wawancara",
+      "Posisi: Staff Admin · Penempatan: Jakarta",
+      "Periode rekrutmen: 1 Oktober 2026 – 30 Oktober 2026",
+      "Peserta wajib melakukan reservasi melalui Citra Wisata Travel sebesar Rp1.350.000",
+      "Transfer ke BRI 0000-01-778899-50-1 a.n. Citra Wisata Travel",
+      "Konfirmasi kehadiran ke WA 0812-0000-4471 paling lambat 2x24 jam",
+      "Info lengkap: karier-listriknusantara.example/tahap-2"
+    ],
+    "story": "Saya melamar lewat link di bio akun Instagram itu, lalu 3 hari kemudian dapat surat ini lewat email Gmail. Saya belum transfer.",
+    "links": [
+      "https://karier-listriknusantara.example/tahap-2"
+    ],
+    "contacts": [
+      {
+        "kind": "phone",
+        "value": "0812-0000-4471"
+      },
+      {
+        "kind": "account",
+        "value": "BRI 0000-01-778899-50-1 a.n. Citra Wisata Travel"
+      },
+      {
+        "kind": "domain",
+        "value": "karier-listriknusantara.example"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "phone",
+        "value": "6281200004471"
+      },
+      {
+        "kind": "account",
+        "value": "bri:000001778899501"
+      },
+      {
+        "kind": "domain",
+        "value": "karier-listriknusantara.example"
+      }
+    ],
+    "company": "PT Listrik Nusantara (Persero)",
+    "position": "Staff Admin",
+    "location": "Jakarta",
+    "salary": null,
+    "open_date": "2026-10-01",
+    "close_date": "2026-10-30",
+    "source_platform": "Instagram",
+    "source_account": "@rekrutmen.bumn.terbaru",
+    "reaction_count": 23,
+    "match_count": 41,
+    "analyzed_at": "2026-10-12T09:12:00+07:00",
+    "created_at": "2026-10-12T09:20:00+07:00",
+    "comments": [
+      {
+        "author_pseudonym": "Pencari Kerja #19b",
+        "body": "Saya juga dapat surat yang sama, nomor WA-nya sama persis. Waktu saya tanya, adminnya maksa transfer hari itu juga.",
+        "flag": null,
+        "created_at": "2026-10-13T20:05:00+07:00"
+      },
+      {
+        "author_pseudonym": "Pencari Kerja #e80",
+        "body": "Di situs resmi perusahaannya ada pengumuman bahwa seluruh proses rekrutmen tidak dipungut biaya apa pun.",
+        "flag": null,
+        "created_at": "2026-10-14T08:41:00+07:00"
+      },
+      {
+        "author_pseudonym": "Pencari Kerja #d51",
+        "body": "Aman kok, saya sudah ikut dan sekarang sudah kerja di sana. Transfer saja biar cepat.",
+        "flag": "klaim_tanpa_bukti",
+        "created_at": "2026-10-15T23:12:00+07:00"
+      },
+      {
+        "author_pseudonym": "Pencari Kerja #5aa",
+        "body": "Teman saya sudah terlanjur transfer, sekarang nomornya tidak bisa dihubungi.",
+        "flag": null,
+        "created_at": "2026-10-17T11:30:00+07:00"
+      }
+    ]
+  },
+  {
+    "title": "Kerja Paruh Waktu Like & Follow · Admin Online · Remote · Okt 2026",
+    "author_pseudonym": "Pencari Kerja #3d9",
+    "risk_level": "tinggi",
+    "claim": "Tingkat Risiko Awal: Tinggi. Pola tugas like dan follow berbayar yang berlanjut ke permintaan deposit untuk 'tugas prabayar', modus yang sama dengan sindikat yang dibongkar Bareskrim.",
+    "summary": "Tawaran kerja paruh waktu: like dan follow akun media sosial dibayar Rp15.000 per tugas. Setelah tiga tugas, peserta diajak masuk grup Telegram dan ditawari tugas prabayar dengan deposit Rp100.000.",
+    "modus": "tugas_deposit",
+    "evidence": [
+      {
+        "type": "payment_request",
+        "description": "Ada permintaan deposit untuk membuka tugas dengan komisi lebih besar.",
+        "evidence": "tugas prabayar cukup deposit Rp100.000 komisi 30%"
+      },
+      {
+        "type": "overclaim",
+        "description": "Penghasilan dijanjikan tinggi untuk pekerjaan yang sangat ringan.",
+        "evidence": "penghasilan 500rb–2jt per hari hanya dari HP"
+      }
+    ],
+    "material_lines": [
+      "Halo kak, kami dari tim pemasaran digital sedang membuka kerja paruh waktu",
+      "Cukup like & follow akun, 1 tugas dibayar Rp15.000",
+      "Penghasilan 500rb–2jt per hari hanya dari HP",
+      "Gabung grup Telegram t.me/tugasharian_resmi untuk tugas berikutnya",
+      "Tugas prabayar cukup deposit Rp100.000 komisi 30%"
+    ],
+    "story": null,
+    "links": [
+      "https://t.me/tugasharian_resmi"
+    ],
+    "contacts": [
+      {
+        "kind": "phone",
+        "value": "+62 812-0000-9921"
+      },
+      {
+        "kind": "domain",
+        "value": "t.me/tugasharian_resmi"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "phone",
+        "value": "6281200009921"
+      },
+      {
+        "kind": "domain",
+        "value": "t.me/tugasharian_resmi"
+      }
+    ],
+    "company": null,
+    "position": "Admin Online",
+    "location": "Remote",
+    "salary": "Rp15.000 per tugas",
+    "open_date": "2026-10-05",
+    "close_date": null,
+    "source_platform": "WhatsApp",
+    "source_account": "Pesan berantai dari nomor tidak dikenal",
+    "reaction_count": 57,
+    "match_count": 88,
+    "analyzed_at": "2026-10-18T18:55:00+07:00",
+    "created_at": "2026-10-18T19:02:00+07:00",
+    "comments": [
+      {
+        "author_pseudonym": "Pencari Kerja #b72",
+        "body": "Awalnya dibayar beneran 45 ribu, terus diminta deposit 100 ribu, lalu 500 ribu dengan alasan salah input. Uangnya tidak bisa ditarik.",
+        "flag": null,
+        "created_at": "2026-10-19T07:44:00+07:00"
+      },
+      {
+        "author_pseudonym": "Pencari Kerja #0f4",
+        "body": "Nomor yang menghubungi saya beda, tapi link grup Telegram-nya sama.",
+        "flag": null,
+        "created_at": "2026-10-20T13:10:00+07:00"
+      }
+    ]
+  },
+  {
+    "title": "Operator Komputer · Bangkok, Thailand · berangkat Nov 2026",
+    "author_pseudonym": "Pencari Kerja #c11",
+    "risk_level": "tinggi",
+    "claim": "Tingkat Risiko Awal: Tinggi. Tawaran kerja ke luar negeri dengan visa kunjungan dan semua dokumen diurus sponsor, tanpa P3MI resmi. Pola ini sesuai dengan kasus TPPO online scam di Asia Tenggara.",
+    "summary": "Dicari operator komputer untuk perusahaan di Bangkok, gaji Rp9–12 juta, tanpa pengalaman. Tiket, paspor, dan visa diurus sponsor; berangkat dengan visa kunjungan lalu 'diurus izin kerja di sana'.",
+    "modus": "tppo",
+    "evidence": [
+      {
+        "type": "tppo",
+        "description": "Berangkat bekerja ke luar negeri memakai visa kunjungan, tanpa perusahaan penempatan resmi.",
+        "evidence": "berangkat pakai visa kunjungan dulu, izin kerja diurus di sana"
+      },
+      {
+        "type": "overclaim",
+        "description": "Gaji tinggi untuk posisi tanpa syarat pengalaman.",
+        "evidence": "gaji 9-12 juta tanpa pengalaman"
+      }
+    ],
+    "material_lines": [
+      "DIBUTUHKAN OPERATOR KOMPUTER DI BANGKOK",
+      "Gaji 9-12 juta tanpa pengalaman, bisa bahasa Inggris dasar",
+      "Tiket, paspor, visa semua diurus sponsor",
+      "Berangkat pakai visa kunjungan dulu, izin kerja diurus di sana",
+      "Minat hubungi 0857-0000-3310, kuota terbatas berangkat November"
+    ],
+    "story": null,
+    "links": [],
+    "contacts": [
+      {
+        "kind": "phone",
+        "value": "0857-0000-3310"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "phone",
+        "value": "6285700003310"
+      }
+    ],
+    "company": null,
+    "position": "Operator Komputer",
+    "location": "Bangkok, Thailand",
+    "salary": "Rp9–12 juta per bulan",
+    "open_date": "2026-09-20",
+    "close_date": "2026-10-31",
+    "source_platform": "Facebook",
+    "source_account": "Grup Loker Luar Negeri Jatim",
+    "reaction_count": 12,
+    "match_count": 19,
+    "analyzed_at": "2026-10-02T15:31:00+07:00",
+    "created_at": "2026-10-02T15:40:00+07:00",
+    "comments": [
+      {
+        "author_pseudonym": "Pencari Kerja #91e",
+        "body": "Tetangga saya berangkat lewat tawaran yang mirip, ternyata dibawa ke Kamboja. Tolong jangan berangkat.",
+        "flag": null,
+        "created_at": "2026-10-04T21:18:00+07:00"
+      }
+    ]
+  },
+  {
+    "title": "Lowongan Kasir Minimarket · Surabaya · 5–20 Okt 2026",
+    "author_pseudonym": "Pencari Kerja #7c2a",
+    "risk_level": "sedang",
+    "claim": "Tingkat Risiko Awal: Sedang. Formulir pendaftaran meminta foto KTP dan swafoto sambil memegang KTP sejak awal, sebelum ada wawancara. Identitas pemberi kerja juga belum bisa dipastikan.",
+    "summary": "Lowongan kasir minimarket di Surabaya. Pendaftaran lewat formulir Google yang meminta foto KTP, swafoto memegang KTP, dan nomor ibu kandung.",
+    "modus": "data_sensitif",
+    "evidence": [
+      {
+        "type": "sensitive_data",
+        "description": "Meminta foto KTP, swafoto dengan KTP, dan nama ibu kandung di tahap pendaftaran awal.",
+        "evidence": "upload foto KTP + selfie pegang KTP + nama ibu kandung"
+      },
+      {
+        "type": "missing_context",
+        "description": "Nama minimarket dan alamat kantor tidak disebutkan."
+      }
+    ],
+    "material_lines": [
+      "LOKER KASIR MINIMARKET SURABAYA",
+      "Lulusan SMA/SMK, usia 18-25 tahun",
+      "Daftar lewat formulir: upload foto KTP + selfie pegang KTP + nama ibu kandung",
+      "Pendaftaran dibuka 5–20 Oktober 2026"
+    ],
+    "story": null,
+    "links": [
+      "https://forms.gle/xxxxx"
+    ],
+    "contacts": [
+      {
+        "kind": "domain",
+        "value": "forms.gle/xxxxx (formulir Google)"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "domain",
+        "value": "forms.gle/xxxxx"
+      }
+    ],
+    "company": null,
+    "position": "Kasir",
+    "location": "Surabaya",
+    "salary": null,
+    "open_date": "2026-10-05",
+    "close_date": "2026-10-20",
+    "source_platform": "TikTok",
+    "source_account": "@lokersurabaya.update",
+    "reaction_count": 4,
+    "match_count": 6,
+    "analyzed_at": "2026-10-15T10:01:00+07:00",
+    "created_at": "2026-10-15T10:05:00+07:00",
+    "comments": []
+  },
+  {
+    "title": "Lowongan PT Mitra Digital Sejahtera · Customer Service · Bandung · Okt 2026",
+    "author_pseudonym": "Pencari Kerja #2be",
+    "risk_level": "sedang",
+    "claim": "Tingkat Risiko Awal: Sedang. Kontak rekrutmen hanya lewat Gmail dan WhatsApp pribadi, dan link pendaftarannya memakai shortlink. Tidak ada permintaan biaya, tetapi identitas perusahaan perlu diverifikasi.",
+    "summary": "Lowongan customer service di Bandung dengan gaji UMK + insentif. Lamaran dikirim lewat shortlink dan konfirmasi lewat Gmail atau WhatsApp HRD.",
+    "modus": "lainnya",
+    "evidence": [
+      {
+        "type": "suspicious_contact",
+        "description": "Kanal rekrutmen memakai email gratis dan shortlink, sehingga identitas perusahaan sulit dipastikan.",
+        "evidence": "kirim CV ke hrd.mitradigital@gmail.com atau bit.ly/daftar-mds"
+      }
+    ],
+    "material_lines": [
+      "PT Mitra Digital Sejahtera membuka lowongan Customer Service",
+      "Penempatan Bandung, gaji UMK + insentif",
+      "Kirim CV ke hrd.mitradigital@gmail.com atau bit.ly/daftar-mds",
+      "Info: WA HRD 0813-0000-2045"
+    ],
+    "story": null,
+    "links": [
+      "https://bit.ly/daftar-mds"
+    ],
+    "contacts": [
+      {
+        "kind": "email",
+        "value": "hrd.mitradigital@gmail.com"
+      },
+      {
+        "kind": "phone",
+        "value": "0813-0000-2045"
+      },
+      {
+        "kind": "domain",
+        "value": "bit.ly/daftar-mds"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "email",
+        "value": "hrd.mitradigital@gmail.com"
+      },
+      {
+        "kind": "phone",
+        "value": "6281300002045"
+      },
+      {
+        "kind": "domain",
+        "value": "bit.ly/daftar-mds"
+      }
+    ],
+    "company": "PT Mitra Digital Sejahtera",
+    "position": "Customer Service",
+    "location": "Bandung",
+    "salary": "UMK Bandung + insentif",
+    "open_date": "2026-10-01",
+    "close_date": null,
+    "source_platform": "Instagram",
+    "source_account": "@mitradigital.karier",
+    "reaction_count": 3,
+    "match_count": 9,
+    "analyzed_at": "2026-10-09T13:15:00+07:00",
+    "created_at": "2026-10-09T13:22:00+07:00",
+    "comments": [
+      {
+        "author_pseudonym": "Pencari Kerja #77d",
+        "body": "Saya ikut interview minggu lalu, prosesnya normal. Tapi memang sebaiknya cek alamat kantornya dulu.",
+        "flag": null,
+        "created_at": "2026-10-11T09:02:00+07:00"
+      }
+    ]
+  },
+  {
+    "title": "Program Magang Nasional Batch 2 · Mencatut Kementerian · 2026",
+    "author_pseudonym": "Pencari Kerja #8f0",
+    "risk_level": "tinggi",
+    "claim": "Tingkat Risiko Awal: Tinggi. Mengatasnamakan program magang pemerintah tetapi meminta biaya pendaftaran ke rekening pribadi, dan situs pendaftarannya tidak berdomain resmi pemerintah.",
+    "summary": "Pendaftaran program magang nasional batch 2 yang mengatasnamakan kementerian. Peserta diminta membayar biaya administrasi Rp250.000 ke rekening pribadi.",
+    "modus": "impersonasi",
+    "evidence": [
+      {
+        "type": "payment_request",
+        "description": "Biaya administrasi pendaftaran ditransfer ke rekening pribadi.",
+        "evidence": "biaya administrasi Rp250.000 ke BCA 0000-112-233"
+      },
+      {
+        "type": "suspicious_contact",
+        "description": "Situs pendaftaran tidak memakai domain resmi pemerintah (go.id).",
+        "evidence": "daftar di pendaftaran-magangnasional.example"
+      }
+    ],
+    "material_lines": [
+      "PROGRAM MAGANG NASIONAL BATCH 2 TAHUN 2026",
+      "Daftar di pendaftaran-magangnasional.example",
+      "Biaya administrasi Rp250.000 ke BCA 0000-112-233",
+      "Pendaftaran 25 September – 25 Oktober 2026"
+    ],
+    "story": null,
+    "links": [
+      "https://pendaftaran-magangnasional.example"
+    ],
+    "contacts": [
+      {
+        "kind": "domain",
+        "value": "pendaftaran-magangnasional.example"
+      },
+      {
+        "kind": "account",
+        "value": "BCA 0000-112-233 a.n. pribadi"
+      }
+    ],
+    "identifiers": [
+      {
+        "kind": "account",
+        "value": "bca:0000112233"
+      },
+      {
+        "kind": "domain",
+        "value": "pendaftaran-magangnasional.example"
+      }
+    ],
+    "company": null,
+    "position": "Peserta Magang",
+    "location": "Seluruh Indonesia",
+    "salary": null,
+    "open_date": "2026-09-25",
+    "close_date": "2026-10-25",
+    "source_platform": "Website",
+    "source_account": "pendaftaran-magangnasional.example",
+    "reaction_count": 31,
+    "match_count": 52,
+    "analyzed_at": "2026-09-28T08:09:00+07:00",
+    "created_at": "2026-09-28T08:15:00+07:00",
+    "comments": []
+  }
+]

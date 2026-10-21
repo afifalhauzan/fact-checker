@@ -20,6 +20,10 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            // Model events are off while seeding, so the pseudonym is not generated on its own
+            'pseudonym' => User::newPseudonym(),
         ]);
+
+        $this->call(TelaahSeeder::class);
     }
 }
