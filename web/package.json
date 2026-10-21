@@ -14,7 +14,8 @@
     "test:signals": "jiti eval/signals.test.ts",
     "test:session-title": "jiti eval/session-title.test.ts",
     "test:redaction": "jiti eval/redaction.test.ts",
-    "test:identifiers": "jiti eval/identifiers.test.ts"
+    "test:identifiers": "jiti eval/identifiers.test.ts",
+    "test:telaah": "jiti eval/telaah-share.test.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.148",

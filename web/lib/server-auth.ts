@@ -29,6 +29,16 @@ export function backendFetch(path: string, init: RequestInit & { token?: string 
   });
 }
 
+/**
+ * Header that lets Laravel accept TelaahBareng writes from this server only. Local development
+ * uses the same fixed key as api/config/services.php, so no setup is needed.
+ */
+export function internalKeyHeader(): Record<string, string> {
+  const key = process.env.TELAAH_INTERNAL_KEY || (process.env.NODE_ENV !== 'production' ? 'dev-telaah-internal-key' : '');
+  if (!key) throw new Error('TELAAH_INTERNAL_KEY is not set');
+  return { 'X-Internal-Key': key };
+}
+
 // Same cookie shape proxy.ts checks; httpOnly keeps the token away from client JS
 export function setAuthCookie(res: NextResponse, token: string, tokenType = 'Bearer') {
   res.cookies.set(
