@@ -15,23 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { saveLandingChatDraft, type LandingAttachmentDraft } from "@/lib/landing-chat-handoff";
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function createAttachmentId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `landing-attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+import { ACCEPTED_ATTACHMENT_TYPES, filesFromClipboard, prepareAttachments } from "@/lib/attachments";
 
 const reasoningSteps = [
   {
@@ -177,32 +161,28 @@ export function HeroSection() {
   const [input, setInput] = React.useState("");
   const [attachments, setAttachments] = React.useState<LandingAttachmentDraft[]>([]);
   const [isPreparingAttachments, setIsPreparingAttachments] = React.useState(false);
+  const [attachmentNotice, setAttachmentNotice] = React.useState<string | null>(null);
 
-  const handleSelectFiles = React.useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) {
-      return;
-    }
+  const handleSelectFiles = React.useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) {
+        return;
+      }
 
-    setIsPreparingAttachments(true);
-    try {
-      const selected = Array.from(files);
-      const prepared = await Promise.all(
-        selected.map(async (file): Promise<LandingAttachmentDraft> => ({
-          id: createAttachmentId(),
-          filename: file.name,
-          mediaType: file.type || "application/octet-stream",
-          url: await fileToDataUrl(file),
-          size: file.size,
-        }))
-      );
-
-      setAttachments((prev) => [...prev, ...prepared]);
-    } catch (error) {
-      console.error("[HeroSection] Failed to prepare attachments:", error);
-    } finally {
-      setIsPreparingAttachments(false);
-    }
-  }, []);
+      setIsPreparingAttachments(true);
+      try {
+        const { attachments: prepared, rejections } = await prepareAttachments(files, attachments.length);
+        setAttachmentNotice(rejections.length ? rejections.join(" ") : null);
+        setAttachments((prev) => [...prev, ...prepared]);
+      } catch (error) {
+        console.error("[HeroSection] Failed to prepare attachments:", error);
+        setAttachmentNotice("Gagal membaca lampiran. Coba lagi ya.");
+      } finally {
+        setIsPreparingAttachments(false);
+      }
+    },
+    [attachments.length]
+  );
 
   const handleSubmit = React.useCallback(
     (event?: React.FormEvent) => {
@@ -274,17 +254,24 @@ export function HeroSection() {
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Tempel teks lowongan, link, atau poster yang ingin dicek..."
+              onPaste={(event) => {
+                const files = filesFromClipboard(event.clipboardData);
+                if (files.length === 0) return;
+                event.preventDefault();
+                void handleSelectFiles(files);
+              }}
+              placeholder="Tempel teks lowongan, link, atau screenshot (Ctrl+V)..."
               className="w-full bg-transparent px-2 py-3 text-sm text-[#17232c] placeholder:text-[#9aa9b5] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
             />
 
             <input
               ref={fileInputRef}
               type="file"
+              accept={ACCEPTED_ATTACHMENT_TYPES}
               multiple
               className="hidden"
               onChange={(event) => {
-                void handleSelectFiles(event.target.files);
+                void handleSelectFiles(Array.from(event.target.files ?? []));
                 event.currentTarget.value = "";
               }}
             />
@@ -308,6 +295,12 @@ export function HeroSection() {
             </button>
           </div>
         </form>
+
+        {attachmentNotice && (
+          <p role="alert" className="mt-2 text-xs text-[#a34d3c]">
+            {attachmentNotice}
+          </p>
+        )}
 
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           {inputModes.map(({ label, icon: Icon }) => (
