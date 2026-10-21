@@ -5,7 +5,11 @@ import { prepareAttachments } from "@/lib/attachments";
 import { ChatStart } from "@/components/chat/chat-start";
 import { ConfirmModal } from "@/components/ui/modal";
 import { UserMessage } from "@/components/chat/UserMessage";
-import { AssistantMessage } from "@/components/chat/AssistantMessage";
+import { AssistantMessage, type TelaahChoice } from "@/components/chat/AssistantMessage";
+import { LoginPromptHost, useLoginPrompt } from "@/components/telaah-bersama/login-prompt";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { startShareDraft } from "@/lib/telaah-bersama/share-handoff";
+import { useRouter } from "next/navigation";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useChatInitialization } from "@/hooks/useChatInitialization";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
@@ -14,6 +18,7 @@ import { useConversationStore } from "@/lib/conversation-store";
 import {
   clearLandingChatDraft,
   readLandingChatDraft,
+  saveLandingChatDraft,
   type LandingChatDraft,
 } from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
@@ -127,6 +132,28 @@ function extractLatestAttachmentMetadata(messages: MetabotUIMessage[]): UIAction
   return undefined;
 }
 
+/** The user message an assistant answer replied to. */
+function questionBefore(messages: MetabotUIMessage[], answerId: string): MetabotUIMessage | undefined {
+  const index = messages.findIndex((message) => message.id === answerId);
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (messages[i].role === "user") return messages[i];
+  }
+  return undefined;
+}
+
+function filesOf(message: MetabotUIMessage | undefined) {
+  return ((message?.parts || []) as MetabotUIMessagePart[]).flatMap((part) =>
+    part.type === "file" && part.url.startsWith("data:") ? [{ filename: part.filename, mediaType: part.mediaType, url: part.url }] : []
+  );
+}
+
+function textOf(message: MetabotUIMessage | undefined): string {
+  return ((message?.parts || []) as MetabotUIMessagePart[])
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("\n")
+    .trim();
+}
+
 export function Chat() {
   // Get streaming state from context
   const {
@@ -139,8 +166,12 @@ export function Chat() {
     handleRefresh,
     renderMessageContent,
     chatId,
-    handleInteractiveChoice
+    handleInteractiveChoice,
+    regenerateWith,
   } = useStreaming();
+  const router = useRouter();
+  const { user } = useCurrentUser();
+  const openLoginPrompt = useLoginPrompt((state) => state.open);
 
   // === Initialization Engine ===
   const {
@@ -485,6 +516,38 @@ export function Chat() {
     });
   };
 
+  const handleTelaahChoice = (choice: TelaahChoice) => {
+    if (choice.kind === "share") {
+      if (!user) {
+        openLoginPrompt("Masuk untuk membagikan hasil telaah ke TelaahBareng.");
+        return;
+      }
+      startShareDraft(choice.share, filesOf(questionBefore(messages, choice.messageId)));
+      router.push("/telaah-bersama/buat");
+      return;
+    }
+
+    if (isLoading) return;
+
+    if (choice.kind === "self-analyze") {
+      regenerateWith(choice.messageId, { skip_similar: true });
+    } else if (choice.kind === "same-posting") {
+      regenerateWith(choice.messageId, { same_posting: true });
+    } else {
+      // The new session sends the moved message on its own, like a message started on the landing page.
+      const question = questionBefore(messages, choice.messageId);
+      const attachments = filesOf(question).map((file, index) => ({ id: `moved-${index}`, ...file }));
+      try {
+        saveLandingChatDraft({ text: textOf(question), attachments });
+      } catch {
+        // Large images can exceed browser storage: move the text and ask for the files again.
+        saveLandingChatDraft({ text: textOf(question), attachments: [] });
+        if (attachments.length) toast("Lampiran terlalu besar untuk dipindahkan. Lampirkan lagi di sesi baru.");
+      }
+      openSession();
+    }
+  };
+
   const handleResetClick = () => {
     setShowResetModal(true);
   };
@@ -533,6 +596,7 @@ export function Chat() {
         onActionClick={handleActionClick}
         pendingActionId={pendingActionId}
         isActionLoading={isLoading}
+        onTelaahChoice={handleTelaahChoice}
       />
     );
   };
@@ -590,6 +654,7 @@ export function Chat() {
           <section className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background md:max-w-3xl lg:w-full">
 
             <Toaster />
+            <LoginPromptHost />
 
             {/* Chat Box */}
             <div

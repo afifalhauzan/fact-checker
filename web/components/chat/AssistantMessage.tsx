@@ -26,6 +26,15 @@ import { AnalysisActions } from "@/components/cards/AnalysisActions";
 import { ActionInsightCard } from "@/components/cards/ActionInsightCard";
 import { SalaryBenefitCard } from "@/components/cards/SalaryBenefitCard";
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
+import { BuatPostPrompt, SessionMoveCard, SimilarTelaahCard } from "@/components/telaah-bersama/chat-cards";
+import type { SimilarTelaahPartData, TelaahSharePartData } from "@/types/streaming";
+
+/** What the user picked on a TelaahBareng card in the chat; handled by components/chat.tsx. */
+export type TelaahChoice =
+  | { kind: "share"; messageId: string; share: TelaahSharePartData }
+  | { kind: "self-analyze"; messageId: string }
+  | { kind: "move-session"; messageId: string }
+  | { kind: "same-posting"; messageId: string };
 
 interface AssistantMessageProps {
   message: MetabotUIMessage;
@@ -38,6 +47,7 @@ interface AssistantMessageProps {
   onActionClick: (action: AnalysisAction, sourceMessageId?: string) => void;
   pendingActionId?: UIActionId | null;
   isActionLoading?: boolean;
+  onTelaahChoice?: (choice: TelaahChoice) => void;
 }
 
 interface SectionalAnalysisData {
@@ -77,7 +87,10 @@ type RenderItem =
         points: string[];
       };
     }
-  | { kind: "suggested-questions"; key: string; questions: string[] };
+  | { kind: "suggested-questions"; key: string; questions: string[] }
+  | { kind: "telaah-share"; key: string; share: TelaahSharePartData }
+  | { kind: "similar-telaah"; key: string; data: SimilarTelaahPartData }
+  | { kind: "session-move"; key: string; previousTitle: string };
 
 function extractAnalysisFromParts(parts: MetabotUIMessagePart[]): AnalysisResult | null {
   const analysisPart = parts.find((part) => part.type === "data-analysis");
@@ -138,7 +151,10 @@ function hasInterleavableDataPart(part: MetabotUIMessagePart): boolean {
     part.type === "data-actions" ||
     part.type === "data-action-insight" ||
     part.type === "data-suggested-questions" ||
-    part.type === "data-reasoning"
+    part.type === "data-reasoning" ||
+    part.type === "data-telaah-share" ||
+    part.type === "data-similar-telaah" ||
+    part.type === "data-session-move"
   );
 }
 
@@ -153,6 +169,7 @@ export function AssistantMessage({
   onActionClick,
   pendingActionId = null,
   isActionLoading = false,
+  onTelaahChoice,
 }: AssistantMessageProps) {
   const fadeUp = {
     initial: { opacity: 0, y: 10 },
@@ -280,6 +297,21 @@ export function AssistantMessage({
 
         if (part.type === "data-suggested-questions" && part.data.length > 0) {
           items.push({ kind: "suggested-questions", key, questions: part.data });
+          return;
+        }
+
+        if (part.type === "data-telaah-share") {
+          items.push({ kind: "telaah-share", key, share: part.data });
+          return;
+        }
+
+        if (part.type === "data-similar-telaah") {
+          items.push({ kind: "similar-telaah", key, data: part.data });
+          return;
+        }
+
+        if (part.type === "data-session-move") {
+          items.push({ kind: "session-move", key, previousTitle: part.data.previousTitle });
         }
       });
 
@@ -527,6 +559,42 @@ export function AssistantMessage({
       return (
         <motion.div key={item.key} {...fadeUp}>
           <ActionInsightCard title={item.actionInsight.title} points={item.actionInsight.points} />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "telaah-share") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <BuatPostPrompt onCreate={() => onTelaahChoice?.({ kind: "share", messageId: message.id, share: item.share })} />
+        </motion.div>
+      );
+    }
+
+    // Choices only make sense on the latest answer: they replace it or move its question elsewhere.
+    const canChoose = isLastMessage && !isCurrentlyStreaming;
+
+    if (item.kind === "similar-telaah") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <SimilarTelaahCard
+            data={item.data}
+            disabled={!canChoose}
+            onSelfAnalyze={() => onTelaahChoice?.({ kind: "self-analyze", messageId: message.id })}
+          />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "session-move") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <SessionMoveCard
+            previousTitle={item.previousTitle}
+            disabled={!canChoose}
+            onMove={() => onTelaahChoice?.({ kind: "move-session", messageId: message.id })}
+            onStay={() => onTelaahChoice?.({ kind: "same-posting", messageId: message.id })}
+          />
         </motion.div>
       );
     }

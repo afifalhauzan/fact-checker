@@ -28,6 +28,8 @@ interface StreamingContextType {
   renderMessageContent: (message: MetabotUIMessage) => string;
   chatId: string;
   handleInteractiveChoice: (stepId: string, selection: string) => void;
+  // Replaces an assistant answer with a new one for the same question, e.g. with skip_similar.
+  regenerateWith: (messageId: string, body: Record<string, unknown>) => void;
 }
 
 const StreamingContext = createContext<StreamingContextType | undefined>(undefined);
@@ -66,12 +68,16 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
   const activeConversationIdRef = useRef(activeConversationId);
   activeConversationIdRef.current = activeConversationId;
 
+  // Answers replaced through regenerateWith; the next save removes them from the stored history.
+  const replacedMessageIdsRef = useRef<string[]>([]);
+
   const shouldInitializeChat = true; // not require auth for now. Can add auth checks here if needed in the future.
 
   const {
     messages: rawMessages,
     setMessages,
     sendMessage: originalSendMessage,
+    regenerate,
     status,
     stop,
   } = useChat<any>({
@@ -92,7 +98,8 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
       setIsUserSending(false); // Reset loading when finished
 
       if (!isError && activeConversationIdRef.current) {
-        persistLatestExchange(activeConversationIdRef.current, finishedMessages as MetabotUIMessage[]);
+        persistLatestExchange(activeConversationIdRef.current, finishedMessages as MetabotUIMessage[], replacedMessageIdsRef.current);
+        replacedMessageIdsRef.current = [];
       }
     }
   });
@@ -168,6 +175,12 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     console.log('[StreamingContext] Interactive choice is not used in simplified mode:', { stepId, selection });
   }, []);
 
+  const regenerateWith = useCallback((messageId: string, body: Record<string, unknown>) => {
+    setIsUserSending(true);
+    replacedMessageIdsRef.current.push(messageId);
+    void regenerate({ messageId, body });
+  }, [regenerate]);
+
   const handleRefresh = useCallback(() => {
     setMessages([]);
   }, [setMessages]);
@@ -191,6 +204,7 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     renderMessageContent,
     chatId,
     handleInteractiveChoice,
+    regenerateWith,
   };
 
   return (

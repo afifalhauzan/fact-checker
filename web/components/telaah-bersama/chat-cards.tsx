@@ -1,19 +1,14 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowRightLeft, CheckCircle2, HandHelping, Megaphone, MessageCircle, ScanSearch, ShieldAlert } from "lucide-react";
+import { ArrowRightLeft, HandHelping, Megaphone, MessageCircle, ScanSearch, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate, type TelaahPost } from "@/lib/telaah-bersama/mock-data";
-import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { formatDate } from "@/lib/telaah-bersama/types";
+import type { SimilarTelaahPartData } from "@/types/streaming";
 import { RiskLevelBadge } from "./badges";
 
 /** Shown under a Sedang/Tinggi verdict: the only entry point for creating a post (design doc 5.1). */
-export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: string }) {
-  const router = useRouter();
-  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
-
+export function BuatPostPrompt({ onCreate }: { onCreate: () => void }) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex gap-3">
@@ -27,44 +22,24 @@ export function BuatPostPrompt({ href = "/telaah-bersama/buat" }: { href?: strin
           </p>
         </div>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="shrink-0"
-        onClick={() => {
-          if (requireLogin("Masuk untuk membagikan hasil telaah ke TelaahBareng.")) router.push(href);
-        }}
-      >
+      <Button variant="outline" size="sm" className="shrink-0" onClick={onCreate}>
         Buat post?
       </Button>
     </section>
   );
 }
 
-function ChoiceDone({ label }: { label: string }) {
-  return (
-    <p className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-      <CheckCircle2 className="h-3.5 w-3.5" />
-      {label}
-    </p>
-  );
-}
-
-/** Design doc 6.2: one most-similar Telaah, shown before the pipeline runs. */
+/** Design doc 6.2: the most similar existing post, offered before the pipeline runs. */
 export function SimilarTelaahCard({
-  post,
-  reasons,
-  ownSignals = [],
-  choice,
+  data,
   onSelfAnalyze,
+  disabled,
 }: {
-  post: TelaahPost;
-  reasons: string[];
-  ownSignals?: string[];
-  choice: "self" | null;
+  data: SimilarTelaahPartData;
   onSelfAnalyze: () => void;
+  disabled: boolean;
 }) {
-  const topComment = post.comments.find((comment) => !comment.flag);
+  const { post } = data;
 
   return (
     <section className="overflow-hidden rounded-xl border border-primary/30 bg-card shadow-sm">
@@ -86,13 +61,15 @@ export function SimilarTelaahCard({
           <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{post.claim}</p>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {reasons.map((reason) => (
-            <span key={reason} className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-foreground">
-              {reason}
-            </span>
-          ))}
-        </div>
+        {data.reasons.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {data.reasons.map((reason) => (
+              <span key={reason} className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-foreground">
+                {reason}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
@@ -101,24 +78,24 @@ export function SimilarTelaahCard({
           </span>
           <span className="inline-flex items-center gap-1.5">
             <MessageCircle className="h-3.5 w-3.5" />
-            {post.comments.length} diskusi
+            {post.commentCount} diskusi
           </span>
         </div>
 
-        {topComment && (
+        {post.topComment && (
           <p className="border-l-2 border-border pl-3 text-xs italic leading-relaxed text-muted-foreground">
-            &ldquo;{topComment.body}&rdquo; · {topComment.author}
+            &ldquo;{post.topComment.body}&rdquo; · {post.topComment.author}
           </p>
         )}
 
-        {ownSignals.length > 0 && (
+        {data.ownSignals.length > 0 && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-red-800">
               <ShieldAlert className="h-3.5 w-3.5" />
               Dari pesanmu sendiri
             </p>
             <ul className="mt-1 space-y-0.5 text-xs text-red-900/85">
-              {ownSignals.map((signal) => (
+              {data.ownSignals.map((signal) => (
                 <li key={signal}>{signal}</li>
               ))}
             </ul>
@@ -126,40 +103,32 @@ export function SimilarTelaahCard({
         )}
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          {choice === "self" ? (
-            <ChoiceDone label="Kamu memilih menelaah sendiri" />
-          ) : (
-            <>
-              <Button size="sm" asChild>
-                <Link href={`/telaah-bersama/${post.id}`}>Baca Telaah</Link>
-              </Button>
-              <Button size="sm" variant="outline" onClick={onSelfAnalyze}>
-                Tetap telaah sendiri
-              </Button>
-            </>
-          )}
+          <Button size="sm" asChild>
+            <Link href={`/telaah-bersama/${post.id}`}>Baca Telaah</Link>
+          </Button>
+          <Button size="sm" variant="outline" onClick={onSelfAnalyze} disabled={disabled}>
+            Tetap telaah sendiri
+          </Button>
         </div>
-        {choice !== "self" && (
-          <p className="text-[11px] text-muted-foreground">
-            Telaah sendiri tidak memakai hasil Telaah di atas, jadi penilaiannya murni dari materimu.
-          </p>
-        )}
+        <p className="text-[11px] text-muted-foreground">
+          Telaah sendiri tidak memakai hasil Telaah di atas, jadi penilaiannya murni dari materimu.
+        </p>
       </div>
     </section>
   );
 }
 
-/** Design doc 6.11: the router thinks the new material is a different posting. */
+/** Design doc 6.11: the new material looks like another posting than the one this session is about. */
 export function SessionMoveCard({
   previousTitle,
-  choice,
   onMove,
   onStay,
+  disabled,
 }: {
   previousTitle: string;
-  choice: "move" | "stay" | null;
   onMove: () => void;
   onStay: () => void;
+  disabled: boolean;
 }) {
   return (
     <section className="rounded-xl border border-amber-300 bg-amber-50 p-4">
@@ -169,21 +138,14 @@ export function SessionMoveCard({
       </p>
       <p className="mt-1.5 text-sm leading-relaxed text-amber-900/85">
         Sesi ini sedang membahas <b>{previousTitle}</b>. Supaya konteksnya tidak tercampur, pindahkan pesanmu ke sesi baru?
-        Pesanmu belum dianalisis.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {choice === "move" && <ChoiceDone label="Dipindahkan ke sesi baru" />}
-        {choice === "stay" && <ChoiceDone label="Dilanjutkan di sesi ini" />}
-        {choice === null && (
-          <>
-            <Button size="sm" onClick={onMove}>
-              Ya, pindahkan ke sesi baru
-            </Button>
-            <Button size="sm" variant="outline" className="bg-background" onClick={onStay}>
-              Tidak, ini lowongan yang sama
-            </Button>
-          </>
-        )}
+        <Button size="sm" onClick={onMove} disabled={disabled}>
+          Ya, pindahkan ke sesi baru
+        </Button>
+        <Button size="sm" variant="outline" className="bg-background" onClick={onStay} disabled={disabled}>
+          Tidak, ini lowongan yang sama
+        </Button>
       </div>
     </section>
   );
