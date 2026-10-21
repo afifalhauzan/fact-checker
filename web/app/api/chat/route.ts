@@ -1,11 +1,32 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { runAnalysis } from "@/langchain/agents/analyzer/analyze";
+import { PROGRESS_INTENT, runAnalysis } from "@/langchain/agents/analyzer/analyze";
 import { handleUIAction } from "@/langchain/agents/analyzer/action-handler";
 import { answerFollowUp } from "@/langchain/agents/analyzer/follow-up";
-import { decideTurnMode } from "@/langchain/agents/analyzer/turn-router";
-import { findPostingContext, recentTurns, toMessageList } from "@/langchain/agents/analyzer/conversation-context";
-import { isSupportedAttachment } from "@/langchain/agents/analyzer/extraction";
+import { classifyNewMaterial, decideTurnMode } from "@/langchain/agents/analyzer/turn-router";
+import {
+  findPostingContext,
+  recentTurns,
+  toMessageList,
+  type PostingContext,
+} from "@/langchain/agents/analyzer/conversation-context";
+import {
+  composeMaterialText,
+  extractAttachments,
+  isSupportedAttachment,
+  limitAttachments,
+  type ExtractionRun,
+} from "@/langchain/agents/analyzer/extraction";
+import { preprocessJobInput } from "@/langchain/agents/analyzer/preprocessor";
+import { buildSharePayload, signSharePayload } from "@/langchain/agents/telaah-bersama/share-payload";
+import {
+  findSimilarTelaah,
+  ownSignalLabels,
+  recordMatchShown,
+  type SimilarMatch,
+} from "@/langchain/agents/telaah-bersama/similar";
+import type { SimilarTelaahPartData } from "@/types/streaming";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 import { generateSessionTitle } from "@/langchain/agents/session-title";
 import { getAccessToken } from "@/lib/server-auth";
@@ -112,6 +133,48 @@ async function streamTextBlock({
   writer.write({ type: "text-end", id });
 }
 
+const SIMILAR_FOUND_MESSAGE =
+  "Lowongan seperti ini **sudah pernah ditelaah dan dibagikan** di TelaahBareng. Kamu bisa membaca Telaah itu beserta diskusinya, atau tetap menelaah pesanmu sendiri.";
+const SESSION_MOVE_MESSAGE =
+  "Sepertinya ini lowongan lain dari yang sedang dibahas. Supaya konteksnya tidak tercampur, pindahkan ke sesi baru? Pesanmu belum dianalisis.";
+
+/** Short name of the posting a session is about, for the "move to a new session" card. */
+function describeSessionPosting(context: PostingContext): string {
+  const company = context.analysis.material?.entities?.companyNames?.[0];
+  if (company) return company;
+  const firstSentence = (context.analysis.summary ?? context.postingText).split(/(?<=[.!?])\s/)[0] ?? "";
+  return firstSentence.length > 90 ? `${firstSentence.slice(0, 90)}…` : firstSentence || "lowongan sebelumnya";
+}
+
+/** Counts a match once per viewer per day without storing who the viewer is. */
+function viewerKey(req: NextRequest): string {
+  const token = getAccessToken(req);
+  if (token) return `u:${createHash("sha256").update(token).digest("hex").slice(0, 24)}`;
+  return `ip:${req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"}`;
+}
+
+function toSimilarPart(match: SimilarMatch, ownSignals: string[]): SimilarTelaahPartData {
+  const { post } = match;
+  const topComment = post.comments?.find((comment) => !comment.flag);
+  return {
+    post: {
+      id: post.id,
+      title: post.title,
+      riskLevel: post.riskLevel,
+      claim: post.claim,
+      summary: post.summary,
+      evidence: post.evidence.map((item) => ({ ...item, evidence: item.evidence ?? undefined })),
+      analyzedAt: post.analyzedAt,
+      reactionCount: post.reactionCount,
+      commentCount: post.commentCount,
+      topComment: topComment ? { author: topComment.author, body: topComment.body } : null,
+    },
+    reasons: match.reasons,
+    differentPeriod: match.differentPeriod,
+    ownSignals,
+  };
+}
+
 /** Names the session for the history list. Sent last so it never delays the answer itself. */
 async function writeSessionTitle(writer: any, question: string, answer: string) {
   const title = await generateSessionTitle({ question, answer });
@@ -216,12 +279,61 @@ export async function POST(req: NextRequest) {
         const closingTextId = `analysis-closing-${Date.now()}`;
         const reasoningPartId = `analysis-reasoning-${Date.now()}`;
 
+        // TelaahBareng steps before the pipeline (design doc 6.1), both outside the engine. One
+        // session holds one posting: later material is checked against it, and only the first
+        // material of a session is compared with existing posts.
+        const isSubstantive = attachments.length > 0 || preprocessJobInput(input).hasSubstantiveContent;
+        const checkNewPosting = !!context && body?.same_posting !== true && isSubstantive;
+        const checkSimilar = !context && body?.skip_similar !== true && isSubstantive;
+        let extraction: ExtractionRun | undefined;
+        let materialText = input;
+
+        if (checkNewPosting || checkSimilar) {
+          if (checkSimilar) {
+            writer.write({
+              type: "data-reasoning",
+              id: reasoningPartId,
+              data: [{ intent: PROGRESS_INTENT, steps: ["Memeriksa apakah lowongan ini sudah pernah ditelaah di TelaahBareng"] }],
+            });
+          }
+          // Read once here and handed to runAnalysis, so attachments are not read twice.
+          if (attachments.length) {
+            extraction = await extractAttachments(limitAttachments(attachments).usable);
+            materialText = composeMaterialText(input, extraction.material?.transcript);
+          }
+        }
+
+        if (checkNewPosting && context) {
+          const continuation = await classifyNewMaterial({ materialText, context });
+          console.info("[chat] posting check", JSON.stringify(continuation));
+          if (continuation.isNewPosting) {
+            await streamTextBlock({ writer, text: SESSION_MOVE_MESSAGE, id: `session-move-${Date.now()}` });
+            writer.write({ type: "data-session-move", data: { previousTitle: describeSessionPosting(context) } });
+            return;
+          }
+        }
+
+        if (checkSimilar) {
+          const { match, meta: similarMeta } = await findSimilarTelaah(materialText);
+          console.info("[chat] similar check", JSON.stringify(similarMeta));
+          if (match) {
+            recordMatchShown(match.post.id, viewerKey(req));
+            await streamTextBlock({ writer, text: SIMILAR_FOUND_MESSAGE, id: `similar-${Date.now()}` });
+            writer.write({ type: "data-similar-telaah", data: toSimilarPart(match, ownSignalLabels(materialText)) });
+            if (shouldTitleSession) {
+              await writeSessionTitle(writer, input || materialText, `${match.post.title}\n${match.post.summary}`);
+            }
+            return;
+          }
+        }
+
         // Each pipeline stage reports as it actually finishes, so the "thinking" panel shows real
         // progress (rules, web search, model) instead of a replay after the fact.
         const { result: analysis, meta } = await runAnalysis(
           { input, images: attachments },
           {
             onProgress: (reasoning) => writer.write({ type: "data-reasoning", id: reasoningPartId, data: reasoning }),
+            extraction,
           }
         );
         // Metadata only: never log the posting or the analysis text.
@@ -292,6 +404,12 @@ export async function POST(req: NextRequest) {
             data: { actions: DEFAULT_ANALYSIS_ACTIONS },
           });
           await sleep(SECTION_STEP_DELAY_MS);
+
+          // Only Sedang/Tinggi verdicts get one; it is what the "Buat post?" button publishes from.
+          const share = buildSharePayload({ analysis, userText: input, attachments });
+          if (share) {
+            writer.write({ type: "data-telaah-share", data: signSharePayload(share) });
+          }
         }
 
         const closingText = hasRiskVerdict

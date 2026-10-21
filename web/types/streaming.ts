@@ -43,6 +43,36 @@ export interface ActionInsightPartData {
   points: string[];
 }
 
+/** Signed by the chat route under a Sedang/Tinggi verdict; the only way to start a TelaahBareng post. */
+export interface TelaahSharePartData {
+  payload: string;
+  signature: string;
+}
+
+/** "Sudah ditelaah sebelumnya": an existing post offered instead of running the analysis. */
+export interface SimilarTelaahPartData {
+  post: {
+    id: number;
+    title: string;
+    riskLevel: 'sedang' | 'tinggi';
+    claim: string;
+    summary: string;
+    evidence: Risk[];
+    analyzedAt: string;
+    reactionCount: number;
+    commentCount: number;
+    topComment: { author: string; body: string } | null;
+  };
+  reasons: string[];
+  differentPeriod: boolean;
+  ownSignals: string[];
+}
+
+/** New material that looks like another posting than the one this session is about. */
+export interface SessionMovePartData {
+  previousTitle: string;
+}
+
 export type MetabotUIMessagePart =
   | { type: 'text'; text: string }
   | {
@@ -64,6 +94,10 @@ export type MetabotUIMessagePart =
   | { type: "data-action-insight"; data: ActionInsightPartData }
   | { type: 'data-suggested-questions'; data: string[] }
   | { type: 'data-reasoning'; data: Reasoning[] }
+  | { type: 'data-telaah-share'; data: TelaahSharePartData }
+  | { type: 'data-similar-telaah'; data: SimilarTelaahPartData }
+  | { type: 'data-session-move'; data: SessionMovePartData }
+  | { type: 'data-session-title'; data: { title: string } }
   | {
       type: 'data-notification';
       data: {
