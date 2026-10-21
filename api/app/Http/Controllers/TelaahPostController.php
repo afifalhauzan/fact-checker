@@ -132,10 +132,14 @@ class TelaahPostController extends Controller
             'source_platform' => ['nullable', 'string', 'max:40'],
             'source_account' => ['nullable', 'string', 'max:255'],
             'analyzed_at' => ['required', 'date'],
+            'share_key' => ['required', 'regex:/^[0-9a-f]{64}$/'],
             'attachments' => ['present', 'array', 'max:4'],
             'attachments.*.label' => ['required', 'string', 'max:120'],
             'attachments.*.sha256' => ['required', 'regex:/^[0-9a-f]{64}$/'],
         ])->validate();
+
+        // The unique index also catches two submits racing each other
+        abort_if(TelaahPost::where('share_key', $data['share_key'])->exists(), 409, 'Hasil telaah ini sudah pernah diposting.');
 
         $request->validate([
             'files' => [$data['attachments'] ? 'required' : 'nullable', 'array', 'size:'.count($data['attachments'])],
@@ -204,6 +208,18 @@ class TelaahPostController extends Controller
         $this->saveEmbedding($post, $data['embedding'] ?? null);
 
         return response()->json($post->load('attachments')->present(['isOwner' => true]));
+    }
+
+    /**
+     * The post published from a given analysis, if any; deleting the post frees the analysis again.
+     */
+    public function findShared(string $shareKey): JsonResponse
+    {
+        $post = TelaahPost::where('share_key', $shareKey)->first(['id', 'status']);
+
+        abort_unless($post, 404);
+
+        return response()->json(['id' => $post->id, 'status' => $post->status]);
     }
 
     public function destroy(Request $request, TelaahPost $post): JsonResponse

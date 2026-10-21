@@ -27,6 +27,7 @@ Route::prefix('telaah-bersama')->group(function () {
     Route::middleware('internal')->group(function () {
         Route::post('/similar', [TelaahMatchController::class, 'similar']);
         Route::get('/missing-embeddings', [TelaahMatchController::class, 'missingEmbeddings']);
+        Route::get('/shared/{shareKey}', [TelaahPostController::class, 'findShared'])->where('shareKey', '[0-9a-f]{64}');
         Route::put('/{post}/embedding', [TelaahMatchController::class, 'storeEmbedding'])->whereNumber('post');
         Route::post('/{post}/matched', [TelaahMatchController::class, 'matched'])->whereNumber('post');
 

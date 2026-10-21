@@ -51,6 +51,7 @@ class TelaahBersamaTest extends TestCase
             'source_platform' => 'Instagram',
             'source_account' => '@loker.contoh',
             'analyzed_at' => now()->toIso8601String(),
+            'share_key' => bin2hex(random_bytes(32)),
             'attachments' => [],
             ...$overrides,
         ];
@@ -123,6 +124,22 @@ class TelaahBersamaTest extends TestCase
         $this->internal()->postJson('/api/telaah-bersama', [
             'post' => json_encode($this->postPayload(['attachments' => [['label' => 'x', 'sha256' => str_repeat('a', 64)]]])),
         ])->assertUnprocessable();
+    }
+
+    public function test_one_analysis_can_be_published_only_once_until_its_post_is_deleted(): void
+    {
+        $owner = User::factory()->create();
+        $key = str_repeat('ab', 32);
+        $post = $this->createPost($owner, ['share_key' => $key]);
+
+        $this->internal()->postJson('/api/telaah-bersama', ['post' => json_encode($this->postPayload(['share_key' => $key]))])
+            ->assertStatus(409);
+        $this->internal()->getJson("/api/telaah-bersama/shared/{$key}")->assertOk()->assertJsonPath('id', $post->id);
+        $this->getJson("/api/telaah-bersama/{$post->id}")->assertJsonMissingPath('share_key');
+
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}")->assertOk();
+        $this->internal()->getJson("/api/telaah-bersama/shared/{$key}")->assertNotFound();
+        $this->createPost($owner, ['share_key' => $key]);
     }
 
     public function test_the_list_filters_and_finds_a_number_in_any_format(): void

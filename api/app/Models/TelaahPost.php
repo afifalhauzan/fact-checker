@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'user_id', 'author_pseudonym', 'status', 'title', 'story', 'risk_level', 'claim', 'summary', 'modus',
     'evidence', 'material_lines', 'links', 'contacts', 'company', 'position', 'location', 'salary',
-    'open_date', 'close_date', 'source_platform', 'source_account', 'is_seed', 'analyzed_at',
+    'open_date', 'close_date', 'source_platform', 'source_account', 'is_seed', 'analyzed_at', 'share_key',
 ])]
-#[Hidden(['user_id', 'embedding'])]
+#[Hidden(['user_id', 'embedding', 'share_key'])]
 class TelaahPost extends Model
 {
     public const RISK_LEVELS = ['sedang', 'tinggi'];
