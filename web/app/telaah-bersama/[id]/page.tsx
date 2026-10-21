@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  ArrowRight,
   Check,
   CheckCircle2,
   Copy,
   Flag,
-  Landmark,
   Link2,
   Pencil,
   ShieldAlert,
@@ -36,7 +34,6 @@ import {
   type TelaahContact,
 } from "@/lib/telaah-bersama/mock-data";
 import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
-import { rujukanHrefFor } from "@/lib/telaah-bersama/rujukan";
 import { EditPostModal } from "@/components/telaah-bersama/edit-post-modal";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -324,23 +321,6 @@ export default function TelaahDetailPage() {
                 </ul>
               </div>
             )}
-
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Landmark className="h-4 w-4 text-primary" />
-                Lapor ke lembaga resmi
-              </h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Sudah transfer atau mengirim data? Lihat kanal pengaduan resmi yang sesuai dengan situasimu.
-              </p>
-              <Link
-                href={rujukanHrefFor(post.modus)}
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-              >
-                Lihat kanal yang sesuai
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
 
             <Link
               href="/chat"
