@@ -51,6 +51,8 @@ if (-not $SkipBuild) {
     # docker-compose.yml requires these to parse; the real values live in the server's .env
     if (-not $env:APP_KEY) { $env:APP_KEY = 'build-only' }
     if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = 'build-only' }
+    if (-not $env:TELAAH_INTERNAL_KEY) { $env:TELAAH_INTERNAL_KEY = 'build-only' }
+    if (-not $env:TELAAH_SIGNING_KEY) { $env:TELAAH_SIGNING_KEY = 'build-only' }
     foreach ($s in $services) {
         docker compose -p gemastik build $s
         Assert-Ok "build of $s"

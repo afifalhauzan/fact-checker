@@ -34,6 +34,7 @@ services:
       DB_DATABASE: ${DB_DATABASE:-gemastik}
       DB_USERNAME: ${DB_USERNAME:-gemastik}
       DB_PASSWORD: ${DB_PASSWORD}
+      TELAAH_INTERNAL_KEY: ${TELAAH_INTERNAL_KEY:?set TELAAH_INTERNAL_KEY in .env}
     # Only reached by web over the compose network
     expose:
       - "8000"
@@ -52,6 +53,8 @@ services:
       - web/.env
     environment:
       BACKEND_URL: http://api:8000/api
+      TELAAH_INTERNAL_KEY: ${TELAAH_INTERNAL_KEY:?set TELAAH_INTERNAL_KEY in .env}
+      TELAAH_SIGNING_KEY: ${TELAAH_SIGNING_KEY:?set TELAAH_SIGNING_KEY in .env}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
