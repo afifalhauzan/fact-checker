@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, ImageIcon, Link2, Lock, RefreshCw, RotateCcw, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ImageIcon, Link2, Lock, RotateCcw, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,30 +140,23 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
   const [isPublishing, setIsPublishing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const runDraft = React.useCallback(
-    async (keepSource: boolean) => {
-      setIsDrafting(true);
-      try {
-        const result = await draftPost(share);
+  React.useEffect(() => {
+    let cancelled = false;
+    draftPost(share)
+      .then((result) => {
+        if (cancelled) return;
         setAttributes(result.attributes);
         setAttributesSignature(result.attributesSignature);
         setTitle(result.attributes.title);
-        if (!keepSource) {
-          setPlatform(result.attributes.sourcePlatform ?? "");
-          setAccount(result.attributes.sourceAccount ?? "");
-        }
-      } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Judul gagal dibuat.");
-      } finally {
-        setIsDrafting(false);
-      }
-    },
-    [share]
-  );
-
-  React.useEffect(() => {
-    void runDraft(false);
-  }, [runDraft]);
+        setPlatform(result.attributes.sourcePlatform ?? "");
+        setAccount(result.attributes.sourceAccount ?? "");
+      })
+      .catch((draftError) => !cancelled && setError(draftError instanceof Error ? draftError.message : "Judul gagal dibuat."))
+      .finally(() => !cancelled && setIsDrafting(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [share]);
 
   // Images still in this browser session from the chat fill their slot by hash.
   React.useEffect(() => {
@@ -303,31 +296,19 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
               hint={
                 <span className="inline-flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-primary" />
-                  Dibuat AI dari materi, bisa diedit
+                  Disusun AI dari info lowongan, bisa diedit
                 </span>
               }
             >
               Judul
             </FieldLabel>
-            <div className="flex gap-2">
-              <Input
-                id="title"
-                value={title}
-                maxLength={MAX_TITLE_LENGTH}
-                placeholder={isDrafting ? "Membuat judul…" : ""}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => void runDraft(true)}
-                disabled={isDrafting}
-                title="Buat ulang judul"
-              >
-                <RefreshCw className={isDrafting ? "animate-spin" : undefined} />
-              </Button>
-            </div>
+            <Input
+              id="title"
+              value={title}
+              maxLength={MAX_TITLE_LENGTH}
+              placeholder={isDrafting ? "Menyusun judul…" : ""}
+              onChange={(event) => setTitle(event.target.value)}
+            />
             <div className="mt-1 flex justify-between gap-2 text-xs">
               <span className={hasAccusatoryWord(title) ? "text-amber-700" : "text-muted-foreground"}>
                 {hasAccusatoryWord(title)

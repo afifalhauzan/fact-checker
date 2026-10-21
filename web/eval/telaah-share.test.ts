@@ -16,6 +16,15 @@ import {
 } from "../langchain/agents/telaah-bersama/share-payload";
 import { materialFeatures, scoreCandidate, type SimilarCandidate } from "../langchain/agents/telaah-bersama/similar";
 import { flagComment } from "../langchain/agents/telaah-bersama/moderation";
+import { composeTitle } from "../langchain/agents/telaah-bersama/draft";
+
+test("post titles are composed from neutral attributes", () => {
+  const base = { company: "PT Listrik Nusantara", position: "Staff Admin", location: "Jakarta", openDate: "2026-10-01", closeDate: "2026-10-30" };
+  assert.equal(composeTitle(base), "Lowongan PT Listrik Nusantara · Staff Admin · Jakarta · 1–30 Okt 2026");
+  assert.equal(composeTitle({ ...base, openDate: "2026-09-28", closeDate: "2026-10-05" }), "Lowongan PT Listrik Nusantara · Staff Admin · Jakarta · 28 Sep – 5 Okt 2026");
+  assert.equal(composeTitle({ ...base, company: null, openDate: null }), "Lowongan Staff Admin · Jakarta · s.d. 30 Okt 2026");
+  assert.equal(composeTitle({ company: null, position: null, location: null, openDate: null, closeDate: null }), "Lowongan tanpa nama perusahaan");
+});
 import type { TelaahPost } from "../lib/telaah-bersama/types";
 
 test("comments that reassure without evidence are flagged, warnings are not", () => {
