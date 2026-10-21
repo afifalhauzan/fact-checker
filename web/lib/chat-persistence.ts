@@ -51,11 +51,16 @@ export async function persistLatestExchange(conversationId: string, messages: Me
 
   if (exchange.length === 0) return
 
+  // The chat route names a session on its first exchange (data-session-title); the backend stores it.
+  const titlePart = exchange
+    .flatMap((message) => (message.parts || []) as any[])
+    .find((part) => part?.type === 'data-session-title' && typeof part.data?.title === 'string')
+
   try {
     const response = await fetch(`/api/chat/session/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: exchange.map(toStoredMessage) }),
+      body: JSON.stringify({ messages: exchange.map(toStoredMessage), title: titlePart?.data.title }),
     })
     if (response.ok) {
       // Lets the session history pick up a new or updated session without polling.

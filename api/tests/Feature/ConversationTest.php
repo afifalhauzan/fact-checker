@@ -41,6 +41,30 @@ class ConversationTest extends TestCase
             ->assertJsonPath('data.0.title', 'Cek lowongan ini');
     }
 
+    public function test_a_title_sent_with_the_messages_replaces_the_fallback_title(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $id = (string) Str::uuid();
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [['id' => 'msg-1', 'role' => 'user', 'content' => 'Cek lowongan ini']],
+        ])->assertCreated();
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [['id' => 'msg-2', 'role' => 'assistant', 'content' => 'Hasil telaah']],
+            'title' => '  Lowongan Staff Admin PT Contoh  ',
+        ])->assertOk();
+
+        $this->getJson('/api/conversations')
+            ->assertOk()
+            ->assertJsonPath('data.0.title', 'Lowongan Staff Admin PT Contoh');
+
+        $this->postJson("/api/conversations/{$id}/messages", [
+            'messages' => [['id' => 'msg-3', 'role' => 'user', 'content' => 'x']],
+            'title' => str_repeat('a', 121),
+        ])->assertUnprocessable();
+    }
+
     public function test_saving_the_same_message_again_updates_it(): void
     {
         Sanctum::actingAs(User::factory()->create());
