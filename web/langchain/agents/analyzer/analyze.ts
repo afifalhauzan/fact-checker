@@ -20,6 +20,7 @@ import {
   extractAttachments,
   limitAttachments,
   type ExtractedMaterial,
+  type ExtractionRun,
   type ExtractionStatus,
 } from "./extraction";
 import {
@@ -66,6 +67,9 @@ export interface AnalyzeOptions {
   // Off: attachments go straight into the analysis call instead of being transcribed first.
   // Independent of useLLM, so a rules-only run can still read attachments.
   useExtraction?: boolean;
+  // Attachments the chat route already read (for the TelaahBareng check), so they are not read
+  // twice. Must come from extractAttachments on the same images. The evaluation never sets it.
+  extraction?: ExtractionRun;
 }
 
 export interface AnalysisRunMeta {
@@ -529,7 +533,7 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
 
   // Reading is separate from judging: with useLLM off, the rules still judge the transcript.
   if (attachments.length && useExtraction) {
-    const extraction = await extractAttachments(attachments);
+    const extraction = options.extraction ?? (await extractAttachments(attachments));
     meta.extraction = {
       status: extraction.status,
       attachmentCount: attachments.length,
