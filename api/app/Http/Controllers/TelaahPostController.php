@@ -45,6 +45,7 @@ class TelaahPostController extends Controller
             'to' => ['nullable', 'date'],
             'mine' => ['nullable', 'boolean'],
             'limit' => ['nullable', 'integer', 'between:1,50'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $query = TelaahPost::query()->with('attachments');

@@ -6,6 +6,8 @@ export interface CurrentUser {
   id: number
   name: string
   email: string
+  // Public name in TelaahBareng
+  pseudonym: string | null
 }
 
 /**
