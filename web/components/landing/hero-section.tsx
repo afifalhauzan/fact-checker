@@ -1,21 +1,15 @@
 "use client";
 
 import React from "react";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
-  Image,
-  Link2,
-  Paperclip,
-  Search,
-  SendHorizontal,
-  X,
-} from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CheckCircle2, History } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { Composer } from "@/components/chat/composer";
 import { saveLandingChatDraft, type LandingAttachmentDraft } from "@/lib/landing-chat-handoff";
-import { ACCEPTED_ATTACHMENT_TYPES, filesFromClipboard, prepareAttachments } from "@/lib/attachments";
+import { prepareAttachments } from "@/lib/attachments";
+import { useChatSessions } from "@/hooks/use-chat-sessions";
+import { formatRelativeTime } from "@/utils/formatters";
 
 const reasoningSteps = [
   {
@@ -48,12 +42,6 @@ const reasoningSteps = [
     signal: "Bukan vonis final",
     tone: "border-[#17232c]/15 bg-white",
   },
-];
-
-const inputModes = [
-  { label: "Poster/Teks", icon: FileText },
-  { label: "Screenshot", icon: Image },
-  { label: "Link lowongan", icon: Link2 },
 ];
 
 function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachments: boolean }) {
@@ -155,9 +143,38 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
   );
 }
 
+const MAX_RECENT_SESSIONS = 3;
+
+/** Signed-in visitors can pick up their latest telaah right from the homepage. */
+function RecentSessions() {
+  const { sessions, isGuest, isLoading } = useChatSessions();
+  if (isLoading || isGuest || sessions.length === 0) return null;
+
+  return (
+    <div className="mt-5 text-left">
+      <p className="mb-2 flex items-center gap-1.5 px-1 text-xs font-medium text-[#5a6a76]">
+        <History className="size-3.5" />
+        Lanjutkan telaah terakhir
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-3">
+        {sessions.slice(0, MAX_RECENT_SESSIONS).map((session) => (
+          <li key={session.id}>
+            <Link
+              href={`/chat?conversation_id=${encodeURIComponent(session.id)}`}
+              className="block rounded-lg border border-[#17232c]/10 bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-[#2b6f95]/40"
+            >
+              <span className="block truncate text-sm font-medium text-[#17232c]">{session.title || "Telaah tanpa judul"}</span>
+              <span className="text-xs text-[#5a6a76]">{formatRelativeTime(session.updated_at)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function HeroSection() {
   const router = useRouter();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [input, setInput] = React.useState("");
   const [attachments, setAttachments] = React.useState<LandingAttachmentDraft[]>([]);
   const [isPreparingAttachments, setIsPreparingAttachments] = React.useState(false);
@@ -185,9 +202,7 @@ export function HeroSection() {
   );
 
   const handleSubmit = React.useCallback(
-    (event?: React.FormEvent) => {
-      event?.preventDefault();
-
+    () => {
       const text = input.trim();
       const hasText = text.length > 0;
       const hasAttachments = attachments.length > 0;
@@ -203,8 +218,6 @@ export function HeroSection() {
     },
     [attachments, input, router]
   );
-
-  const canSubmit = !isPreparingAttachments && (input.trim().length > 0 || attachments.length > 0);
 
   return (
     <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 text-center sm:mb-28 sm:px-8">
@@ -223,78 +236,17 @@ export function HeroSection() {
           validitas perusahaan, risiko link/kontak, dan langkah aman sebelum kamu kirim data atau melakukan pembayaran.
         </p>
 
-        {attachments.length > 0 && (
-          <div className="mb-3 flex flex-wrap justify-center gap-2">
-            {attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="inline-flex max-w-[220px] items-center gap-2 rounded-full border border-[#17232c]/10 bg-white px-3 py-1.5 text-xs text-[#5a6a76] shadow-sm"
-              >
-                <span className="truncate">{attachment.filename || "file"}</span>
-                <button
-                  type="button"
-                  onClick={() => setAttachments((prev) => prev.filter((item) => item.id !== attachment.id))}
-                  className="rounded-full p-0.5 text-[#748493] transition-colors hover:bg-[#edf5fa] hover:text-[#17232c]"
-                  aria-label="Hapus file"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <form
+        <Composer
+          input={input}
+          setInput={setInput}
           onSubmit={handleSubmit}
-          className="rounded-xl bg-white p-1.5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] ring-1 ring-[#17232c]/10 transition-all focus-within:ring-2 focus-within:ring-[#2b6f95]/25 sm:p-2"
-        >
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Search className="ml-3 size-6 text-[#748493] sm:ml-4" strokeWidth={2} />
-            <input
-              type="text"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onPaste={(event) => {
-                const files = filesFromClipboard(event.clipboardData);
-                if (files.length === 0) return;
-                event.preventDefault();
-                void handleSelectFiles(files);
-              }}
-              placeholder="Tempel teks lowongan, link, atau screenshot (Ctrl+V)..."
-              className="w-full bg-transparent px-2 py-3 text-sm text-[#17232c] placeholder:text-[#9aa9b5] focus:outline-none sm:px-4 sm:py-4 sm:text-base"
-            />
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED_ATTACHMENT_TYPES}
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                void handleSelectFiles(Array.from(event.target.files ?? []));
-                event.currentTarget.value = "";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#5a6a76] transition-colors hover:bg-[#edf5fa] hover:text-[#17232c] sm:mr-0"
-              title="Lampirkan file"
-              aria-label="Lampirkan file"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
-
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="inline-flex items-center gap-3 rounded-md bg-[#2b6f95] px-1 py-2 text-sm font-medium text-[#f8fbff] shadow-[0_10px_24px_rgba(43,111,149,0.22)] transition hover:bg-[#215875] disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:py-3.5"
-            >
-              Analisis
-              <SendHorizontal className="hidden size-4 sm:block" />
-            </button>
-          </div>
-        </form>
+          isLoading={isPreparingAttachments}
+          attachments={attachments}
+          onSelectFiles={(files) => void handleSelectFiles(files)}
+          onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((item) => item.id !== id))}
+          autoFocus={false}
+          className="shadow-[0_18px_45px_rgba(23,35,44,0.08)]"
+        />
 
         {attachmentNotice && (
           <p role="alert" className="mt-2 text-xs text-[#a34d3c]">
@@ -302,17 +254,7 @@ export function HeroSection() {
           </p>
         )}
 
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {inputModes.map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#17232c]/10 bg-white/60 px-3 py-1 text-xs font-medium text-[#5a6a76]"
-            >
-              <Icon className="size-3.5" />
-              {label}
-            </span>
-          ))}
-        </div>
+        <RecentSessions />
       </div>
 
       <ReasoningFlow input={input} hasAttachments={attachments.length > 0} />
