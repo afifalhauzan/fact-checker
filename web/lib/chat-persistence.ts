@@ -2,6 +2,8 @@ import type { MetabotUIMessage } from '@/types/streaming'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+export const SESSION_SAVED_EVENT = 'telaahkarier:session-saved'
+
 /**
  * Convert a UI message into the row shape the backend stores.
  * Inline (base64) attachments are not uploaded yet, so they are replaced by a text note.
@@ -50,11 +52,15 @@ export async function persistLatestExchange(conversationId: string, messages: Me
   if (exchange.length === 0) return
 
   try {
-    await fetch(`/api/chat/session/${conversationId}/messages`, {
+    const response = await fetch(`/api/chat/session/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: exchange.map(toStoredMessage) }),
     })
+    if (response.ok) {
+      // Lets the session history pick up a new or updated session without polling.
+      window.dispatchEvent(new CustomEvent(SESSION_SAVED_EVENT, { detail: conversationId }))
+    }
   } catch (error) {
     console.error('[ChatPersistence] Failed to save messages:', error)
   }
