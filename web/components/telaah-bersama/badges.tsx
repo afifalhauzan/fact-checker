@@ -1,4 +1,3 @@
-import { FlaskConical } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { MODUS_LABELS, type TelaahModus, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";
 
@@ -41,11 +40,5 @@ export function SeedBadge() {
   );
 }
 
-export function PrototypeBanner() {
-  return (
-    <div className="flex items-center justify-center gap-2 border-b border-violet-200 bg-violet-50 px-4 py-1.5 text-center text-xs text-violet-800">
-      <FlaskConical className="h-3.5 w-3.5 shrink-0" />
-      <span>Prototipe UX Telaah Bersama. Semua data di halaman ini adalah contoh dan tidak tersimpan.</span>
-    </div>
-  );
-}
+// Temporary re-export while pages move to prototype-banner.tsx.
+export { PrototypeBanner } from "./prototype-banner";
