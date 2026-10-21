@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { RiskCard } from "@/components/cards/RiskCard";
-import { ModusBadge, PrototypeBanner, RiskLevelBadge } from "@/components/telaah-bersama/badges";
+import { ModusBadge, RiskLevelBadge } from "@/components/telaah-bersama/badges";
+import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { MockAttachment } from "@/components/telaah-bersama/mock-attachment";
 import { cn } from "@/utils/utils";
 import {
@@ -19,7 +20,9 @@ import {
   hasAccusatoryWord,
   hasNikLikeNumber,
   maskNik,
+  type TelaahAttachment,
 } from "@/lib/telaah-bersama/mock-data";
+import { ACCEPTED_ATTACHMENT_TYPES, prepareAttachments } from "@/lib/attachments";
 import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
 
 const MAX_TITLE_LENGTH = 120;
@@ -41,9 +44,17 @@ function FieldLabel({ htmlFor, children, hint }: { htmlFor?: string; children: R
   );
 }
 
+const REUPLOAD_CHECK_MS = 700;
+
 export default function BuatPostPage() {
   const router = useRouter();
   const addPost = useTelaahBersamaStore((state) => state.addPost);
+  const isGuest = useTelaahBersamaStore((state) => state.viewer === "tamu");
+  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
+  const reuploadInputRef = React.useRef<HTMLInputElement>(null);
+  const [reuploads, setReuploads] = React.useState<TelaahAttachment[]>([]);
+  const [reuploadStatus, setReuploadStatus] = React.useState<"idle" | "checking" | "matched" | "rejected">("idle");
+  const [reuploadMessage, setReuploadMessage] = React.useState("");
 
   const [titleIndex, setTitleIndex] = React.useState(0);
   const [title, setTitle] = React.useState(draft.titleSuggestions[0]);
@@ -57,7 +68,8 @@ export default function BuatPostPage() {
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
 
   const keptLines = draft.materialLines.filter((_, index) => !removedLines.has(index));
-  const keptAttachments = draft.attachments.filter((item) => attachmentIds.includes(item.id));
+  const allAttachments: TelaahAttachment[] = [...draft.attachments, ...reuploads];
+  const keptAttachments = allAttachments.filter((item) => attachmentIds.includes(item.id));
   const personalLinesLeft = keptLines.filter(looksPersonal).length;
   const sensitiveAttachmentsLeft = keptAttachments.filter((item) => item.sensitiveWarning).length;
   const canContinue = consent && title.trim().length > 0 && keptLines.length > 0;
@@ -69,6 +81,31 @@ export default function BuatPostPage() {
       else next.add(index);
       return next;
     });
+  };
+
+  // shortcut: the prototype accepts any valid image; the real check compares its SHA-256 with the
+  // hashes in the signed payload and rejects files that were never analyzed (design doc 6.4).
+  const handleReupload = async (file: File | undefined) => {
+    if (!file) return;
+    const { attachments: prepared, rejections } = await prepareAttachments([file], keptAttachments.length);
+    if (prepared.length === 0) {
+      setReuploadStatus("rejected");
+      setReuploadMessage(rejections.join(" "));
+      return;
+    }
+    setReuploadStatus("checking");
+    setTimeout(() => {
+      const attachment: TelaahAttachment = {
+        id: prepared[0].id,
+        label: prepared[0].filename ?? "Lampiran",
+        variant: "poster",
+        url: prepared[0].url,
+      };
+      setReuploads((current) => [...current, attachment]);
+      setAttachmentIds((ids) => [...ids, attachment.id]);
+      setReuploadStatus("matched");
+      setReuploadMessage(`"${attachment.label}" cocok dengan lampiran yang ditelaah.`);
+    }, REUPLOAD_CHECK_MS);
   };
 
   const regenerateTitle = () => {
@@ -100,6 +137,25 @@ export default function BuatPostPage() {
     });
     router.push(`/telaah-bersama/${id}?baru=1`);
   };
+
+  if (isGuest) {
+    return (
+      <div className="min-h-screen bg-background">
+        <ProtectedTopNavbar />
+        <PrototypeBanner />
+        <main className="mx-auto max-w-md px-4 py-16 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Masuk untuk membuat post</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Post di Telaah Bersama dibuat dari hasil telaahmu sendiri, jadi kamu perlu masuk dulu. Namamu tetap tampil
+            sebagai nama samaran.
+          </p>
+          <Button className="mt-5" onClick={() => requireLogin("Masuk untuk membuat post di Telaah Bersama.")}>
+            Masuk
+          </Button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -283,6 +339,7 @@ export default function BuatPostPage() {
                       <MockAttachment
                         label={attachment.label}
                         variant={attachment.variant}
+                        url={attachment.url}
                         className={attachment.sensitiveWarning ? "ring-2 ring-amber-400" : undefined}
                       />
                       <button
@@ -308,15 +365,40 @@ export default function BuatPostPage() {
                 Tidak ada lampiran yang akan diposting.
               </p>
             )}
+            <input
+              ref={reuploadInputRef}
+              type="file"
+              accept={ACCEPTED_ATTACHMENT_TYPES}
+              className="hidden"
+              onChange={(event) => {
+                void handleReupload(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
             <button
               type="button"
-              disabled
-              title="Tersedia setelah backend siap"
-              className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground disabled:cursor-not-allowed"
+              onClick={() => reuploadInputRef.current?.click()}
+              disabled={reuploadStatus === "checking"}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:cursor-wait disabled:opacity-60"
             >
               <Upload className="h-3.5 w-3.5" />
               Lampiran dari percakapan lama tidak muncul? Unggah ulang file yang sama.
             </button>
+            {reuploadStatus !== "idle" && (
+              <p
+                className={cn(
+                  "mt-1.5 text-xs",
+                  reuploadStatus === "checking" && "text-muted-foreground",
+                  reuploadStatus === "matched" && "text-emerald-700",
+                  reuploadStatus === "rejected" && "text-red-700"
+                )}
+              >
+                {reuploadStatus === "checking" ? "Mencocokkan dengan lampiran yang ditelaah…" : reuploadMessage}
+                {reuploadStatus === "matched" && (
+                  <span className="text-violet-700"> (Prototipe: di versi nyata, hanya file yang sama persis yang diterima.)</span>
+                )}
+              </p>
+            )}
           </section>
 
           {/* Links */}
