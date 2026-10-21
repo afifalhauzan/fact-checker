@@ -7,6 +7,12 @@ import {
 } from "./schema";
 import { buildExtractionUserPrompt, extractionSystemPrompt } from "./prompts";
 import type { AnalyzeImage } from "./analyze";
+import {
+  ATTACHMENT_LIMITS_TEXT,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENTS,
+  isSupportedAttachment,
+} from "../../../lib/attachments";
 
 /**
  * "Read first" stage: attachments are transcribed once, and everything downstream (rules, web
@@ -33,10 +39,7 @@ export interface ExtractionRun {
   errorMessage?: string;
 }
 
-export const MAX_ATTACHMENTS = 4;
-const MAX_ATTACHMENT_MB = 7;
-const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024;
-export const ATTACHMENT_LIMITS_TEXT = `maksimal ${MAX_ATTACHMENTS} lampiran, ${MAX_ATTACHMENT_MB} MB per lampiran`;
+export { ATTACHMENT_LIMITS_TEXT, MAX_ATTACHMENTS, isSupportedAttachment };
 const EXTRACTION_TIMEOUT_MS = 30_000;
 const MAX_VISUAL_CUES = 3;
 const MATERIAL_HEADER = "[Teks dari lampiran]";
@@ -49,11 +52,6 @@ const KIND_LABELS: Record<AttachmentKind, string> = {
   lainnya: "gambar lain",
   bukan_lowongan: "bukan materi lowongan",
 };
-
-/** File types the extraction step can read: images (posters, screenshots) and PDF documents. */
-export function isSupportedAttachment(mediaType: string): boolean {
-  return mediaType.startsWith("image/") || mediaType === "application/pdf";
-}
 
 function decodedSize(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
