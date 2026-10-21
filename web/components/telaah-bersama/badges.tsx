@@ -39,6 +39,3 @@ export function SeedBadge() {
     </span>
   );
 }
-
-// Temporary re-export while pages move to prototype-banner.tsx.
-export { PrototypeBanner } from "./prototype-banner";
