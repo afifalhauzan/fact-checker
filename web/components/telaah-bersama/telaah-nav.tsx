@@ -6,8 +6,8 @@ import { cn } from "@/utils/utils";
 
 const NAV_ITEMS = [
   { label: "Beranda", href: "/" },
-  { label: "Mulai Telaah", href: "/chat" },
-  { label: "Telaah Bersama", href: "/telaah-bersama" },
+  { label: "TelaahLoker", href: "/chat" },
+  { label: "TelaahBareng", href: "/telaah-bersama" },
 ];
 
 /** Links between the main areas: inline in the top bar on wider screens, a second row on phones. */
