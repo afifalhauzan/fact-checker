@@ -3,12 +3,26 @@
 import React from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, Copy, ExternalLink, Flag, Landmark, Link2, ShieldAlert, Trash2, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Copy,
+  Flag,
+  Landmark,
+  Link2,
+  Pencil,
+  ShieldAlert,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/modal";
 import { RiskCard } from "@/components/cards/RiskCard";
-import { ModusBadge, PrototypeBanner, RiskLevelBadge, SeedBadge } from "@/components/telaah-bersama/badges";
+import { ModusBadge, RiskLevelBadge, SeedBadge } from "@/components/telaah-bersama/badges";
+import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { ReactionButton } from "@/components/telaah-bersama/reaction-button";
 import { Discussion } from "@/components/telaah-bersama/discussion";
 import { ReportModal } from "@/components/telaah-bersama/report-modal";
@@ -22,6 +36,8 @@ import {
   type TelaahContact,
 } from "@/lib/telaah-bersama/mock-data";
 import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
+import { rujukanHrefFor } from "@/lib/telaah-bersama/rujukan";
+import { EditPostModal } from "@/components/telaah-bersama/edit-post-modal";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -72,7 +88,7 @@ function NewPostBanner() {
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
         <p className="font-medium">Telaahmu sudah terbit. Terima kasih sudah membantu orang lain waspada.</p>
-        <p className="mt-1 text-emerald-900/80">Kamu bisa menghapus Telaah ini kapan saja lewat tombol Hapus.</p>
+        <p className="mt-1 text-emerald-900/80">Kamu bisa menyunting atau menghapus Telaah ini kapan saja.</p>
       </div>
     </div>
   );
@@ -84,9 +100,12 @@ export default function TelaahDetailPage() {
   const post = useTelaahBersamaStore((state) => state.posts.find((item) => item.id === postId));
   const hasReported = useTelaahBersamaStore((state) => !!state.reported[postId]);
   const removePost = useTelaahBersamaStore((state) => state.removePost);
+  const isGuest = useTelaahBersamaStore((state) => state.viewer === "tamu");
+  const requireLogin = useTelaahBersamaStore((state) => state.requireLogin);
   const router = useRouter();
   const [isReportOpen, setIsReportOpen] = React.useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
 
   if (!post) {
     return (
@@ -102,6 +121,7 @@ export default function TelaahDetailPage() {
     );
   }
 
+  const isOwner = !isGuest && post.author === CURRENT_USER;
   const period = formatPeriod(post.openDate, post.closeDate);
   const details = [
     { label: "Perusahaan / instansi", value: post.company },
@@ -165,16 +185,24 @@ export default function TelaahDetailPage() {
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
                 <ReactionButton postId={post.id} />
-                {post.author === CURRENT_USER ? (
-                  <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="text-muted-foreground">
-                    <Trash2 />
-                    Hapus Telaah saya
-                  </Button>
+                {isOwner ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditOpen(true)} className="text-muted-foreground">
+                      <Pencil />
+                      Sunting
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setIsDeleteOpen(true)} className="text-muted-foreground">
+                      <Trash2 />
+                      Hapus
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsReportOpen(true)}
+                    onClick={() => {
+                      if (requireLogin("Masuk untuk melaporkan Telaah ini.")) setIsReportOpen(true);
+                    }}
                     disabled={hasReported}
                     className="text-muted-foreground"
                   >
@@ -238,7 +266,12 @@ export default function TelaahDetailPage() {
               <Section title="Lampiran">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {post.attachments.map((attachment) => (
-                    <MockAttachment key={attachment.id} label={attachment.label} variant={attachment.variant} />
+                    <MockAttachment
+                      key={attachment.id}
+                      label={attachment.label}
+                      variant={attachment.variant}
+                      url={attachment.url}
+                    />
                   ))}
                 </div>
               </Section>
@@ -300,10 +333,13 @@ export default function TelaahDetailPage() {
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 Sudah transfer atau mengirim data? Lihat kanal pengaduan resmi yang sesuai dengan situasimu.
               </p>
-              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                Halaman Rujukan (segera hadir)
-                <ExternalLink className="h-3.5 w-3.5" />
-              </span>
+              <Link
+                href={rujukanHrefFor(post.modus)}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                Lihat kanal yang sesuai
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
 
             <Link
@@ -318,6 +354,7 @@ export default function TelaahDetailPage() {
       </main>
 
       <ReportModal postId={post.id} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      <EditPostModal post={post} isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} />
       <ConfirmModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}

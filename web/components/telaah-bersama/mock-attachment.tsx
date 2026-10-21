@@ -2,15 +2,31 @@ import { ImageIcon, MessageSquareText } from "lucide-react";
 import { cn } from "@/utils/utils";
 
 // Drawn placeholder instead of a real poster or screenshot, so the prototype ships no real case data.
+// A `url` (an image the user re-uploaded in the prototype) is shown as-is instead.
 export function MockAttachment({
   label,
   variant,
+  url,
   className,
 }: {
   label: string;
   variant: "poster" | "chat";
+  url?: string;
   className?: string;
 }) {
+  if (url) {
+    return (
+      <div className={cn("flex aspect-[3/4] w-full flex-col overflow-hidden rounded-lg border border-border bg-muted", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={label} className="min-h-0 flex-1 object-cover" />
+        <div className="flex items-center gap-1.5 border-t border-border bg-white/80 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+          <ImageIcon className="h-3 w-3" />
+          <span className="truncate">{label}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
