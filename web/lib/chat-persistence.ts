@@ -65,6 +65,9 @@ export async function persistLatestExchange(conversationId: string, messages: Me
     if (response.ok) {
       // Lets the session history pick up a new or updated session without polling.
       window.dispatchEvent(new CustomEvent(SESSION_SAVED_EVENT, { detail: conversationId }))
+    } else if (response.status !== 401) {
+      // 401 is a guest; anything else means a signed-in session was not saved
+      console.error('[ChatPersistence] Save failed with status', response.status)
     }
   } catch (error) {
     console.error('[ChatPersistence] Failed to save messages:', error)
