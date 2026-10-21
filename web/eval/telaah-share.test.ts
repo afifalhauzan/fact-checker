@@ -15,7 +15,15 @@ import {
   signSharePayload,
 } from "../langchain/agents/telaah-bersama/share-payload";
 import { materialFeatures, scoreCandidate, type SimilarCandidate } from "../langchain/agents/telaah-bersama/similar";
+import { flagComment } from "../langchain/agents/telaah-bersama/moderation";
 import type { TelaahPost } from "../lib/telaah-bersama/types";
+
+test("comments that reassure without evidence are flagged, warnings are not", () => {
+  assert.equal(flagComment("Aman kok, saya sudah digaji. Transfer saja biar cepat."), "klaim_tanpa_bukti");
+  assert.equal(flagComment("Ini bukan penipuan, terpercaya"), "klaim_tanpa_bukti");
+  assert.equal(flagComment("Katanya aman, ternyata uangnya tidak bisa ditarik"), null);
+  assert.equal(flagComment("Saya juga dapat surat yang sama, nomor WA-nya sama persis."), null);
+});
 
 function analysis(riskLevel: "rendah" | "sedang" | "tinggi"): AnalysisResult {
   return {
