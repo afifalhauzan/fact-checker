@@ -4,6 +4,7 @@ import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { PreviewSection } from "@/components/landing/preview-section";
 import { StepsSection } from "@/components/landing/steps-section";
+import { TrendingSection } from "@/components/landing/trending-section";
 
 export default function HomePage() {
   return (
@@ -14,6 +15,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-[#17232c]/10" />
         <HeroSection />
         <PreviewSection />
+        <TrendingSection />
         <StepsSection />
         <CtaSection />
       </main>

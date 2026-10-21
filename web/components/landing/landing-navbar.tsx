@@ -7,6 +7,7 @@ export function LandingNavbar() {
   const navItems = [
     { label: "Produk", href: "#produk" },
     { label: "Cara kerja", href: "#cara-kerja" },
+    { label: "Telaah Bersama", href: "/telaah-bersama" },
     // { label: "Untuk Jobseeker", href: "#produk" },
   ];
 
