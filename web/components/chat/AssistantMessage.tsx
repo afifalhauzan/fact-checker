@@ -430,7 +430,12 @@ export function AssistantMessage({
       return (
         <motion.section key={item.key} {...fadeUp} className="space-y-2">
           {item.claims.map((claim, index) => (
-            <ClaimCard key={`${item.key}-claim-${index}`} text={claim.text} confidence={claim.confidence} />
+            <ClaimCard
+              key={`${item.key}-claim-${index}`}
+              text={claim.text}
+              confidence={claim.confidence}
+              riskLevel={claim.riskLevel}
+            />
           ))}
         </motion.section>
       );
