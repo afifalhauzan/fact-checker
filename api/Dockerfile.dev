@@ -7,6 +7,9 @@ RUN apk add --no-cache git unzip postgresql-dev \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# artisan serve is CLI PHP, where OPcache is off by default; timestamps are still checked, so edits show up
+RUN echo "opcache.enable_cli=1" > /usr/local/etc/php/conf.d/opcache-cli.ini
+
 EXPOSE 8000
 
 # Source is bind-mounted, so dependencies and migrations are handled at start

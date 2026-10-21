@@ -29,10 +29,14 @@ services:
       DB_DATABASE: gemastik
       DB_USERNAME: gemastik
       DB_PASSWORD: secret
+      # One PHP process answers one request at a time; the web app loads profile and history in parallel
+      PHP_CLI_SERVER_WORKERS: 4
     ports:
       - "8000:8000"
     volumes:
       - ./api:/var/www/html
+      # Reading vendor through the Windows bind mount is slow; keep it inside the container
+      - /var/www/html/vendor
     depends_on:
       postgres:
         condition: service_healthy
