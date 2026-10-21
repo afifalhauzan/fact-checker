@@ -2,15 +2,39 @@
 
 import React from "react";
 import Link from "next/link";
-import { Info, ShieldCheck } from "lucide-react";
+import { Info, Search, ShieldCheck } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { PrototypeBanner } from "@/components/telaah-bersama/prototype-banner";
 import { TelaahCard } from "@/components/telaah-bersama/telaah-card";
 import { cn } from "@/utils/utils";
-import { MODUS_LABELS, hotScore, type TelaahModus, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";
+import { MODUS_LABELS, hotScore, type TelaahModus, type TelaahPost, type TelaahRiskLevel } from "@/lib/telaah-bersama/mock-data";
 import { useTelaahBersamaStore } from "@/lib/telaah-bersama/store";
 
 type SortMode = "ramai" | "terbaru";
+
+// A number typed as "0812-0000" should still find "+62 812 0000...", so digits are matched on their own.
+function matchesQuery(post: TelaahPost, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+
+  const fields = [
+    post.title,
+    post.summary,
+    post.company,
+    post.position,
+    post.location,
+    post.source.platform,
+    post.source.account,
+    ...post.contacts.map((contact) => contact.value),
+  ].filter((field): field is string => !!field);
+  const text = fields.join(" ").toLowerCase();
+  const digits = fields.map((field) => field.replace(/\D/g, "").replace(/^62(8)/, "0$1")).join(" ");
+
+  return words.every((word) => {
+    const wordDigits = word.replace(/\D/g, "").replace(/^62(8)/, "0$1");
+    return text.includes(word) || (wordDigits.length >= 4 && digits.includes(wordDigits));
+  });
+}
 
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -35,13 +59,16 @@ export default function TelaahBersamaPage() {
   const [sort, setSort] = React.useState<SortMode>("ramai");
   const [risk, setRisk] = React.useState<TelaahRiskLevel | null>(null);
   const [modus, setModus] = React.useState<TelaahModus | null>(null);
+  const [query, setQuery] = React.useState("");
 
   const visiblePosts = React.useMemo(() => {
-    const filtered = posts.filter((post) => (!risk || post.riskLevel === risk) && (!modus || post.modus === modus));
+    const filtered = posts.filter(
+      (post) => (!risk || post.riskLevel === risk) && (!modus || post.modus === modus) && matchesQuery(post, query)
+    );
     return [...filtered].sort((a, b) =>
       sort === "ramai" ? hotScore(b) - hotScore(a) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [posts, risk, modus, sort]);
+  }, [posts, risk, modus, query, sort]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,6 +86,18 @@ export default function TelaahBersamaPage() {
           </p>
 
           <div className="mt-6 flex flex-col gap-3 border-b border-border pb-4">
+            <label className="relative block">
+              <span className="sr-only">Cari Telaah</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cari perusahaan, posisi, nomor kontak, atau akun sumber"
+                className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
             <div className="flex gap-1" role="tablist" aria-label="Urutkan">
               {(["ramai", "terbaru"] as const).map((mode) => (
                 <button
@@ -100,7 +139,7 @@ export default function TelaahBersamaPage() {
             ))}
             {visiblePosts.length === 0 && (
               <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                Belum ada Telaah dengan filter ini.
+                {query.trim() ? `Belum ada Telaah yang cocok dengan "${query.trim()}".` : "Belum ada Telaah dengan filter ini."}
               </p>
             )}
           </div>
