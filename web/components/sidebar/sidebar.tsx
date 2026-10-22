@@ -43,7 +43,9 @@ function EdgeToggle({
       aria-label={isOpen ? `Tutup ${label}` : `Buka ${label}`}
       title={isOpen ? `Tutup ${label}` : `Buka ${label}`}
       className={cn(
-        "absolute top-1/2 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "absolute z-20 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        // The context panel's tab stays at the top right, clear of the chat; the history tab is centered
+        side === "right" ? "top-3" : "top-1/2 -translate-y-1/2",
         className
       )}
     >
