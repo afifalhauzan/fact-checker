@@ -338,6 +338,15 @@ export default function TelaahDetailPage() {
                       }
                   )
                 }
+                onChanged={(changed) =>
+                  setPost(
+                    (current) =>
+                      current && {
+                        ...current,
+                        comments: (current.comments ?? []).map((comment) => (comment.id === changed.id ? changed : comment)),
+                      }
+                  )
+                }
                 // The server decides whether a placeholder stays, so the thread is reloaded as it now is
                 onDeleted={() =>
                   getPost(post.id)

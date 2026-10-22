@@ -5,10 +5,12 @@ import { CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import { reportPost } from "@/lib/telaah-bersama/api";
+import { reportComment, reportPost } from "@/lib/telaah-bersama/api";
 import type { ReportType } from "@/lib/telaah-bersama/types";
 
-const OPTIONS: Array<{ type: ReportType; label: string; description: string; result: string }> = [
+type ReportOption = { type: ReportType; label: string; description: string; result: string };
+
+const POST_OPTIONS: ReportOption[] = [
   {
     type: "data_pribadi",
     label: "Ada data pribadi yang bocor",
@@ -24,17 +26,37 @@ const OPTIONS: Array<{ type: ReportType; label: string; description: string; res
   },
 ];
 
+const COMMENT_OPTIONS: ReportOption[] = [
+  {
+    type: "data_pribadi",
+    label: "Ada data pribadi yang bocor",
+    description: "Misalnya NIK, alamat, atau nomor pribadi seseorang.",
+    result: "Kami memindai ulang komentar ini secara otomatis. Jika ditemukan data pribadi, komentar disembunyikan.",
+  },
+  {
+    type: "spam",
+    label: "Spam atau tidak relevan",
+    description: "Iklan, promosi, atau tidak berkaitan dengan lowongan ini.",
+    result: "Komentar ini akan diberi label jumlah laporan spam.",
+  },
+];
+
 export function ReportModal({
   postId,
+  commentId,
   isOpen,
   onClose,
   onReported,
 }: {
   postId: number;
+  // Set to report one comment instead of the post.
+  commentId?: number;
   isOpen: boolean;
   onClose: () => void;
   onReported: () => void;
 }) {
+  const isComment = commentId !== undefined;
+  const OPTIONS = isComment ? COMMENT_OPTIONS : POST_OPTIONS;
   const [selected, setSelected] = React.useState<ReportType | null>(null);
   const [submitted, setSubmitted] = React.useState<ReportType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -52,7 +74,7 @@ export function ReportModal({
     setIsSending(true);
     setError(null);
     try {
-      await reportPost(postId, selected);
+      await (isComment ? reportComment(postId, commentId, selected) : reportPost(postId, selected));
       setSubmitted(selected);
       onReported();
     } catch (reportError) {
@@ -65,7 +87,12 @@ export function ReportModal({
   const submittedOption = OPTIONS.find((option) => option.type === submitted);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Laporkan Telaah ini" description="Pilih alasan yang paling sesuai.">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={isComment ? "Laporkan komentar ini" : "Laporkan Telaah ini"}
+      description="Pilih alasan yang paling sesuai."
+    >
       {submittedOption ? (
         <div className="space-y-4">
           <div className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
