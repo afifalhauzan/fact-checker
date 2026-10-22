@@ -22,6 +22,12 @@ test("free mail, shortlinks, and abbreviations are not searched", () => {
   assert.equal(queryFor("Lulusan S.Kom, datang ke Jl.Mawar 12, kirim CV ke hrd.toko@gmail.com atau bit.ly/daftar"), null);
 });
 
-test("a legal company name still comes first", () => {
-  assert.equal(queryFor("PT Sukses Makmur Sentosa membuka lowongan. Info: sukses.example.com"), '"PT Sukses Makmur Sentosa" lowongan kerja');
+test("a legal company name still comes first, and the posting's site is searched alongside it", () => {
+  const target = buildVerificationQuery(preprocessJobInput("PT Sukses Makmur Sentosa membuka lowongan. Info: karir.suksesmakmur.co.id"));
+  assert.equal(target?.query, '"PT Sukses Makmur Sentosa" lowongan kerja');
+  assert.equal(target?.siteDomain, "karir.suksesmakmur.co.id");
+});
+
+test("job boards are not taken for the employer's site", () => {
+  assert.equal(queryFor("Lowongan Data Analyst https://www.jobstreet.co.id/id/job/123 dan glints.com/id/opportunities/jobs/x"), null);
 });

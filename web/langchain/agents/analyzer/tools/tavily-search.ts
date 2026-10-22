@@ -22,6 +22,8 @@ export interface SearchEntity {
 export interface SearchTarget {
   query: string;
   entity: SearchEntity;
+  // The site the posting points to, searched on its own for the company's pages there.
+  siteDomain?: string;
 }
 
 export interface WebSearchResult {
@@ -29,8 +31,10 @@ export interface WebSearchResult {
   entity?: SearchEntity;
   // Results returned by the search engine before the relevance filter.
   retrievedCount: number;
-  // Only results that mention the entity.
+  // Only results that mention the entity, or come from the posting's own site.
   sources: SearchSource[];
+  // How many of the sources are pages on the site the posting points to.
+  site?: { domain: string; count: number };
 }
 
 const SEARCH_TIMEOUT_MS = 8000;
@@ -65,6 +69,8 @@ const NON_EMPLOYER_DOMAINS = [
   "bit.ly", "s.id", "tinyurl.com", "cutt.ly", "shorturl.at", "rb.gy", "linktr.ee", "lnk.bio",
   "wa.me", "whatsapp.com", "t.me", "instagram.com", "facebook.com", "fb.com", "tiktok.com",
   "twitter.com", "x.com", "linkedin.com", "youtube.com", "google.com", "forms.gle",
+  // Job boards: the posting is on them, the employer is not
+  "jobstreet.co.id", "jobstreet.com", "glints.com", "kalibrr.id", "kalibrr.com", "indeed.com", "karirhub.kemnaker.go.id",
 ];
 
 // Bare text like "S.Kom" or "Jl.Mawar" also looks like a host; only common employer TLDs count.
@@ -127,29 +133,35 @@ function extractCompany(text: string): SearchEntity | null {
  */
 export function buildVerificationQuery(preprocessed: PreprocessedInput): SearchTarget | null {
   const company = extractCompany(preprocessed.cleanedText);
+  const [employerDomain] = employerDomains(preprocessed);
   if (company) {
-    return { query: `"${company.name}" lowongan kerja`, entity: company };
+    return { query: `"${company.name}" lowongan kerja`, entity: company, siteDomain: employerDomain };
+  }
+  if (employerDomain) {
+    // The site search finds what a domain query misses, such as the company's own scam warning
+    return { query: employerDomain, entity: { kind: "domain", name: employerDomain }, siteDomain: employerDomain };
   }
 
+  return null;
+}
+
+/** Sites the posting points to that could be the employer's own, in the order they appear. */
+export function employerDomains(preprocessed: PreprocessedInput): string[] {
   // Posters write sites bare ("idstar.co.id") and often only give an email, so both count
   const { identifiers } = findContacts(preprocessed.cleanedText);
-  const employerDomain = [
+  const domains = [
     ...preprocessed.extractedDomains,
     ...identifiers.filter((item) => item.kind === "domain").map((item) => item.value),
     ...identifiers.filter((item) => item.kind === "email").map((item) => item.value.split("@")[1]),
   ]
     .map((domain) => domain.replace(/^www\./, ""))
-    .find(
+    .filter(
       (domain) =>
         EMPLOYER_TLD.test(domain) &&
         !isGenericDomain(domain) &&
         !NON_EMPLOYER_DOMAINS.some((generic) => domain === generic || domain.endsWith(`.${generic}`))
     );
-  if (employerDomain) {
-    return { query: employerDomain, entity: { kind: "domain", name: employerDomain } };
-  }
-
-  return null;
+  return [...new Set(domains)];
 }
 
 function hostnameOf(url: string): string {
@@ -207,58 +219,74 @@ export async function searchWeb(target: SearchTarget | null): Promise<WebSearchR
     return { status: "skipped_no_query", retrievedCount: 0, sources: [] };
   }
 
-  const { query, entity } = target;
+  const { query, entity, siteDomain } = target;
 
   try {
-    const response = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        api_key: apiKey,
-        query,
-        search_depth: "basic",
-        include_answer: false,
-        max_results: MAX_RESULTS,
-      }),
-      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Tavily API error HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    const results: any[] = Array.isArray(data?.results) ? data.results : [];
+    const [main, site] = await Promise.all([
+      tavilySearch(apiKey, { query }),
+      siteDomain
+        ? // The site search is extra evidence: its failure must not lose the main results
+          tavilySearch(apiKey, { query: `${entity.name} lowongan karir`, include_domains: [siteDomain] }).catch(() => [])
+        : [],
+    ]);
 
     const retrieved: Array<Omit<SearchSource, "id">> = [];
-    for (const item of results) {
-      const url = item?.url;
-      if (typeof url !== "string" || !/^https?:\/\//i.test(url) || retrieved.some((source) => source.url === url)) {
-        continue;
-      }
-      retrieved.push({
-        title: cleanText(item.title) || "Sumber web",
-        url,
-        snippet: truncate(cleanText(item.content), PROMPT_SNIPPET_LENGTH),
-      });
-      if (retrieved.length >= MAX_RESULTS) {
-        break;
+    for (const item of [...main, ...site]) {
+      if (!retrieved.some((source) => source.url === item.url)) {
+        retrieved.push(item);
       }
     }
 
+    const onSite = (url: string) => !!siteDomain && mentionsEntity({ id: "", title: "", url, snippet: "" }, { kind: "domain", name: siteDomain });
     // IDs are assigned after filtering so the model only ever sees S1..Sn of relevant sources.
     const sources: SearchSource[] = retrieved
-      .filter((item) => mentionsEntity({ id: "", ...item }, entity))
+      .filter((item) => mentionsEntity({ id: "", ...item }, entity) || onSite(item.url))
       .map((item, index) => ({ id: `S${index + 1}`, ...item }));
 
-    return { status: sources.length ? "ok" : "empty", entity, retrievedCount: retrieved.length, sources };
+    return {
+      status: sources.length ? "ok" : "empty",
+      entity,
+      retrievedCount: retrieved.length,
+      sources,
+      site: siteDomain ? { domain: siteDomain, count: sources.filter((source) => onSite(source.url)).length } : undefined,
+    };
   } catch (error) {
     console.error("[WebSearch] Tavily request failed:", error instanceof Error ? error.message : error);
     return { status: "error", entity, retrievedCount: 0, sources: [] };
   }
+}
+
+async function tavilySearch(apiKey: string, params: { query: string; include_domains?: string[] }): Promise<Array<Omit<SearchSource, "id">>> {
+  const response = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      ...params,
+      search_depth: "basic",
+      include_answer: false,
+      max_results: MAX_RESULTS,
+    }),
+    signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Tavily API error HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const results: any[] = Array.isArray(data?.results) ? data.results : [];
+
+  return results
+    .filter((item) => typeof item?.url === "string" && /^https?:\/\//i.test(item.url))
+    .slice(0, MAX_RESULTS)
+    .map((item) => ({
+      title: cleanText(item.title) || "Sumber web",
+      url: item.url,
+      snippet: truncate(cleanText(item.content), PROMPT_SNIPPET_LENGTH),
+    }));
 }
 
 /** Accepts the forms models produce for a source ID ("S1", "s1", "[S1]", "1") and returns "S1". */
