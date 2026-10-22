@@ -52,16 +52,29 @@ class TelaahInteractionController extends Controller
 
     /**
      * Only the comment's own author may delete it (the post's creator cannot silence objections).
-     * Replies to it go with it.
+     * A comment with replies becomes a "Komentar telah dihapus" placeholder, its text and author
+     * wiped, so the replies keep their thread; anything else is deleted outright.
      */
     public function destroyComment(Request $request, TelaahPost $post, TelaahComment $comment): JsonResponse
     {
-        abort_unless($comment->post_id === $post->id && $comment->user_id === $request->user()->id, 404);
+        abort_unless(
+            $comment->post_id === $post->id && $comment->user_id === $request->user()->id && ! $comment->removed_at,
+            404,
+        );
 
         DB::transaction(function () use ($post, $comment) {
-            $removed = 1 + TelaahComment::where('parent_id', $comment->id)->count();
-            $comment->delete();
-            $post->decrement('comment_count', min($removed, $post->comment_count));
+            if (TelaahComment::where('parent_id', $comment->id)->exists()) {
+                $comment->update(['removed_at' => now(), 'body' => '', 'author_pseudonym' => '', 'user_id' => null, 'flag' => null]);
+            } else {
+                $parent = $comment->parent_id ? TelaahComment::find($comment->parent_id) : null;
+                $comment->delete();
+                // The last reply under a placeholder takes the placeholder with it
+                if ($parent?->removed_at && ! TelaahComment::where('parent_id', $parent->id)->exists()) {
+                    $parent->delete();
+                }
+            }
+            // comment_count counts visible comments; a placeholder was already uncounted
+            $post->decrement('comment_count', min(1, $post->comment_count));
         });
 
         return response()->json(['message' => 'Comment deleted', 'commentCount' => $post->fresh()->comment_count]);

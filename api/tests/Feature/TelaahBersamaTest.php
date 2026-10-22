@@ -234,7 +234,7 @@ class TelaahBersamaTest extends TestCase
             ->assertJsonPath('commentCount', 3);
     }
 
-    public function test_only_the_author_deletes_a_comment_and_its_replies_go_with_it(): void
+    public function test_a_deleted_comment_with_replies_stays_as_an_anonymous_placeholder(): void
     {
         $owner = User::factory()->create();
         $post = $this->createPost($owner);
@@ -244,14 +244,40 @@ class TelaahBersamaTest extends TestCase
             ->assertJsonPath('isMine', true)->json('id');
 
         Sanctum::actingAs($owner);
-        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Terima kasih.', 'parent_id' => $comment]);
+        $reply = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Terima kasih.', 'parent_id' => $comment])
+            ->json('id');
         // The post's creator cannot remove someone else's comment
         $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")->assertNotFound();
-        $this->getJson("/api/telaah-bersama/{$post->id}")->assertJsonPath('comments.0.isMine', false);
 
         Sanctum::actingAs($reader);
         $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")
+            ->assertOk()->assertJsonPath('commentCount', 1);
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")->assertNotFound();
+
+        $response = $this->getJson("/api/telaah-bersama/{$post->id}")
+            ->assertJsonCount(2, 'comments')
+            ->assertJsonPath('comments.0.isDeleted', true)
+            ->assertJsonPath('comments.0.author', null)
+            ->assertJsonPath('comments.0.body', null)
+            ->assertJsonPath('comments.1.body', 'Terima kasih.');
+        $this->assertStringNotContainsString('Saya juga dapat.', $response->getContent());
+        $this->assertStringNotContainsString($reader->pseudonym, $response->getContent());
+
+        // The last reply under the placeholder takes the placeholder with it
+        Sanctum::actingAs($owner);
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$reply}")
             ->assertOk()->assertJsonPath('commentCount', 0);
+        $this->assertDatabaseCount('telaah_comments', 0);
+    }
+
+    public function test_a_deleted_comment_without_replies_is_removed(): void
+    {
+        $post = $this->createPost(User::factory()->create());
+
+        Sanctum::actingAs(User::factory()->create());
+        $comment = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Salah ketik.'])->json('id');
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")->assertJsonPath('commentCount', 0);
+
         $this->assertDatabaseCount('telaah_comments', 0);
     }
 

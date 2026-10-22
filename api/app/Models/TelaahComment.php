@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'parent_id', 'author_pseudonym', 'body', 'flag'])]
+#[Fillable(['user_id', 'parent_id', 'author_pseudonym', 'body', 'flag', 'removed_at'])]
 class TelaahComment extends Model
 {
+    protected function casts(): array
+    {
+        return ['removed_at' => 'datetime'];
+    }
     public const FLAGS = ['klaim_tanpa_bukti'];
 
     // Accounts younger than this get an "akun baru" badge on their comments (design doc 5.5)
@@ -20,7 +24,24 @@ class TelaahComment extends Model
      */
     public function present(?int $postOwnerId = null, ?int $viewerId = null): array
     {
+        // A removed comment is only a placeholder that keeps its replies in their thread
+        if ($this->removed_at) {
+            return [
+                'id' => $this->id,
+                'parentId' => $this->parent_id,
+                'isDeleted' => true,
+                'author' => null,
+                'isPostAuthor' => false,
+                'isMine' => false,
+                'isNewAccount' => false,
+                'body' => null,
+                'flag' => null,
+                'createdAt' => $this->created_at?->toIso8601String(),
+            ];
+        }
+
         return [
+            'isDeleted' => false,
             'id' => $this->id,
             'parentId' => $this->parent_id,
             'author' => $this->author_pseudonym,
