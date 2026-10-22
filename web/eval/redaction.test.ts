@@ -4,38 +4,39 @@
  *
  *   pnpm test:redaction
  */
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, expect, it } from "vitest";
 import { hasSensitiveData, looksLikePersonalData, redactSensitive, stripUrlQuery } from "../langchain/agents/analyzer/redaction";
 
-test("masks a NIK, plain or grouped", () => {
-  assert.equal(redactSensitive("NIK 3201234567890001"), "NIK [NIK disensor]");
-  assert.equal(redactSensitive("NIK: 3201 2345 6789 0001."), "NIK: [NIK disensor].");
+describe("personal data redaction", () => {
+it("masks a NIK, plain or grouped", () => {
+  expect(redactSensitive("NIK 3201234567890001")).toBe("NIK [NIK disensor]");
+  expect(redactSensitive("NIK: 3201 2345 6789 0001.")).toBe("NIK: [NIK disensor].");
 });
 
-test("keeps 16-digit numbers that cannot be a NIK", () => {
+it("keeps 16-digit numbers that cannot be a NIK", () => {
   // 88 is not a province code: e.g. a virtual account number from the posting
-  assert.equal(redactSensitive("VA 8808123456789012"), "VA 8808123456789012");
+  expect(redactSensitive("VA 8808123456789012")).toBe("VA 8808123456789012");
 });
 
-test("masks one-time codes but not postal codes", () => {
-  assert.equal(redactSensitive("Kode OTP kamu 482913, jangan bagikan"), "Kode OTP kamu [kode disensor], jangan bagikan");
-  assert.equal(redactSensitive("PIN: 1234"), "PIN: [kode disensor]");
-  assert.equal(redactSensitive("kode pos 60111"), "kode pos 60111");
+it("masks one-time codes but not postal codes", () => {
+  expect(redactSensitive("Kode OTP kamu 482913, jangan bagikan")).toBe("Kode OTP kamu [kode disensor], jangan bagikan");
+  expect(redactSensitive("PIN: 1234")).toBe("PIN: [kode disensor]");
+  expect(redactSensitive("kode pos 60111")).toBe("kode pos 60111");
 });
 
-test("leaves posting data intact", () => {
+it("leaves posting data intact", () => {
   const posting = "Transfer Rp1.350.000 ke BRI 0000-01-778899-50-1, WA 0812-0000-4471, gaji 6.000.000, 30 Oktober 2026";
-  assert.equal(redactSensitive(posting), posting);
-  assert.equal(hasSensitiveData(posting), false);
+  expect(redactSensitive(posting)).toBe(posting);
+  expect(hasSensitiveData(posting)).toBe(false);
 });
 
-test("flags lines that probably describe the applicant", () => {
-  assert.equal(looksLikePersonalData("NIK [NIK disensor]"), true);
-  assert.equal(looksLikePersonalData("Tempat, tanggal lahir: Malang, 2 Mei 2003"), true);
-  assert.equal(looksLikePersonalData("Posisi: Staff Admin"), false);
+it("flags lines that probably describe the applicant", () => {
+  expect(looksLikePersonalData("NIK [NIK disensor]")).toBe(true);
+  expect(looksLikePersonalData("Tempat, tanggal lahir: Malang, 2 Mei 2003")).toBe(true);
+  expect(looksLikePersonalData("Posisi: Staff Admin")).toBe(false);
 });
 
-test("strips query strings from links", () => {
-  assert.equal(stripUrlQuery("https://contoh.example/daftar?token=abc#x"), "https://contoh.example/daftar");
+it("strips query strings from links", () => {
+  expect(stripUrlQuery("https://contoh.example/daftar?token=abc#x")).toBe("https://contoh.example/daftar");
+});
 });
