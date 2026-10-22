@@ -37,3 +37,39 @@ test("login page links to registration", async ({ page }) => {
   await expect(page).toHaveURL(/\/register$/);
   await expect(page.getByRole("heading", { name: /Daftar/i })).toBeVisible();
 });
+
+test("login password visibility can be toggled", async ({ page }) => {
+  await page.goto("/login");
+  const password = page.getByPlaceholder("Password");
+
+  await expect(password).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Tampilkan password" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Sembunyikan password" }).click();
+  await expect(password).toHaveAttribute("type", "password");
+});
+
+test("registration form reports mismatched passwords", async ({ page }) => {
+  await page.goto("/register");
+  await page.getByPlaceholder("Nama lengkap").fill("Siti Rahmawati");
+  await page.getByPlaceholder("Email").fill("siti@example.com");
+  await page.getByPlaceholder("Password", { exact: true }).fill("secret123");
+  await page.getByPlaceholder("Ulangi password").fill("different123");
+  await page.getByRole("button", { name: "Daftar" }).click();
+
+  await expect(page.getByText("Password tidak sama")).toBeVisible();
+  await expect(page).toHaveURL(/\/register$/);
+});
+
+test("chat composer keeps send disabled until there is input", async ({ page }) => {
+  await page.goto("/chat");
+  await expect(page).toHaveURL(/\/chat\?conversation_id=/);
+
+  const send = page.getByRole("button", { name: "Kirim" });
+  const composer = page.getByRole("textbox", { name: "Pesan" });
+  await expect(send).toBeDisabled();
+  await composer.fill("Cek lowongan ini");
+  await expect(send).toBeEnabled();
+  await composer.fill("   ");
+  await expect(send).toBeDisabled();
+});

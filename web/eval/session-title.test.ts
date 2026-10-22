@@ -4,34 +4,37 @@
  *
  *   pnpm test:session-title
  */
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, expect, it } from "vitest";
 import { cleanSessionTitle } from "../langchain/agents/session-title";
 
-test("keeps a plain title", () => {
-  assert.equal(cleanSessionTitle("Lowongan Staff Admin PT Listrik Nusantara"), "Lowongan Staff Admin PT Listrik Nusantara");
-});
+describe("session title cleanup", () => {
+  it("keeps a plain title", () => {
+    expect(cleanSessionTitle("Lowongan Staff Admin PT Listrik Nusantara")).toBe("Lowongan Staff Admin PT Listrik Nusantara");
+  });
 
-test("drops quotes, markdown, a 'Judul:' label, and trailing punctuation", () => {
-  assert.equal(cleanSessionTitle('**Judul: "Biaya administrasi rekrutmen".**'), "Biaya administrasi rekrutmen");
-});
+  it("drops quotes, markdown, a 'Judul:' label, and trailing punctuation", () => {
+    expect(cleanSessionTitle('**Judul: "Biaya administrasi rekrutmen".**')).toBe("Biaya administrasi rekrutmen");
+  });
 
-test("uses only the first non-empty line", () => {
-  assert.equal(cleanSessionTitle("\nMagang remote VINIX7\nAlasan: ..."), "Magang remote VINIX7");
-});
+  it("uses only the first non-empty line", () => {
+    expect(cleanSessionTitle("\nMagang remote VINIX7\nAlasan: ...")).toBe("Magang remote VINIX7");
+  });
 
-test("removes phone numbers and emails", () => {
-  assert.equal(cleanSessionTitle("Lowongan kasir 0812-3456-7890 hrd@gmail.com"), "Lowongan kasir");
-});
+  it("removes phone numbers and emails", () => {
+    expect(cleanSessionTitle("Lowongan kasir 0812-3456-7890 hrd@gmail.com")).toBe("Lowongan kasir");
+  });
 
-test("cuts long titles at a word boundary", () => {
-  const title = cleanSessionTitle(
-    "Tawaran kerja operator komputer di Bangkok Thailand dengan visa kunjungan dan tiket yang dibayari sponsor"
-  );
-  assert.ok(title && title.length <= 60 && !title.endsWith(" "), title ?? "null");
-});
+  it("cuts long titles at a word boundary", () => {
+    const title = cleanSessionTitle(
+      "Tawaran kerja operator komputer di Bangkok Thailand dengan visa kunjungan dan tiket yang dibayari sponsor"
+    );
+    expect(title).not.toBeNull();
+    expect(title!.length).toBeLessThanOrEqual(60);
+    expect(title).not.toMatch(/\s$/);
+  });
 
-test("returns null when nothing usable is left", () => {
-  assert.equal(cleanSessionTitle("  \n "), null);
-  assert.equal(cleanSessionTitle("0812-3456-7890"), null);
+  it("returns null when nothing usable is left", () => {
+    expect(cleanSessionTitle("  \n ")).toBeNull();
+    expect(cleanSessionTitle("0812-3456-7890")).toBeNull();
+  });
 });
