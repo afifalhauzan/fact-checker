@@ -1,5 +1,6 @@
 import type { Citation, Reference } from "../schema";
 import type { PreprocessedInput } from "../preprocessor";
+import { findContacts, isGenericDomain } from "../../telaah-bersama/identifiers";
 
 export type WebSearchStatus = "ok" | "empty" | "skipped_no_key" | "skipped_no_query" | "error";
 
@@ -66,6 +67,10 @@ const NON_EMPLOYER_DOMAINS = [
   "twitter.com", "x.com", "linkedin.com", "youtube.com", "google.com", "forms.gle",
 ];
 
+// Bare text like "S.Kom" or "Jl.Mawar" also looks like a host; only common employer TLDs count.
+// shortcut: fixed TLD list, extend it when a real employer domain is missed.
+const EMPLOYER_TLD = /\.(?:id|com|net|org|co|io|group|biz|info|asia|my|sg|tech|ai|app|site|online|careers|jobs)$/;
+
 // Names stay on one line: transcribed letters put the address ("Jl. ...") on the next line.
 const COMPANY_PATTERN = /\b(PT|CV)\.?[ \t]+((?:[A-Z0-9][\w&'.-]*[ \t]?){1,6})(?:\(([A-Z]{2,8})\))?/;
 const COMPANY_STOPWORDS = new Set([
@@ -126,9 +131,20 @@ export function buildVerificationQuery(preprocessed: PreprocessedInput): SearchT
     return { query: `"${company.name}" lowongan kerja`, entity: company };
   }
 
-  const employerDomain = preprocessed.extractedDomains
+  // Posters write sites bare ("idstar.co.id") and often only give an email, so both count
+  const { identifiers } = findContacts(preprocessed.cleanedText);
+  const employerDomain = [
+    ...preprocessed.extractedDomains,
+    ...identifiers.filter((item) => item.kind === "domain").map((item) => item.value),
+    ...identifiers.filter((item) => item.kind === "email").map((item) => item.value.split("@")[1]),
+  ]
     .map((domain) => domain.replace(/^www\./, ""))
-    .find((domain) => !NON_EMPLOYER_DOMAINS.some((generic) => domain === generic || domain.endsWith(`.${generic}`)));
+    .find(
+      (domain) =>
+        EMPLOYER_TLD.test(domain) &&
+        !isGenericDomain(domain) &&
+        !NON_EMPLOYER_DOMAINS.some((generic) => domain === generic || domain.endsWith(`.${generic}`))
+    );
   if (employerDomain) {
     return { query: employerDomain, entity: { kind: "domain", name: employerDomain } };
   }
