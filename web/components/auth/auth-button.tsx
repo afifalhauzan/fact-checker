@@ -60,7 +60,7 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
 
   // "Pencari Kerja #3d9a" -> "#3d9a": the name others see in TelaahBareng, shown next to the account name
   const publicTag = user.pseudonym?.match(/#\w+$/)?.[0];
-  const displayName = publicTag ? `${user.name} (${publicTag})` : user.name;
+  const displayName = user.name;
 
   return (
     <div className="relative" ref={dropdownRef}>

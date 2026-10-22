@@ -244,7 +244,7 @@ export function HistoryPanel({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Cari telaah"
-          className="h-9 w-full rounded-lg border border-border bg-background pl-8 pr-8 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="h-9 w-full rounded-lg border border-border bg-background pl-8 pr-8 text-sm [&::-webkit-search-cancel-button]:appearance-none text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         {query && (
           <button

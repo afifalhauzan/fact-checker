@@ -1,5 +1,5 @@
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
-import { RISK_LEVELS, type Claim, type RiskLevel } from "@/langchain/agents/analyzer/schema";
+import { RISK_LEVELS, RISK_LEVEL_ADVICE, splitClaim, type Claim, type RiskLevel } from "@/langchain/agents/analyzer/schema";
 import { cn } from "@/utils/utils";
 
 interface ClaimCardProps extends Pick<Claim, "text"> {
@@ -12,7 +12,7 @@ const LEVEL_STYLES: Record<
 > = {
   tinggi: {
     label: "Risiko Tinggi",
-    advice: "Jangan transfer uang atau kirim data pribadi dulu.",
+    advice: RISK_LEVEL_ADVICE.tinggi,
     icon: ShieldAlert,
     card: "border-red-200",
     header: "bg-red-50",
@@ -22,7 +22,7 @@ const LEVEL_STYLES: Record<
   },
   sedang: {
     label: "Risiko Sedang",
-    advice: "Verifikasi ke kanal resmi perusahaan sebelum lanjut.",
+    advice: RISK_LEVEL_ADVICE.sedang,
     icon: ShieldQuestion,
     card: "border-amber-200",
     header: "bg-amber-50",
@@ -32,7 +32,7 @@ const LEVEL_STYLES: Record<
   },
   rendah: {
     label: "Risiko Rendah",
-    advice: "Belum ada tanda bahaya utama, tetap cocokkan dengan kanal resmi.",
+    advice: RISK_LEVEL_ADVICE.rendah,
     icon: ShieldCheck,
     card: "border-emerald-200",
     header: "bg-emerald-50",
@@ -41,17 +41,6 @@ const LEVEL_STYLES: Record<
     segment: "bg-emerald-500",
   },
 };
-
-const LEVEL_IN_TEXT = /^\s*tingkat\s+risiko(?:\s+awal)?\s*:\s*(rendah|sedang|tinggi)\s*\.?\s*/i;
-
-/** Older stored claims only carry the level inside the text ("Tingkat Risiko Awal: Sedang. ..."). */
-function splitClaim(text: string, riskLevel?: RiskLevel): { level?: RiskLevel; reason: string } {
-  const match = text.match(LEVEL_IN_TEXT);
-  return {
-    level: riskLevel ?? (match?.[1].toLowerCase() as RiskLevel | undefined),
-    reason: match ? text.slice(match[0].length) : text,
-  };
-}
 
 export function ClaimCard({ text, riskLevel }: ClaimCardProps) {
   const { level, reason } = splitClaim(text, riskLevel);

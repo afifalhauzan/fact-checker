@@ -20,7 +20,8 @@
     "test:telaah": "jiti eval/telaah-share.test.ts",
     "test:search-query": "jiti eval/search-query.test.ts",
     "test:web-checks": "jiti eval/web-checks.test.ts",
-    "test:context": "jiti eval/conversation-context.test.ts"
+    "test:context": "jiti eval/conversation-context.test.ts",
+    "test:export": "jiti eval/analysis-export.test.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.148",
@@ -34,6 +35,7 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-pdf/renderer": "^4.9.0",
     "@tanstack/react-table": "^8.21.3",
     "@vercel/analytics": "^1.3.1",
     "@vercel/kv": "^2.0.0",

@@ -29,6 +29,35 @@ export const RISK_LEVEL_LABELS: Record<RiskLevel, string> = {
   tinggi: "Tinggi",
 };
 
+/** What to tell the user at each risk level; shown on the verdict card and in exports. */
+export const RISK_LEVEL_ADVICE: Record<RiskLevel, string> = {
+  tinggi: "Jangan transfer uang atau kirim data pribadi dulu.",
+  sedang: "Verifikasi ke kanal resmi perusahaan sebelum lanjut.",
+  rendah: "Belum ada tanda bahaya utama, tetap cocokkan dengan kanal resmi.",
+};
+
+export const RISK_TYPE_LABELS: Record<RiskType, string> = {
+  payment_request: "Permintaan Biaya",
+  sensitive_data: "Data Sensitif",
+  tppo: "Indikasi TPPO",
+  suspicious_contact: "Kontak/Link Mencurigakan",
+  manipulation: "Upaya Manipulasi",
+  bias: "Tekanan Sosial",
+  overclaim: "Janji Terlalu Muluk",
+  missing_context: "Detail Tidak Lengkap",
+};
+
+// Older stored claims only carry the level inside the text ("Tingkat Risiko Awal: Sedang. ...").
+const LEVEL_IN_TEXT = /^\s*tingkat\s+risiko(?:\s+awal)?\s*:\s*(rendah|sedang|tinggi)\s*\.?\s*/i;
+
+export function splitClaim(text: string, riskLevel?: RiskLevel): { level?: RiskLevel; reason: string } {
+  const match = text.match(LEVEL_IN_TEXT);
+  return {
+    level: riskLevel ?? (match?.[1].toLowerCase() as RiskLevel | undefined),
+    reason: match ? text.slice(match[0].length) : text,
+  };
+}
+
 export const ATTACHMENT_KINDS = [
   "poster_lowongan",
   "screenshot_chat",
