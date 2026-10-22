@@ -47,7 +47,24 @@ class TelaahInteractionController extends Controller
             ]);
         });
 
-        return response()->json($comment->load('user')->present($post->user_id), 201);
+        return response()->json($comment->load('user')->present($post->user_id, $request->user()->id), 201);
+    }
+
+    /**
+     * Only the comment's own author may delete it (the post's creator cannot silence objections).
+     * Replies to it go with it.
+     */
+    public function destroyComment(Request $request, TelaahPost $post, TelaahComment $comment): JsonResponse
+    {
+        abort_unless($comment->post_id === $post->id && $comment->user_id === $request->user()->id, 404);
+
+        DB::transaction(function () use ($post, $comment) {
+            $removed = 1 + TelaahComment::where('parent_id', $comment->id)->count();
+            $comment->delete();
+            $post->decrement('comment_count', min($removed, $post->comment_count));
+        });
+
+        return response()->json(['message' => 'Comment deleted', 'commentCount' => $post->fresh()->comment_count]);
     }
 
     public function toggleReaction(Request $request, TelaahPost $post): JsonResponse

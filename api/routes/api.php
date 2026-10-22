@@ -37,6 +37,8 @@ Route::prefix('telaah-bersama')->group(function () {
             Route::delete('/{post}', [TelaahPostController::class, 'destroy'])->whereNumber('post');
             Route::post('/{post}/comments', [TelaahInteractionController::class, 'storeComment'])
                 ->whereNumber('post')->middleware('throttle:telaah-comment');
+            Route::delete('/{post}/comments/{comment}', [TelaahInteractionController::class, 'destroyComment'])
+                ->whereNumber(['post', 'comment']);
             Route::post('/{post}/reactions', [TelaahInteractionController::class, 'toggleReaction'])->whereNumber('post');
             Route::post('/{post}/reports', [TelaahInteractionController::class, 'storeReport'])->whereNumber('post');
         });

@@ -234,6 +234,27 @@ class TelaahBersamaTest extends TestCase
             ->assertJsonPath('commentCount', 3);
     }
 
+    public function test_only_the_author_deletes_a_comment_and_its_replies_go_with_it(): void
+    {
+        $owner = User::factory()->create();
+        $post = $this->createPost($owner);
+
+        Sanctum::actingAs($reader = User::factory()->create());
+        $comment = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Saya juga dapat.'])
+            ->assertJsonPath('isMine', true)->json('id');
+
+        Sanctum::actingAs($owner);
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Terima kasih.', 'parent_id' => $comment]);
+        // The post's creator cannot remove someone else's comment
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")->assertNotFound();
+        $this->getJson("/api/telaah-bersama/{$post->id}")->assertJsonPath('comments.0.isMine', false);
+
+        Sanctum::actingAs($reader);
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")
+            ->assertOk()->assertJsonPath('commentCount', 0);
+        $this->assertDatabaseCount('telaah_comments', 0);
+    }
+
     public function test_reports_count_only_from_older_accounts_and_hide_only_confirmed_personal_data(): void
     {
         $post = $this->createPost(User::factory()->create());

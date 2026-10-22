@@ -16,14 +16,16 @@ class TelaahComment extends Model
 
     /**
      * @param  int|null  $postOwnerId  the post's author, so their comments can carry a "Pembuat" badge
+     * @param  int|null  $viewerId  the signed-in viewer, who may delete their own comments
      */
-    public function present(?int $postOwnerId = null): array
+    public function present(?int $postOwnerId = null, ?int $viewerId = null): array
     {
         return [
             'id' => $this->id,
             'parentId' => $this->parent_id,
             'author' => $this->author_pseudonym,
             'isPostAuthor' => $postOwnerId !== null && $this->user_id === $postOwnerId,
+            'isMine' => $viewerId !== null && $this->user_id === $viewerId,
             'isNewAccount' => $this->user?->created_at?->gt(now()->subDays(self::NEW_ACCOUNT_DAYS)) ?? false,
             'body' => $this->body,
             'flag' => $this->flag,
