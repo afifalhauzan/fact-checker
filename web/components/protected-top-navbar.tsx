@@ -23,7 +23,8 @@ export function ProtectedTopNavbar() {
                     />
                 </Link>
                 <TelaahNav className="hidden md:flex" />
-                <div className="flex items-center justify-self-end">
+                {/* Pinned to the last column: on phones the middle nav is hidden and takes no cell */}
+                <div className="col-start-3 flex items-center justify-self-end">
                     <AuthButton logoutRedirectTo="/" />
                 </div>
             </div>
