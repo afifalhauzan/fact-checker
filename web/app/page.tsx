@@ -13,7 +13,7 @@ export default function HomePage() {
       <SmoothScroll />
       <ProtectedTopNavbar />
 
-      <main className="relative overflow-hidden pb-24 pt-14 sm:pt-16">
+      <main className="relative overflow-hidden pb-6 pt-14 sm:pt-8">
         <HeroSection />
         <PreviewSection />
         <TrendingSection />

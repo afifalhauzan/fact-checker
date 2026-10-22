@@ -1,11 +1,12 @@
-import { ArrowUpRight, BriefcaseBusiness, Flag, SearchCheck, type LucideIcon } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight } from "lucide-react";
 
 interface VerificationSource {
   category: string;
   name: string;
   description: string;
   href: string;
-  icon: LucideIcon;
+  logo: string;
 }
 
 const sources: VerificationSource[] = [
@@ -15,7 +16,7 @@ const sources: VerificationSource[] = [
     description:
       "Database hasil pemeriksaan fakta MAFINDO, termasuk konten yang dikategorikan sebagai penipuan. Cocok untuk mencari apakah klaim atau modus serupa pernah diperiksa.",
     href: "https://turnbackhoax.id",
-    icon: SearchCheck,
+    logo: "/turnbackhoax.jpg",
   },
   {
     category: "Pemeriksaan Fakta",
@@ -23,7 +24,7 @@ const sources: VerificationSource[] = [
     description:
       "Portal kolaborasi pemeriksa fakta yang diinisiasi MAFINDO, AJI, dan AMSI. Berguna untuk mencari klaim atau informasi yang sudah pernah diverifikasi.",
     href: "https://cekfakta.com",
-    icon: SearchCheck,
+    logo: "/cekfakta.png",
   },
   {
     category: "Referensi Lowongan Kerja",
@@ -31,7 +32,7 @@ const sources: VerificationSource[] = [
     description:
       "Layanan pasar kerja resmi Kemnaker untuk mencari lowongan dan membandingkan informasi rekrutmen. Tidak ditemukannya suatu lowongan di sini bukan bukti bahwa lowongan tersebut palsu.",
     href: "https://karirhub.kemnaker.go.id",
-    icon: BriefcaseBusiness,
+    logo: "/karirhub_lower_08c3886bd0_6e9a9ee711.svg",
   },
   {
     category: "Pelaporan Konten",
@@ -39,13 +40,13 @@ const sources: VerificationSource[] = [
     description:
       "Layanan pemerintah untuk melaporkan URL, situs web, akun media sosial, dan konten yang memenuhi kriteria pelaporan. Ini kanal pelaporan, bukan mesin verifikasi lowongan otomatis.",
     href: "https://aduankonten.id",
-    icon: Flag,
+    logo: "/aduan-konten.png",
   },
 ];
 
 export function SourcesSection() {
   return (
-    <section id="sumber-verifikasi" className="mx-auto mb-24 w-full max-w-7xl px-4 sm:mb-32 sm:px-8">
+    <section id="sumber-verifikasi" className="mx-auto mb-12 w-full max-w-7xl px-4 sm:mb-16 sm:px-8">
       <div className="mb-10 max-w-2xl">
         <h2 className="font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:text-5xl">
           Sumber Verifikasi Tepercaya
@@ -57,7 +58,6 @@ export function SourcesSection() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {sources.map((source) => {
-          const Icon = source.icon;
           const host = new URL(source.href).hostname;
 
           return (
@@ -68,8 +68,16 @@ export function SourcesSection() {
               rel="noreferrer"
               className="group flex flex-col rounded-lg border border-[#17232c]/10 bg-white p-5 shadow-[0_18px_45px_rgba(23,35,44,0.06)] transition-colors hover:border-[#2b6f95]/40 hover:bg-[#2b6f95]/5"
             >
-              <span className="inline-flex size-9 items-center justify-center rounded-lg bg-[#2b6f95]/10 text-[#2b6f95]">
-                <Icon className="size-4.5" />
+              {/* Logos come in different shapes, so each sits in the same box and is fitted into it */}
+              <span className="relative block h-12 w-full">
+                <Image
+                  src={source.logo}
+                  alt={`Logo ${source.name}`}
+                  fill
+                  sizes="(min-width: 1024px) 20vw, (min-width: 640px) 40vw, 80vw"
+                  className="object-contain object-left"
+                  unoptimized={source.logo.endsWith(".svg")}
+                />
               </span>
               <p className="mt-4 text-xs font-medium text-[#5a6a76]">{source.category}</p>
               <h3 className="mt-1 text-base font-semibold leading-snug text-[#17232c]">{source.name}</h3>
