@@ -453,13 +453,14 @@ Setelah langkah 3, fitur sudah bisa didemokan sebagai forum. Langkah 4–6 menam
 
 ## 11. Catatan Implementasi (22 Okt 2026)
 
-Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute Next, chat, dan halaman). Perbedaan dari rancangan di atas:
+Semua bagian MVP sudah berjalan end-to-end (Postgres, Laravel, rute Next, chat, dan halaman). Perbedaan dari rancangan di atas:
 
 | Bagian | Yang diimplementasikan |
 |---|---|
 | 5.3 Laporan | Hanya **data pribadi** dan **spam**. Tanggapan "lowongan ini asli" dihapus atas keputusan tim; halaman Rujukan juga dihapus |
-| 6.2 Ambang | `cosine ≥ 0,92`, atau ada pengenal yang sama dengan `cosine ≥ 0,6`. Pengaman lowongan resmi diperluas: materi punya situs resmi sendiri yang berbeda dari situs di Telaah, dan tidak ada kontak yang sama → dibatalkan, walaupun Telaah tidak menyebut nama perusahaan (kasus pencatutan kementerian) |
-| 6.2 Batas waktu | **6 detik**, bukan 2. Embedding + kueri kandidat biasanya ~1,2 detik, tetapi melewati 2,5 detik saat server baru menyala; pada uji 22 Okt, kecocokan nyata (cosine 0,933) gagal tampil hanya karena batas waktu |
+| 6.2 Pencocokan, 6.7 Penyimpanan (keputusan 5 diganti, 23 Okt 2026) | **Tanpa embedding dan tanpa pgvector**, karena terlalu berlebihan untuk kebutuhan ini. Telaah serupa dicari dengan **3 aturan**: (1) ada nomor/rekening/email/link yang sama; (2) teks materi hampir sama, diukur dengan trigram `pg_trgm` (ekstensi bawaan Postgres) dengan ambang **0,5**, untuk template copas yang tidak menyebut perusahaan; (3) perusahaan **dan** posisi sama, **dengan bukti pendukung** berupa periode pendaftaran yang tumpang-tindih atau akun sumber yang sama (sumber yang hanya berisi nama perusahaan tidak dihitung), karena nama perusahaan dan posisi justru yang ditiru lowongan palsu. Pada uji 11 kasus sintetis: presisi 1,00, recall 1,00, salah-rujuk lowongan resmi 0 |
+| 6.2 Pengaman lowongan resmi | Diperluas: materi punya situs resmi sendiri yang berbeda dari situs di Telaah, dan tidak ada kontak yang sama → dibatalkan, walaupun Telaah tidak menyebut nama perusahaan (kasus pencatutan kementerian). Handle media sosial seperti `@loker.bumn.id` tidak lagi terbaca sebagai situs |
+| 6.2 Batas waktu | **6 detik**, bukan 2. Kueri kandidat biasanya jauh di bawah 1 detik, tetapi lambat saat server baru menyala; analisis yang bisa dilewati butuh 10–40 detik |
 | 6.6 Judul | Model hanya mengekstrak atribut. Judul **disusun di kode** dari atribut (perusahaan · posisi · lokasi · periode), karena keluaran terstruktur Gemini sempat merusak karakter "·" dan "–" |
 | 6.11 Router | Prompt router lama **tidak diubah**. Pemeriksaan lanjutan vs lowongan baru adalah klasifikasi terpisah (`classifyNewMaterial`) yang hanya dipanggil jika router sudah memutuskan "materi" dan sesi sudah punya telaah |
 | 7.5 Data awal | **Tidak ada data awal**: aplikasi dimulai kosong. 6 Telaah fiktif (`api/database/seeders/data/telaah-seed.json`) hanya dipakai untuk uji pencocokan lokal |
@@ -471,7 +472,7 @@ Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute N
 
 **Operasional:**
 - Server butuh `TELAAH_INTERNAL_KEY` dan `TELAAH_SIGNING_KEY` di `.env` root (lihat `.env.example`).
-- `deploy.ps1` kini juga membangun dan mengirim image Postgres + pgvector.
+- Postgres memakai image bawaan `postgres:17-alpine` (tidak perlu image khusus); `pg_trgm` diaktifkan oleh migrasi.
 - **TelaahBareng dimulai kosong** (keputusan tim, 23 Okt 2026); isinya datang dari pengguna yang menguji aplikasi. Jangan menjalankan `TelaahSeeder` di produksi. Seeder itu hanya untuk uji pencocokan lokal (`pnpm eval:similar`).
 
 ## 12. Hal yang Masih Terbuka
