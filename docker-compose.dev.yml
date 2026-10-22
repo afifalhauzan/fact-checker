@@ -53,6 +53,9 @@ services:
       WATCHPACK_POLLING: "true"
     ports:
       - "3000:3000"
+    # Turbopack keeps a compile cache in .next, and this volume outlives restarts: a stale cache
+    # answers 404 for routes added since. Starting from an empty .next costs one slower first compile.
+    command: sh -c "rm -rf .next/* && pnpm run dev"
     volumes:
       - ./web:/app/web
       - /app/web/node_modules
