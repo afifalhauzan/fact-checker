@@ -28,6 +28,12 @@ test("a legal company name still comes first, and the posting's site is searched
   assert.equal(target?.siteDomain, "karir.suksesmakmur.co.id");
 });
 
+test("a site without the company's name, such as a job blog, is not searched as the company's site", () => {
+  const target = buildVerificationQuery(preprocessJobInput("PT Nutrifood Indonesia membuka lowongan. Daftar di lokerblog.com/nutrifood"));
+  assert.equal(target?.query, '"PT Nutrifood Indonesia" lowongan kerja');
+  assert.equal(target?.siteDomain, undefined);
+});
+
 test("job boards are not taken for the employer's site", () => {
   assert.equal(queryFor("Lowongan Data Analyst https://www.jobstreet.co.id/id/job/123 dan glints.com/id/opportunities/jobs/x"), null);
 });

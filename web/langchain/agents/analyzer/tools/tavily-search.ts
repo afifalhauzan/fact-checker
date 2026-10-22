@@ -87,6 +87,8 @@ const COMPANY_STOPWORDS = new Set([
 ]);
 // Legal suffixes that sources often drop ("PT Bank Central Asia Tbk" vs "PT Bank Central Asia").
 const LEGAL_SUFFIXES = new Set(["tbk", "persero"]);
+// Words in many company names, so a domain containing one says nothing about whose site it is.
+const GENERIC_NAME_WORDS = new Set(["tbk", "persero", "indonesia", "group", "grup", "global", "international", "nusantara"]);
 
 function cleanText(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -133,9 +135,13 @@ function extractCompany(text: string): SearchEntity | null {
  */
 export function buildVerificationQuery(preprocessed: PreprocessedInput): SearchTarget | null {
   const company = extractCompany(preprocessed.cleanedText);
-  const [employerDomain] = employerDomains(preprocessed);
+  const domains = employerDomains(preprocessed);
+  const [employerDomain] = domains;
   if (company) {
-    return { query: `"${company.name}" lowongan kerja`, entity: company, siteDomain: employerDomain };
+    // Only a site that carries the company's name: a job blog reposting it is not the company's
+    const nameWords = normalizeForMatch(company.name).trim().split(" ").filter((word) => word.length >= 3 && !GENERIC_NAME_WORDS.has(word));
+    const siteDomain = domains.find((domain) => nameWords.some((word) => domain.includes(word)));
+    return { query: `"${company.name}" lowongan kerja`, entity: company, siteDomain };
   }
   if (employerDomain) {
     // The site search finds what a domain query misses, such as the company's own scam warning
