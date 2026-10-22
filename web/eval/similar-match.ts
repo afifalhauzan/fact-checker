@@ -1,17 +1,21 @@
 /**
  * Matching check for "sudah ditelaah sebelumnya" (design doc 7.2), run against the seed posts in
- * a local database (php artisan db:seed --class=TelaahSeeder; the seed file carries the embeddings).
- * Never seed production: TelaahBareng starts empty there.
- * Synthetic queries only, never the test split. Reports, per query, the best candidate's cosine
- * and whether it would be offered, then precision, recall, and the official-posting false referrals.
+ * a local database (php artisan db:seed --class=TelaahSeeder). Never seed production: TelaahBareng
+ * starts empty there. Synthetic queries only, never the test split. Reports, per query, the best
+ * candidate's text similarity and whether it would be offered, then precision, recall, and the
+ * official-posting false referrals.
  *
  *   pnpm eval:similar
  */
 import "dotenv/config";
 import { backendFetch, internalKeyHeader } from "../lib/server-auth";
-import { embedText, embeddingTextFor } from "../langchain/agents/telaah-bersama/embeddings";
 import { toMaterialLines } from "../langchain/agents/telaah-bersama/share-payload";
-import { COSINE_THRESHOLD, materialFeatures, pickBestMatch, type SimilarCandidate } from "../langchain/agents/telaah-bersama/similar";
+import {
+  TEXT_SIMILARITY_THRESHOLD,
+  materialFeatures,
+  pickBestMatch,
+  type SimilarCandidate,
+} from "../langchain/agents/telaah-bersama/similar";
 
 type Expectation = { kind: "match"; titleStartsWith: string } | { kind: "official" } | { kind: "unrelated" };
 
@@ -75,11 +79,10 @@ const QUERIES: Array<{ name: string; text: string; expect: Expectation }> = [
 
 async function candidatesFor(text: string): Promise<SimilarCandidate[]> {
   const features = materialFeatures(text);
-  const embedding = await embedText(embeddingTextFor(toMaterialLines(text)));
   const response = await backendFetch("/telaah-bersama/similar", {
     method: "POST",
     headers: internalKeyHeader(),
-    body: JSON.stringify({ embedding, identifiers: features.identifiers }),
+    body: JSON.stringify({ text: toMaterialLines(text).join("\n"), identifiers: features.identifiers }),
   });
   if (!response.ok) throw new Error(`similar returned ${response.status}`);
   return (await response.json()).data;
@@ -93,7 +96,7 @@ async function main() {
 
   for (const query of QUERIES) {
     const candidates = await candidatesFor(query.text);
-    const best = [...candidates].sort((a, b) => (b.cosine ?? 0) - (a.cosine ?? 0))[0];
+    const best = [...candidates].sort((a, b) => (b.textSimilarity ?? 0) - (a.textSimilarity ?? 0))[0];
     const match = pickBestMatch(candidates, materialFeatures(query.text));
 
     let verdict = "ok";
@@ -108,12 +111,14 @@ async function main() {
     }
 
     console.log(
-      `${verdict.padEnd(5)} ${query.name.padEnd(42)} top cosine ${best?.cosine?.toFixed(3) ?? " n/a "} ` +
+      `${verdict.padEnd(5)} ${query.name.padEnd(42)} top text ${best?.textSimilarity?.toFixed(3) ?? " n/a "} ` +
         `→ ${match ? `#${match.post.id} (${match.reasons.join(", ")})` : "no card"}`
     );
   }
 
-  console.log(`\nThreshold: cosine ≥ ${COSINE_THRESHOLD}, or a shared contact with cosine ≥ 0.6`);
+  console.log(
+    `\nRules: shared contact, or text similarity ≥ ${TEXT_SIMILARITY_THRESHOLD}, or same company + position backed by period or source`
+  );
   console.log(`Precision: ${offered ? (truePositives / offered).toFixed(2) : "n/a"} (${truePositives}/${offered} cards correct)`);
   console.log(`Recall: ${(truePositives / expectedMatches).toFixed(2)} (${truePositives}/${expectedMatches})`);
   console.log(`Official postings referred to a fake one: ${officialReferrals} (target 0)`);

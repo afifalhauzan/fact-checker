@@ -86,32 +86,64 @@ test("material can only shrink", () => {
 
 function candidate(overrides: Omit<Partial<SimilarCandidate>, "post"> & { post?: Partial<TelaahPost> } = {}): SimilarCandidate {
   return {
-    cosine: 0.7,
+    textSimilarity: 0.2,
     sharedIdentifiers: [],
     identifiers: [],
     ...overrides,
-    post: { id: 128, company: null, openDate: null, closeDate: null, ...overrides.post } as TelaahPost,
+    post: {
+      id: 128,
+      company: null,
+      position: null,
+      openDate: null,
+      closeDate: null,
+      source: { platform: null, account: null },
+      ...overrides.post,
+    } as TelaahPost,
   };
 }
 
-test("a shared number is enough when the text is related", () => {
+test("rule 1: a shared contact is enough on its own", () => {
   const features = materialFeatures("Konfirmasi ke WA 0812-0000-4471");
-  const match = scoreCandidate(candidate({ cosine: 0.65, sharedIdentifiers: [{ kind: "phone", value: "6281200004471" }] }), features);
+  const match = scoreCandidate(candidate({ textSimilarity: 0.1, sharedIdentifiers: [{ kind: "phone", value: "6281200004471" }] }), features);
   assert.deepEqual(match?.reasons, ["Nomor WA/HP sama"]);
-  assert.equal(scoreCandidate(candidate({ cosine: 0.4, sharedIdentifiers: [{ kind: "phone", value: "x" }] }), features), null);
 });
 
-test("without a shared contact the text must be nearly the same", () => {
+test("rule 2: without a shared contact the text must be nearly the same", () => {
   const features = materialFeatures("Kerja paruh waktu like dan follow");
-  assert.equal(scoreCandidate(candidate({ cosine: 0.85 }), features), null);
-  assert.deepEqual(scoreCandidate(candidate({ cosine: 0.93 }), features)?.reasons, ["Isi lowongan sangat mirip"]);
+  assert.equal(scoreCandidate(candidate({ textSimilarity: 0.3 }), features), null);
+  assert.deepEqual(scoreCandidate(candidate({ textSimilarity: 0.8 }), features)?.reasons, ["Isi lowongan hampir sama"]);
+});
+
+test("rule 3: same company and position count only with a period or source to back them", () => {
+  const post = { company: "PT Data Contoh", position: "Data Scientist", openDate: "2026-10-01", closeDate: "2026-10-30" };
+  const bare = materialFeatures("PT Data Contoh membuka lowongan Data Scientist.");
+  assert.equal(scoreCandidate(candidate({ post }), bare), null);
+
+  const samePeriod = materialFeatures("PT Data Contoh membuka lowongan Data Scientist, ditutup 30 Oktober 2026.");
+  assert.deepEqual(scoreCandidate(candidate({ post }), samePeriod)?.reasons, [
+    "Perusahaan dan posisi sama",
+    "Periode pendaftaran tumpang-tindih",
+  ]);
+
+  const sameSource = materialFeatures("Info dari @loker.data: Data Contoh mencari Data Scientist.");
+  const fromSource = scoreCandidate(candidate({ post: { ...post, source: { platform: "Instagram", account: "@loker.data" } } }), sameSource);
+  assert.ok(fromSource?.reasons.includes("Sumber lowongan sama"));
+
+  // A source that is just the company name is no extra evidence
+  const sourceIsCompany = candidate({ post: { ...post, openDate: null, closeDate: null, source: { platform: "Website", account: "Data Contoh" } } });
+  assert.equal(scoreCandidate(sourceIsCompany, bare), null);
+
+  const otherPosition = materialFeatures("PT Data Contoh membuka lowongan Admin, ditutup 30 Oktober 2026.");
+  assert.equal(scoreCandidate(candidate({ post }), otherPosition), null);
 });
 
 test("the official posting is never referred to a fake one that uses the same company", () => {
-  const features = materialFeatures("PT Listrik Nusantara membuka lowongan. Daftar di karier.listriknusantara.co.id");
+  const features = materialFeatures(
+    "PT Listrik Nusantara membuka lowongan Staff Admin, ditutup 30 Oktober 2026. Daftar di karier.listriknusantara.co.id"
+  );
   const fake = candidate({
-    cosine: 0.95,
-    post: { company: "PT Listrik Nusantara (Persero)" },
+    textSimilarity: 0.9,
+    post: { company: "PT Listrik Nusantara (Persero)", position: "Staff Admin", openDate: "2026-10-01", closeDate: "2026-10-30" },
     identifiers: [{ kind: "domain", value: "karier-listriknusantara.example" }],
   });
   assert.equal(scoreCandidate(fake, features), null);
@@ -119,7 +151,7 @@ test("the official posting is never referred to a fake one that uses the same co
 
 test("an official site is never referred to a fake on another site, even without a company name", () => {
   const features = materialFeatures("Program Magang Nasional dibuka, daftar gratis di magangnasional.kemnaker.go.id");
-  const fake = candidate({ cosine: 0.95, identifiers: [{ kind: "domain", value: "pendaftaran-magangnasional.example" }] });
+  const fake = candidate({ textSimilarity: 0.9, identifiers: [{ kind: "domain", value: "pendaftaran-magangnasional.example" }] });
   assert.equal(scoreCandidate(fake, features), null);
 
   // ...unless they share a contact, which the official site would not
@@ -129,10 +161,13 @@ test("an official site is never referred to a fake on another site, even without
 
 test("a template reposted for another period is shown as an earlier version", () => {
   const features = materialFeatures("Pendaftaran sampai 20 Maret 2027");
-  const match = scoreCandidate(candidate({ cosine: 0.95, post: { openDate: "2026-10-01", closeDate: "2026-10-30" } }), features);
+  const match = scoreCandidate(candidate({ textSimilarity: 0.9, post: { openDate: "2026-10-01", closeDate: "2026-10-30" } }), features);
   assert.equal(match?.differentPeriod, true);
   assert.ok(match?.reasons.includes("Versi sebelumnya, periode berbeda"));
 
-  const same = scoreCandidate(candidate({ cosine: 0.95, post: { openDate: "2026-10-01", closeDate: "2026-10-30" } }), materialFeatures("ditutup 30 Oktober 2026"));
+  const same = scoreCandidate(
+    candidate({ textSimilarity: 0.9, post: { openDate: "2026-10-01", closeDate: "2026-10-30" } }),
+    materialFeatures("ditutup 30 Oktober 2026")
+  );
   assert.ok(same?.reasons.includes("Periode pendaftaran tumpang-tindih"));
 });

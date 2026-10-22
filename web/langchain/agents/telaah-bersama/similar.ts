@@ -3,25 +3,22 @@ import { backendFetch, internalKeyHeader } from "../../../lib/server-auth";
 import type { TelaahPost } from "../../../lib/telaah-bersama/types";
 import { materialDayKeys } from "../analyzer/dates";
 import { detectSignals } from "../analyzer/signals";
-import { embedText, embeddingTextFor } from "./embeddings";
 import { findContacts, isGenericDomain, type Identifier, type IdentifierKind } from "./identifiers";
 import { toMaterialLines } from "./share-payload";
 
 // "Sudah ditelaah sebelumnya" (design doc 6.2): a tool outside the analysis engine that offers an
 // existing post before web search and the model run, purely to save their cost. A match never
-// feeds into a verdict. Laravel returns candidates; they are scored here.
+// feeds into a verdict. Laravel returns candidates; they are matched here by three rules:
+//   1. a shared phone, bank account, email, or link;
+//   2. nearly identical text (trigram similarity, for copy-pasted templates that name no company);
+//   3. the same company and position, backed by an overlapping period or the same source account.
 
-// Calibrated with eval/similar-match.ts on the seed posts (design doc 7.2): unrelated postings
-// reached 0.896 there and reworded copies of a seed post 0.965+, so the bar sits between them.
-export const COSINE_THRESHOLD = 0.92;
-// A shared phone, account, email, or link is strong evidence on its own; the text only has to be related.
-export const COSINE_WITH_SHARED_CONTACT = 0.6;
-const SHARED_CONTACT_BONUS = 0.3;
-const PERIOD_BONUS = 0.05;
+// Trigram similarity of the whole material. Calibrated with eval/similar-match.ts (design doc 7.2).
+export const TEXT_SIMILARITY_THRESHOLD = 0.5;
 const PERIOD_MARGIN_DAYS = 14;
 const DEFAULT_PERIOD_DAYS = 60;
-// Embedding plus the candidate query usually takes about 1.2 s but spikes past 2.5 s on a cold
-// start; the analysis it can skip takes 10-40 s, so a generous budget still pays off.
+// The candidate query usually takes well under a second but is slow on a cold start; the
+// analysis it can skip takes 10-40 s, so a generous budget still pays off.
 const SIMILAR_TIMEOUT_MS = 6_000;
 
 const SHARED_LABELS: Record<IdentifierKind, string> = {
@@ -33,7 +30,8 @@ const SHARED_LABELS: Record<IdentifierKind, string> = {
 
 export interface SimilarCandidate {
   post: TelaahPost;
-  cosine: number | null;
+  // Trigram similarity of the material texts (0-1); null where the database has no pg_trgm.
+  textSimilarity: number | null;
   sharedIdentifiers: Identifier[];
   identifiers: Identifier[];
 }
@@ -96,27 +94,35 @@ export function scoreCandidate(candidate: SimilarCandidate, material: MaterialFe
   const ownDomains = officialDomains(material.identifiers);
   const postDomains = officialDomains(candidate.identifiers);
   const sharesDomain = [...ownDomains].some((domain) => postDomains.has(domain));
-  const sameCompany = !!post.company && material.text.toLowerCase().includes(normalizeCompany(post.company));
+  const text = material.text.toLowerCase();
+  const sameCompany = !!post.company && text.includes(normalizeCompany(post.company));
   if (ownDomains.size && !sharesDomain && (sameCompany || (postDomains.size && !shared.length))) {
     return null;
   }
 
-  const cosine = candidate.cosine;
-  const isMatch = shared.length
-    ? cosine === null || cosine >= COSINE_WITH_SHARED_CONTACT
-    : cosine !== null && cosine >= COSINE_THRESHOLD;
-  if (!isMatch) return null;
+  const overlap = periodOverlaps(post, material.dayKeys);
+  const samePosition = !!post.position && text.includes(post.position.toLowerCase());
+  // A "source" that only repeats the company name would make the company rule back itself up
+  const sourceIsCompany = !!post.company && normalizeCompany(post.source.account ?? "") === normalizeCompany(post.company);
+  const sameSource = !!post.source.account && !sourceIsCompany && text.includes(post.source.account.toLowerCase());
+
+  const byContact = shared.length > 0;
+  const byText = (candidate.textSimilarity ?? 0) >= TEXT_SIMILARITY_THRESHOLD;
+  // Company and position alone are what an impersonating fake copies, so they need backing
+  const byCompany = sameCompany && samePosition && (overlap === true || sameSource);
+  if (!byContact && !byText && !byCompany) return null;
 
   const reasons = [...new Set(shared.map((item) => SHARED_LABELS[item.kind]))];
-  if (cosine !== null && cosine >= COSINE_THRESHOLD) reasons.push("Isi lowongan sangat mirip");
-
-  const overlap = periodOverlaps(post, material.dayKeys);
+  if (byText) reasons.push("Isi lowongan hampir sama");
+  if (byCompany) reasons.push("Perusahaan dan posisi sama");
+  if (sameSource) reasons.push("Sumber lowongan sama");
   if (overlap) reasons.push("Periode pendaftaran tumpang-tindih");
   if (overlap === false) reasons.push("Versi sebelumnya, periode berbeda");
 
   return {
     post,
-    score: (cosine ?? COSINE_WITH_SHARED_CONTACT) + (shared.length ? SHARED_CONTACT_BONUS : 0) + (overlap ? PERIOD_BONUS : 0),
+    // Strongest evidence first when several posts match: a shared contact, then text, then company
+    score: (byContact ? 2 : 0) + (candidate.textSimilarity ?? 0) + (byCompany ? 1 : 0) + (overlap ? 0.05 : 0),
     reasons,
     differentPeriod: overlap === false,
   };
@@ -159,15 +165,16 @@ export async function findSimilarTelaah(materialText: string): Promise<{ match: 
   const features = materialFeatures(materialText);
 
   try {
-    const embedding = await embedText(embeddingTextFor(toMaterialLines(materialText)), signal);
-    if (!embedding && !features.identifiers.length) {
+    // Compared the way posts store it: redacted lines joined by newlines
+    const text = toMaterialLines(materialText).join("\n");
+    if (!text) {
       return { match: null, meta: { status: "no_match", candidateCount: 0, ms: Date.now() - startedAt } };
     }
 
     const response = await backendFetch("/telaah-bersama/similar", {
       method: "POST",
       headers: internalKeyHeader(),
-      body: JSON.stringify({ embedding, identifiers: features.identifiers }),
+      body: JSON.stringify({ text, identifiers: features.identifiers }),
       signal,
       cache: "no-store",
     });
