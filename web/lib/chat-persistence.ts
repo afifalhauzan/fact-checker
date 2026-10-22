@@ -5,21 +5,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export const SESSION_SAVED_EVENT = 'telaahkarier:session-saved'
 
 /**
- * Convert a UI message into the row shape the backend stores.
- * Inline (base64) attachments are not uploaded yet, so they are replaced by a text note.
+ * Convert a UI message into the row shape the backend stores. Inline (base64) attachments are
+ * sent along; the save route uploads them and stores a link to the file in their place.
  */
 function toStoredMessage(message: MetabotUIMessage) {
-  const parts: any[] = []
-
-  for (const part of (message.parts || []) as any[]) {
-    const isInlineFile = part?.type === 'file' && typeof part.url === 'string' && part.url.startsWith('data:')
-
-    if (isInlineFile) {
-      parts.push({ type: 'text', text: `[Lampiran: ${part.filename || part.mediaType || 'file'}]` })
-    } else {
-      parts.push(part)
-    }
-  }
+  const parts = (message.parts || []) as any[]
 
   const content = parts
     .filter((part) => part?.type === 'text' && typeof part.text === 'string')
