@@ -19,16 +19,10 @@ const reasoningSteps = [
     tone: "border-[#2b6f95]/20 bg-[#f2f9fd]",
   },
   {
-    title: "Menandai indikator mencurigakan",
-    description: "Mencari red flag seperti biaya awal, komunikasi personal, dan janji benefit yang terlalu muluk.",
+    title: "Menandai indikator mencurigakan & Validitas sumber",
+    description: "Mencari red flag seperti biaya awal, komunikasi personal, sumber informasi, dan janji benefit yang terlalu muluk.",
     signal: "Red flag terdeteksi",
     tone: "border-[#3a7ca5]/20 bg-[#eef7fc]",
-  },
-  {
-    title: "Memeriksa validitas kanal",
-    description: "Membandingkan domain, email, link pendaftaran, dan akun perusahaan dengan kanal resmi.",
-    signal: "Kanal diuji",
-    tone: "border-[#325f7f]/20 bg-[#f4f9fd]",
   },
   {
     title: "Menilai tingkat risiko awal",
@@ -62,7 +56,7 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#5a6a76]">
                 {/* {hasDraft ? "Analisis berjalan" : "Simulasi setelah submit"} */}
               </p>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#17232c]">
+              <p className="mt-2 max-w-xl text-md leading-relaxed text-[#17232c]">
                 "{displayClaim}"
               </p>
             </div>
@@ -86,9 +80,6 @@ function ReasoningFlow({ input, hasAttachments }: { input: string; hasAttachment
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <h3 className="text-sm font-semibold text-[#17232c]">{step.title}</h3>
-                    <span className="w-fit rounded-full border border-[#17232c]/10 bg-white/70 px-2 py-1 text-[11px] font-medium text-[#5a6a76]">
-                      {step.signal}
-                    </span>
                   </div>
                   <p className="mt-1 text-sm leading-relaxed text-[#5a6a76]">{step.description}</p>
                 </div>
@@ -161,7 +152,7 @@ function RecentSessions() {
           <li key={session.id}>
             <Link
               href={`/chat?conversation_id=${encodeURIComponent(session.id)}`}
-              className="block rounded-lg border border-[#17232c]/10 bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-[#2b6f95]/40"
+              className="block rounded-lg border border-[#17232c]/10 bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-[#2b6f95]/40 hover:bg-[#2b6f95]/5"
             >
               <span className="block truncate text-sm font-medium text-[#17232c]">{session.title || "Telaah tanpa judul"}</span>
               <span className="text-xs text-[#5a6a76]">{formatRelativeTime(session.updated_at)}</span>
