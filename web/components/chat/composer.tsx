@@ -200,7 +200,8 @@ export function Composer({
           onPaste={handlePaste}
           placeholder={placeholder}
           aria-label="Pesan"
-          className="block max-h-60 w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
+          // Typed text stays 16px on phones (smaller makes iOS zoom in on focus); only the hint is smaller
+          className="block max-h-60 w-full resize-none bg-transparent px-4 pb-1 pt-3.5 text-base leading-relaxed text-foreground outline-none placeholder:text-sm placeholder:text-muted-foreground/70 md:text-sm"
         />
 
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
