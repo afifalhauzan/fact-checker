@@ -26,8 +26,6 @@ class TelaahPostController extends Controller
 {
     private const PAGE_SIZE = 20;
 
-    public const EMBEDDING_DIMENSIONS = 768;
-
     /**
      * Public list with the filters of the TelaahBareng page. `mine` lists the viewer's own posts,
      * hidden ones included.
@@ -150,14 +148,13 @@ class TelaahPostController extends Controller
 
         $post = DB::transaction(function () use ($user, $data, $files, $cleaned) {
             $post = TelaahPost::create([
-                ...collect($data)->except(['identifiers', 'attachments', 'embedding'])->all(),
+                ...collect($data)->except(['identifiers', 'attachments'])->all(),
                 'user_id' => $user->id,
                 'author_pseudonym' => $user->pseudonym,
                 'status' => 'visible',
                 'is_seed' => false,
             ]);
             $post->identifiers()->createMany($this->uniqueIdentifiers($data['identifiers']));
-            $this->saveEmbedding($post, $data['embedding'] ?? null);
 
             foreach ($files as $index => $file) {
                 $path = "telaah/{$post->id}/".Str::random(32).'.'.$file->extension();
@@ -205,7 +202,6 @@ class TelaahPostController extends Controller
             $post->status = 'visible';
         }
         $post->save();
-        $this->saveEmbedding($post, $data['embedding'] ?? null);
 
         return response()->json($post->load('attachments')->present(['isOwner' => true]));
     }
@@ -257,8 +253,6 @@ class TelaahPostController extends Controller
             'material_lines.*' => ['string', 'max:1000'],
             'links' => ['present', 'array', 'max:20'],
             'links.*' => ['string', 'max:500'],
-            'embedding' => ['nullable', 'array', 'size:'.self::EMBEDDING_DIMENSIONS],
-            'embedding.*' => ['numeric'],
         ];
     }
 
@@ -331,21 +325,6 @@ class TelaahPostController extends Controller
     private function uniqueIdentifiers(array $identifiers): array
     {
         return collect($identifiers)->unique(fn ($item) => $item['kind'].'|'.$item['value'])->values()->all();
-    }
-
-    /**
-     * @param  array<int, float>|null  $embedding
-     */
-    public static function saveEmbedding(TelaahPost $post, ?array $embedding): void
-    {
-        if ($embedding === null || DB::getDriverName() !== 'pgsql') {
-            return;
-        }
-
-        DB::update('update telaah_posts set embedding = ?::vector where id = ?', [
-            '['.implode(',', array_map('floatval', $embedding)).']',
-            $post->id,
-        ]);
     }
 
     /**

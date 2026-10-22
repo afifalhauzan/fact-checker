@@ -81,7 +81,7 @@ class TelaahBersamaTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create());
         $this->postJson('/api/telaah-bersama', ['post' => json_encode($this->postPayload())])->assertForbidden();
-        $this->postJson('/api/telaah-bersama/similar', ['identifiers' => []])->assertForbidden();
+        $this->postJson('/api/telaah-bersama/similar', ['text' => 'x', 'identifiers' => []])->assertForbidden();
 
         $this->app['auth']->forgetGuards();
         $this->internal()->postJson('/api/telaah-bersama', ['post' => json_encode($this->postPayload())])->assertUnauthorized();
@@ -322,17 +322,27 @@ class TelaahBersamaTest extends TestCase
         $this->getJson('/api/telaah-bersama')->assertJsonCount(0, 'data');
     }
 
-    public function test_similar_returns_posts_sharing_an_identifier_and_matches_count_once_per_viewer(): void
+    public function test_similar_finds_candidates_by_shared_contact_or_position_and_counts_matches_once_per_viewer(): void
     {
         $post = $this->createPost(User::factory()->create());
+        $this->assertSame("Baris satu\nTransfer ke BRI 0000-01-778899\nWA 0812-0000-4471", $post->material_text);
 
         $this->internal()->postJson('/api/telaah-bersama/similar', [
+            'text' => 'Hubungi WA ini',
             'identifiers' => [['kind' => 'phone', 'value' => '6281200004471']],
         ])->assertOk()
             ->assertJsonPath('data.0.post.id', $post->id)
-            ->assertJsonPath('data.0.sharedIdentifiers.0.kind', 'phone');
+            ->assertJsonPath('data.0.sharedIdentifiers.0.kind', 'phone')
+            ->assertJsonMissingPath('data.0.post.material_text');
+
+        // The post's position written in the new material makes it a candidate for the company rule
+        $this->internal()->postJson('/api/telaah-bersama/similar', [
+            'text' => 'Dibuka lowongan STAFF ADMIN di PT Contoh',
+            'identifiers' => [],
+        ])->assertJsonPath('data.0.post.id', $post->id)->assertJsonPath('data.0.sharedIdentifiers', []);
 
         $this->internal()->postJson('/api/telaah-bersama/similar', [
+            'text' => 'Lowongan barista',
             'identifiers' => [['kind' => 'phone', 'value' => '6289999999999']],
         ])->assertJsonCount(0, 'data');
 

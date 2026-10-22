@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Http\Controllers\TelaahPostController;
 use App\Models\TelaahPost;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +9,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Fictitious TelaahBareng posts for the local matching check (web: pnpm eval:similar) only.
  * Not run by DatabaseSeeder and never in production: the app starts empty and is filled by its
- * testers. Every company, number, account, and domain in data/telaah-seed.json is fictitious, and
- * the JSON carries each post's embedding (Gemini, 768 dimensions).
+ * testers. Every company, number, account, and domain in data/telaah-seed.json is fictitious.
  *
  *   php artisan db:seed --class=TelaahSeeder        (local database only)
  */
@@ -30,14 +28,13 @@ class TelaahSeeder extends Seeder
         DB::transaction(function () use ($posts) {
             foreach ($posts as $data) {
                 $post = TelaahPost::forceCreate([
-                    ...collect($data)->except(['identifiers', 'comments', 'embedding'])->all(),
+                    ...collect($data)->except(['identifiers', 'comments'])->all(),
                     'status' => 'visible',
                     'is_seed' => true,
                     'comment_count' => count($data['comments']),
                     'updated_at' => $data['created_at'],
                 ]);
                 $post->identifiers()->createMany($data['identifiers']);
-                TelaahPostController::saveEmbedding($post, $data['embedding'] ?? null);
 
                 foreach ($data['comments'] as $comment) {
                     $post->comments()->forceCreate([...$comment, 'post_id' => $post->id, 'updated_at' => $comment['created_at']]);
