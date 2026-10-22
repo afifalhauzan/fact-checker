@@ -6,6 +6,7 @@
 import type { UIMessage } from 'ai';
 import type {
   AnalysisResult,
+  Check,
   Citation,
   Claim,
   ExplanationItem,
@@ -88,6 +89,7 @@ export type MetabotUIMessagePart =
   | { type: 'data-claims'; data: Claim[] }
   | { type: 'data-salary-benefit'; data: SalaryBenefitAssessment }
   | { type: 'data-risks'; data: Risk[] }
+  | { type: 'data-checks'; data: Check[] }
   | { type: 'data-explanation'; data: ExplanationItem[] }
   | { type: 'data-references'; data: Reference[] }
   | { type: "data-actions"; data: ActionsPartData }

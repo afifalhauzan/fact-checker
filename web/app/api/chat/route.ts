@@ -386,6 +386,11 @@ export async function POST(req: NextRequest) {
           await sleep(SECTION_STEP_DELAY_MS);
         }
 
+        if (analysis.checks?.length) {
+          writer.write({ type: "data-checks", data: analysis.checks });
+          await sleep(SECTION_STEP_DELAY_MS);
+        }
+
         if (analysis.explanations?.length) {
           writer.write({ type: "data-explanation", data: analysis.explanations });
           await sleep(SECTION_STEP_DELAY_MS);

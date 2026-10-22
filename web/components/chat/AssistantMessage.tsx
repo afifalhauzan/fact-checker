@@ -7,6 +7,7 @@ import { useInteractionStore } from "@/lib/interaction-store";
 import {
   AnalysisSchema,
   type AnalysisResult,
+  type Check as AnalysisCheck,
   type Citation,
   type Claim,
   type ExplanationItem,
@@ -18,6 +19,7 @@ import {
 import { SummaryCard } from "@/components/cards/SummaryCard";
 import { ClaimCard } from "@/components/cards/ClaimCard";
 import { RiskCard } from "@/components/cards/RiskCard";
+import { ChecksCard } from "@/components/cards/ChecksCard";
 import { SuggestionQuestions } from "@/components/cards/SuggestionQuestions";
 import { ExplanationCard } from "@/components/cards/ExplanationCard";
 import { ReferenceCard } from "@/components/cards/ReferenceCard";
@@ -78,6 +80,7 @@ type RenderItem =
   | { kind: "claims"; key: string; claims: Claim[] }
   | { kind: "salary-benefit"; key: string; assessment: SalaryBenefitAssessment }
   | { kind: "risks"; key: string; risks: Risk[] }
+  | { kind: "checks"; key: string; checks: AnalysisCheck[] }
   | { kind: "explanations"; key: string; explanations: ExplanationItem[] }
   | { kind: "references"; key: string; references: Reference[] }
   | { kind: "actions"; key: string; actions: AnalysisAction[] }
@@ -149,6 +152,7 @@ function hasInterleavableDataPart(part: MetabotUIMessagePart): boolean {
     part.type === "data-claims" ||
     part.type === "data-salary-benefit" ||
     part.type === "data-risks" ||
+    part.type === "data-checks" ||
     part.type === "data-explanation" ||
     part.type === "data-references" ||
     part.type === "data-actions" ||
@@ -279,6 +283,11 @@ export function AssistantMessage({
           return;
         }
 
+        if (part.type === "data-checks" && part.data.length > 0) {
+          items.push({ kind: "checks", key, checks: part.data });
+          return;
+        }
+
         if (part.type === "data-explanation" && part.data.length > 0) {
           items.push({ kind: "explanations", key, explanations: part.data });
           return;
@@ -361,6 +370,10 @@ export function AssistantMessage({
 
     if (analysisData.risks.length > 0) {
       items.push({ kind: "risks", key: `${message.id}-analysis-risks`, risks: analysisData.risks });
+    }
+
+    if (analysisData.checks?.length) {
+      items.push({ kind: "checks", key: `${message.id}-analysis-checks`, checks: analysisData.checks });
     }
 
     if (analysisData.explanations.length > 0) {
@@ -488,6 +501,14 @@ export function AssistantMessage({
             />
           ))}
         </motion.section>
+      );
+    }
+
+    if (item.kind === "checks") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <ChecksCard checks={item.checks} />
+        </motion.div>
       );
     }
 
