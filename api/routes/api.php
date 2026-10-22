@@ -39,6 +39,10 @@ Route::prefix('telaah-bersama')->group(function () {
                 ->whereNumber(['post', 'comment']);
             Route::post('/{post}/reactions', [TelaahInteractionController::class, 'toggleReaction'])->whereNumber('post');
             Route::post('/{post}/reports', [TelaahInteractionController::class, 'storeReport'])->whereNumber('post');
+            Route::post('/{post}/comments/{comment}/like', [TelaahInteractionController::class, 'toggleCommentLike'])
+                ->whereNumber(['post', 'comment']);
+            Route::post('/{post}/comments/{comment}/reports', [TelaahInteractionController::class, 'storeCommentReport'])
+                ->whereNumber(['post', 'comment']);
         });
     });
 

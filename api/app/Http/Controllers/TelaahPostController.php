@@ -91,10 +91,17 @@ class TelaahPostController extends Controller
 
         $post->load(['attachments', 'comments' => fn ($q) => $q->with('user')->orderBy('id')]);
         $state = $this->viewerState($viewer, [$post->id]);
+        $commentIds = $post->comments->pluck('id');
+        $viewerActions = $viewer ? [
+            'liked' => DB::table('telaah_comment_likes')->where('user_id', $viewer->id)->whereIn('comment_id', $commentIds)->pluck('comment_id')->all(),
+            'reported' => DB::table('telaah_comment_reports')->where('user_id', $viewer->id)->whereIn('comment_id', $commentIds)->pluck('comment_id')->all(),
+        ] : [];
 
         return response()->json([
             ...$post->present($state($post)),
-            'comments' => $post->comments->map(fn (TelaahComment $comment) => $comment->present($post->user_id, $viewer?->id))->values(),
+            'comments' => $post->comments
+                ->map(fn (TelaahComment $comment) => $comment->present($post->user_id, $viewer?->id, $viewerActions))
+                ->values(),
         ]);
     }
 

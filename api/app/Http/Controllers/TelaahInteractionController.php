@@ -129,4 +129,67 @@ class TelaahInteractionController extends Controller
 
         return response()->json(['reported' => true, 'type' => $report->type]);
     }
+
+    /** A like says "this comment helped". Like the post reaction, it never touches the verdict. */
+    public function toggleCommentLike(Request $request, TelaahPost $post, TelaahComment $comment): JsonResponse
+    {
+        $user = $request->user();
+        $this->abortUnlessShown($post, $comment);
+        abort_if($comment->user_id === $user->id, 422, 'Kamu tidak bisa menyukai komentarmu sendiri.');
+
+        $liked = DB::transaction(function () use ($user, $comment) {
+            $deleted = DB::table('telaah_comment_likes')->where(['comment_id' => $comment->id, 'user_id' => $user->id])->delete();
+            if ($deleted) {
+                $comment->decrement('like_count');
+
+                return false;
+            }
+
+            DB::table('telaah_comment_likes')->insert(['comment_id' => $comment->id, 'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()]);
+            $comment->increment('like_count');
+
+            return true;
+        });
+
+        return response()->json(['liked' => $liked, 'likeCount' => $comment->fresh()->like_count]);
+    }
+
+    /**
+     * The same rules as reporting a post (design doc 5.3): spam is only a label, and a
+     * personal-data report hides the comment only when the redaction scan confirms it.
+     */
+    public function storeCommentReport(Request $request, TelaahPost $post, TelaahComment $comment): JsonResponse
+    {
+        $user = $request->user();
+        $this->abortUnlessShown($post, $comment);
+        abort_if($comment->user_id === $user->id, 422, 'Kamu tidak bisa melaporkan komentarmu sendiri.');
+
+        $data = $request->validate([
+            'type' => ['required', Rule::in(TelaahReport::TYPES)],
+            // Result of the web server's redaction scan of the comment, for "data_pribadi" reports
+            'sensitive_found' => ['required', 'boolean'],
+        ]);
+
+        $created = DB::table('telaah_comment_reports')->insertOrIgnore([
+            'comment_id' => $comment->id, 'user_id' => $user->id, 'type' => $data['type'], 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $counts = $created && $user->created_at->lte(now()->subHours(self::MIN_REPORTER_AGE_HOURS));
+
+        if ($counts && $data['type'] === 'spam') {
+            $comment->increment('spam_count');
+        }
+        if ($counts && $data['type'] === 'data_pribadi' && $data['sensitive_found']) {
+            $comment->update(['hidden_at' => now()]);
+        }
+
+        return response()->json(['reported' => true]);
+    }
+
+    private function abortUnlessShown(TelaahPost $post, TelaahComment $comment): void
+    {
+        abort_unless(
+            $post->status === 'visible' && $comment->post_id === $post->id && ! $comment->removed_at && ! $comment->hidden_at,
+            404,
+        );
+    }
 }
