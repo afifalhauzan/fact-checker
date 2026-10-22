@@ -30,12 +30,14 @@ export interface TelaahComment {
   id: number;
   // The top-level comment this replies to; replies are one level deep.
   parentId: number | null;
-  author: string;
+  // A deleted comment that still has replies: no author or text, only a placeholder.
+  isDeleted: boolean;
+  author: string | null;
   isPostAuthor: boolean;
   // Written by the signed-in viewer, who may delete it.
   isMine: boolean;
   isNewAccount: boolean;
-  body: string;
+  body: string | null;
   flag: "klaim_tanpa_bukti" | null;
   createdAt: string;
 }

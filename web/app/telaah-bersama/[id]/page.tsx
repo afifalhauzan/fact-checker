@@ -338,18 +338,11 @@ export default function TelaahDetailPage() {
                       }
                   )
                 }
-                onDeleted={(removed, commentCount) =>
-                  setPost(
-                    (current) =>
-                      current && {
-                        ...current,
-                        commentCount,
-                        // A deleted thread takes its replies with it
-                        comments: (current.comments ?? []).filter(
-                          (comment) => comment.id !== removed.id && comment.parentId !== removed.id
-                        ),
-                      }
-                  )
+                // The server decides whether a placeholder stays, so the thread is reloaded as it now is
+                onDeleted={() =>
+                  getPost(post.id)
+                    .then(setPost)
+                    .catch(() => toast.error("Diskusi gagal dimuat ulang. Muat ulang halaman."))
                 }
               />
             </div>

@@ -96,6 +96,14 @@ function CommentItem({
   onReply: () => void;
   onDelete: () => void;
 }) {
+  if (comment.isDeleted) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm italic text-muted-foreground">
+        Komentar telah dihapus
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -183,7 +191,10 @@ export function Discussion({
   return (
     <section aria-labelledby="diskusi-heading" className="space-y-3">
       <h2 id="diskusi-heading" className="text-base font-semibold text-foreground">
-        Diskusi <span className="font-normal text-muted-foreground">({comments.length})</span>
+        Diskusi{" "}
+        <span className="font-normal text-muted-foreground">
+          ({comments.filter((comment) => !comment.isDeleted).length})
+        </span>
       </h2>
 
       {!viewerName ? (
@@ -233,7 +244,7 @@ export function Discussion({
                         postId={postId}
                         parentId={thread.id}
                         viewerName={viewerName}
-                        placeholder={`Balas ${thread.author}`}
+                        placeholder={thread.author ? `Balas ${thread.author}` : "Tulis balasan"}
                         autoFocus
                         onAdded={(comment) => {
                           onAdded(comment);
@@ -257,7 +268,7 @@ export function Discussion({
         title="Hapus komentar ini?"
         description={
           pendingDelete?.parentId === null && comments.some((comment) => comment.parentId === pendingDelete?.id)
-            ? "Komentar beserta balasan-balasannya akan dihapus. Tindakan ini tidak bisa dibatalkan."
+            ? "Isi dan namamu akan dihapus. Balasan dari orang lain tetap tampil di bawah tulisan \"Komentar telah dihapus\"."
             : "Komentar akan dihapus. Tindakan ini tidak bisa dibatalkan."
         }
         confirmText="Hapus"

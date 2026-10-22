@@ -155,7 +155,7 @@ function viewerKey(req: NextRequest): string {
 
 function toSimilarPart(match: SimilarMatch, ownSignals: string[]): SimilarTelaahPartData {
   const { post } = match;
-  const topComment = post.comments?.find((comment) => !comment.flag);
+  const topComment = post.comments?.find((comment) => !comment.flag && !comment.isDeleted);
   return {
     post: {
       id: post.id,
@@ -167,7 +167,7 @@ function toSimilarPart(match: SimilarMatch, ownSignals: string[]): SimilarTelaah
       analyzedAt: post.analyzedAt,
       reactionCount: post.reactionCount,
       commentCount: post.commentCount,
-      topComment: topComment ? { author: topComment.author, body: topComment.body } : null,
+      topComment: topComment?.author && topComment.body ? { author: topComment.author, body: topComment.body } : null,
     },
     reasons: match.reasons,
     differentPeriod: match.differentPeriod,
