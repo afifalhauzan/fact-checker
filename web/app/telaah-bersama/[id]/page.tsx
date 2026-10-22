@@ -211,17 +211,15 @@ export default function TelaahDetailPage() {
               </p>
             </header>
 
+            {/* The level is the badge above and the reasons are in Ringkasan, so the claim is not repeated */}
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Tingkat risiko · dinilai pada {formatDate(post.analyzedAt)}
-              </p>
-              <p className="mt-1 text-base font-semibold leading-relaxed text-foreground">{post.claim}</p>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ShieldAlert className="h-3.5 w-3.5" />
-                Ini penilaian awal, bukan vonis. Cocokkan dengan kanal resmi perusahaan.
+              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+                <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Dinilai otomatis pada {formatDate(post.analyzedAt)}. Ini penilaian awal, bukan vonis; cocokkan dengan kanal
+                resmi perusahaan.
               </p>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                 {isOwner ? (
                   // The owner cannot mark their own post; they see how many others did
                   <span className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground">
