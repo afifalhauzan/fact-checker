@@ -235,7 +235,7 @@ export function Composer({
               onClick={onStop}
               title="Hentikan jawaban"
               aria-label="Hentikan jawaban"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-transform hover:scale-105 active:scale-95"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-background transition-transform hover:scale-105 active:scale-95"
             >
               <Square className="h-3.5 w-3.5 fill-current" />
             </button>

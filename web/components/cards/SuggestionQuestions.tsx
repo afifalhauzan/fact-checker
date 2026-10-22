@@ -19,7 +19,7 @@ export function SuggestionQuestions({ messageId, questions, onQuestionClick }: S
           key={`${messageId}-suggested-question-${index}`}
           type="button"
           onClick={() => onQuestionClick(question)}
-          className="rounded-xl bg-muted/40 px-3 py-2 text-left text-sm leading-relaxed text-foreground hover:bg-accent transition-colors"
+          className="rounded-xl bg-muted/40 px-3 py-2 text-left text-sm leading-relaxed text-muted-foreground hover:bg-accent transition-colors"
         >
           {question}
         </button>

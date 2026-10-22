@@ -21,6 +21,7 @@ function EdgeToggle({
   label,
   closedIcon,
   badge,
+  large = false,
   onToggle,
   className,
 }: {
@@ -29,11 +30,14 @@ function EdgeToggle({
   label: string;
   closedIcon?: React.ReactNode;
   badge?: number;
+  /** Desktop tabs are 180% of the phone size (28px -> 50px), which keeps the phone's tab row as it is. */
+  large?: boolean;
   onToggle: () => void;
   className?: string;
 }) {
   const opensTowardRight = side === "left" ? !isOpen : isOpen;
-  const chevron = opensTowardRight ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />;
+  const chevronSize = large ? "h-[25px] w-[25px]" : "h-3.5 w-3.5";
+  const chevron = opensTowardRight ? <ChevronsRight className={chevronSize} /> : <ChevronsLeft className={chevronSize} />;
 
   return (
     <button
@@ -43,7 +47,8 @@ function EdgeToggle({
       aria-label={isOpen ? `Tutup ${label}` : `Buka ${label}`}
       title={isOpen ? `Tutup ${label}` : `Buka ${label}`}
       className={cn(
-        "absolute z-20 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "absolute z-20 flex items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        large ? "h-[40px] w-[40px]" : "h-7 w-7",
         // The context panel's tab stays at the top right, clear of the chat; the history tab is centered
         side === "right" ? "top-3" : "top-1/2 -translate-y-1/2",
         className
@@ -138,7 +143,16 @@ export function SidePanel({
       {/* A closed panel without a rail has no visible border, so its tab moves fully into view */}
       <EdgeToggle
         {...toggleProps}
-        className={side === "left" ? (isOpen || hasRail ? "-right-3.5" : "-right-9") : isOpen || hasRail ? "-left-3.5" : "-left-9"}
+        large
+        className={
+          side === "left"
+            ? isOpen || hasRail
+              ? "-right-[25px]"
+              : "-right-[58px]"
+            : isOpen || hasRail
+              ? "-left-[25px]"
+              : "-left-[58px]"
+        }
       />
     </div>
   );

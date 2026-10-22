@@ -51,26 +51,32 @@ export function ChatStart({ onSuggestionClick, isLoading }: ChatStartProps) {
 
       <div className="w-full max-w-2xl">
         <div className="flex flex-wrap justify-center gap-2.5">
-          {SUGGESTIONS.map((suggestion) => (
-            <button
+          {SUGGESTIONS.map((suggestion, index) => (
+            // The entry animation lives on a wrapper so it doesn't fight the button's hover transform.
+            // Each card follows the greeting bubble, staggered a little after the previous one.
+            <div
               key={suggestion.id}
-              onClick={() => onSuggestionClick(suggestion.text)}
-              disabled={isLoading}
-              className="
-                group relative
-                inline-flex max-w-[100%] items-center text-left
-                rounded-2xl border border-border/60
-                bg-muted/30 px-5 py-3
-                text-sm font-medium text-secondary-foreground
-                transition-all duration-300
-                hover:-translate-y-1 hover:border-primary/30 hover:bg-background hover:shadow-md
-                active:scale-95
-                disabled:cursor-not-allowed disabled:opacity-50
-                md:max-w-[45%]
-              "
+              className="max-w-full animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards duration-700 md:max-w-[45%]"
+              style={{ animationDelay: `${150 + index * 100}ms` }}
             >
-              <span className="line-clamp-2">{suggestion.text}</span>
-            </button>
+              <button
+                onClick={() => onSuggestionClick(suggestion.text)}
+                disabled={isLoading}
+                className="
+                  group relative
+                  inline-flex max-w-full items-center text-left
+                  rounded-2xl border border-border/60
+                  bg-muted/30 px-5 py-3
+                  text-sm font-medium text-secondary-foreground
+                  transition-all duration-300
+                  hover:-translate-y-1 hover:border-primary/30 hover:bg-background hover:shadow-md
+                  active:scale-95
+                  disabled:cursor-not-allowed disabled:opacity-50
+                "
+              >
+                <span className="line-clamp-2">{suggestion.text}</span>
+              </button>
+            </div>
           ))}
         </div>
       </div>

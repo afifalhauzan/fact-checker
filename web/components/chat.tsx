@@ -751,11 +751,11 @@ export function Chat() {
           isOpen={isContextOpen}
           isMobile={isMobile}
           label="konteks sesi"
-          closedIcon={<List className="h-3.5 w-3.5" />}
+          closedIcon={<List className="h-5 w-5 " />}
           badge={contextCount}
           onToggle={toggleContext}
         >
-          <h2 className="mb-4 text-sm font-semibold text-foreground">Konteks sesi</h2>
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Pada sesi ini</h2>
           <ContextPanel context={sessionContext} sources={sidebarSources} />
         </SidePanel>
       </div>
