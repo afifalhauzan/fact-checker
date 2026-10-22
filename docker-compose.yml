@@ -3,7 +3,7 @@ name: gemastik
 # Production stack. Needs a root .env (see .env.example) and web/.env for the AI keys.
 services:
   postgres:
-    build: docker/postgres
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE:-gemastik}

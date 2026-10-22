@@ -2,7 +2,7 @@ name: gemastik-dev
 
 services:
   postgres:
-    build: docker/postgres
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: gemastik
       POSTGRES_USER: gemastik
