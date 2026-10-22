@@ -30,6 +30,7 @@ import type { SimilarTelaahPartData } from "@/types/streaming";
 import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload } from "@/types/ui-actions";
 import { generateSessionTitle } from "@/langchain/agents/session-title";
 import { getAccessToken } from "@/lib/server-auth";
+import { loadStoredAttachments } from "@/lib/stored-attachments";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const SECTION_STEP_DELAY_MS = 220;
@@ -186,6 +187,8 @@ async function writeSessionTitle(writer: any, question: string, answer: string) 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    // A reloaded session sends its attachments as links to the stored files
+    await loadStoredAttachments(body?.messages, getAccessToken(req));
     const actionPayload = extractUIActionPayload(body);
     const input = extractLatestUserText(body);
     const { attachments, unsupportedCount } = extractLatestFileParts(body);

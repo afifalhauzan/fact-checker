@@ -60,10 +60,32 @@ function imagesOf(message: LooseMessage | undefined): AnalyzeImage[] {
         part.type === "file" &&
         typeof part.mediaType === "string" &&
         isSupportedAttachment(part.mediaType) &&
+        // A stored file the chat route did not load back is a link the model cannot open
         typeof part.url === "string" &&
-        part.url.length > 0
+        part.url.startsWith("data:")
     )
     .map((part) => ({ mediaType: part.mediaType as string, url: part.url as string }));
+}
+
+/**
+ * User messages whose attachments the model needs again: the latest message (it is being
+ * analyzed), and earlier ones whose analysis kept no transcript or only an incomplete one (the
+ * rule findPostingContext uses). Attachments of a reloaded session are links to stored files, so
+ * only these are loaded back.
+ */
+export function messagesNeedingAttachments(messages: LooseMessage[]): number[] {
+  const indices: number[] = [];
+  messages.forEach((message, index) => {
+    if (message?.role !== "user" || !partsOf(message).some((part) => part.type === "file")) return;
+    if (index === messages.length - 1) {
+      indices.push(index);
+      return;
+    }
+    const analysisPart = partsOf(messages[index + 1]).find((part) => part.type === "data-analysis");
+    const material = analysisPart ? parseAnalysis(analysisPart.data)?.material : undefined;
+    if (!material?.transcript?.trim() || material.legibility === "sebagian") indices.push(index);
+  });
+  return indices;
 }
 
 function parseAnalysis(data: unknown): Partial<AnalysisResult> | null {

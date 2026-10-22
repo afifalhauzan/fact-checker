@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findPostingContext, type LooseMessage } from "../langchain/agents/analyzer/conversation-context";
+import { findPostingContext, messagesNeedingAttachments, type LooseMessage } from "../langchain/agents/analyzer/conversation-context";
 
 const verdict = (material: Record<string, string>): LooseMessage => ({
   role: "assistant",
@@ -38,6 +38,27 @@ test("each stage carries the earlier ones, so a third poster still sees the firs
   // Link evidence goes to follow-up questions, but is not carried into the next analysis
   assert.ok(context.postingText.endsWith("[Tujuan shortlink]\nx"));
   assert.ok(!context.material.includes("Tujuan shortlink"));
+});
+
+test("stored attachments are loaded back only where the model reads the image again", () => {
+  const withFile = (text: string): LooseMessage => ({
+    role: "user",
+    parts: [{ type: "text", text }, { type: "file", mediaType: "image/png", url: "/api/chat/attachments/a/b" }],
+  });
+  const messages = [
+    withFile("poster jelas"),
+    verdict({ transcript: "isi poster", legibility: "jelas" }),
+    withFile("poster buram"),
+    verdict({ transcript: "isi sebagian", legibility: "sebagian" }),
+    user("tanpa lampiran"),
+    verdict({}),
+    withFile("poster baru"),
+  ];
+  assert.deepEqual(messagesNeedingAttachments(messages), [2, 6]);
+
+  // A link that was not loaded back is never sent to the model
+  const context = findPostingContext(messages, 3)!;
+  assert.deepEqual(context.images, []);
 });
 
 test("the first analysis of a session has nothing earlier to carry", () => {
