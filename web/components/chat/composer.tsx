@@ -5,6 +5,7 @@ import React from "react";
 import { ArrowUp, FileText, Plus, Square, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/utils/utils";
+import { canSubmitChatMessage } from "@/lib/chat-composer";
 import { ACCEPTED_ATTACHMENT_TYPES, MAX_ATTACHMENTS, filesFromClipboard } from "@/lib/attachments";
 
 /** What the composer needs to show an attachment; chat and homepage attachments both fit it. */
@@ -108,8 +109,7 @@ export function Composer({
   const textareaRef = inputRef ?? localRef;
   const [previewImage, setPreviewImage] = React.useState<ComposerAttachmentView | null>(null);
 
-  const hasContent = input.trim().length > 0 || attachments.length > 0;
-  const canSend = hasContent && !isLoading;
+  const canSend = canSubmitChatMessage(input, attachments.length, isLoading);
   const isFull = attachments.length >= MAX_ATTACHMENTS;
 
   // Grow with the text, like the Claude composer, up to a cap after which the box scrolls.

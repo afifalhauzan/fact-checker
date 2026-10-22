@@ -31,10 +31,10 @@ test("login form reports a password that is too short", async ({ page }) => {
 });
 
 test("login page links to registration", async ({ page }) => {
-  await page.goto("/login");
-  await page.getByRole("link", { name: "Daftar" }).click();
-
-  await expect(page).toHaveURL(/\/register$/);
+  await page.goto("/login", { waitUntil: "networkidle" });
+  const registerLink = page.getByRole("link", { name: "Daftar" });
+  await expect(registerLink).toHaveAttribute("href", "/register");
+  await Promise.all([page.waitForURL(/\/register$/), registerLink.click()]);
   await expect(page.getByRole("heading", { name: /Daftar/i })).toBeVisible();
 });
 
@@ -72,4 +72,27 @@ test("chat composer keeps send disabled until there is input", async ({ page }) 
   await expect(send).toBeEnabled();
   await composer.fill("   ");
   await expect(send).toBeDisabled();
+});
+
+test("chat analysis returns a risk assessment from the real provider API", async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await page.goto("/chat");
+  await expect(page).toHaveURL(/\/chat\?conversation_id=/);
+
+  const posting =
+    "PT Contoh membuka lowongan Admin Jakarta. Pelamar diminta transfer biaya administrasi Rp250.000 ke rekening BCA 0123456789 sebelum wawancara.";
+  const analysisResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/chat") && response.request().method() === "POST",
+    { timeout: 150_000 }
+  );
+
+  await page.getByRole("textbox", { name: "Pesan" }).fill(posting);
+  await page.getByRole("button", { name: "Kirim" }).click();
+
+  const response = await analysisResponse;
+  expect(response.ok(), `Chat API returned HTTP ${response.status()}`).toBe(true);
+  await expect(page.getByText("Tingkat risiko awal", { exact: true })).toBeVisible({ timeout: 150_000 });
+  await expect(page.getByText("Risiko Tinggi", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Analisis AI sedang tidak dapat dijalankan/)).toHaveCount(0);
 });

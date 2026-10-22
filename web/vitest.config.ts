@@ -7,6 +7,7 @@ export default defineConfig({
       "eval/redaction.test.ts",
       "eval/session-title.test.ts",
       "eval/auth-schemas.test.ts",
+      "eval/chat-composer.test.ts",
     ],
   },
 });
