@@ -8,6 +8,7 @@ import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { RiskCard } from "@/components/cards/RiskCard";
 import { ModusBadge, RiskLevelBadge } from "@/components/telaah-bersama/badges";
@@ -25,6 +26,8 @@ import { SOURCE_PLATFORMS, hasAccusatoryWord } from "@/lib/telaah-bersama/types"
 import { hasSensitiveData, looksLikePersonalData } from "@/langchain/agents/analyzer/redaction";
 import type { SharePayload } from "@/langchain/agents/telaah-bersama/share-payload";
 import type { TelaahSharePartData } from "@/types/streaming";
+
+const platformOptions = SOURCE_PLATFORMS.map((item) => ({ value: item, label: item }));
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_STORY_LENGTH = 1500;
@@ -352,17 +355,14 @@ function PostForm({ share, payload, files }: { share: TelaahSharePartData; paylo
           <section>
             <FieldLabel hint="Diisi AI dari materi, bisa diedit">Sumber lowongan</FieldLabel>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr]">
-              <select
-                aria-label="Platform"
+              <Select
+                ariaLabel="Platform"
                 value={platform}
-                onChange={(event) => setPlatform(event.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Pilih platform</option>
-                {SOURCE_PLATFORMS.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
+                onChange={setPlatform}
+                placeholder="Pilih platform"
+                options={platformOptions}
+                clearable
+              />
               <Input
                 aria-label="Akun atau link asal"
                 value={account}

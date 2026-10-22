@@ -6,6 +6,7 @@ import { Info, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { ProtectedTopNavbar } from "@/components/protected-top-navbar";
 import { TelaahCard } from "@/components/telaah-bersama/telaah-card";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/utils/utils";
 import { listPosts } from "@/lib/telaah-bersama/api";
 import { MODUS_LABELS, type TelaahModus, type TelaahPost, type TelaahRiskLevel } from "@/lib/telaah-bersama/types";
@@ -55,6 +56,7 @@ export default function TelaahBersamaPage() {
     const current = new Date().getFullYear();
     return Array.from({ length: Math.max(1, current - FIRST_YEAR + 1) }, (_, index) => String(current - index));
   }, []);
+  const yearOptions = React.useMemo(() => years.map((item) => ({ value: item, label: item })), [years]);
   const activeFilterCount = [risk, modus, year, from || to].filter(Boolean).length;
 
   // The search waits for a pause in typing instead of firing on every key.
@@ -169,17 +171,16 @@ export default function TelaahBersamaPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
                   <span className="w-16">Dibagikan</span>
-                  <select
+                  <Select
+                    size="sm"
                     value={year}
-                    onChange={(event) => setYear(event.target.value)}
-                    aria-label="Tahun dibagikan"
-                    className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
-                  >
-                    <option value="">Semua tahun</option>
-                    {years.map((item) => (
-                      <option key={item} value={item}>{item}</option>
-                    ))}
-                  </select>
+                    onChange={setYear}
+                    ariaLabel="Tahun dibagikan"
+                    placeholder="Semua tahun"
+                    options={yearOptions}
+                    clearable
+                    className="w-32"
+                  />
                   <label className="inline-flex items-center gap-1.5">
                     dari
                     <input
