@@ -67,6 +67,9 @@ export const toggleReaction = (id: number) =>
 export const addComment = (id: number, body: string, parentId?: number) =>
   request<TelaahComment>(`/api/telaah-bersama/${id}/comments`, json("POST", { body, parentId }));
 
+export const deleteComment = (id: number, commentId: number) =>
+  request<{ commentCount: number }>(`/api/telaah-bersama/${id}/comments/${commentId}`, json("DELETE"));
+
 export const reportPost = (id: number, type: ReportType) =>
   request<{ reported: boolean }>(`/api/telaah-bersama/${id}/reports`, json("POST", { type }));
 

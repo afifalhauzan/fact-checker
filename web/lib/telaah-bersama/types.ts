@@ -32,6 +32,8 @@ export interface TelaahComment {
   parentId: number | null;
   author: string;
   isPostAuthor: boolean;
+  // Written by the signed-in viewer, who may delete it.
+  isMine: boolean;
   isNewAccount: boolean;
   body: string;
   flag: "klaim_tanpa_bukti" | null;

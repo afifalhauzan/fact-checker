@@ -338,6 +338,19 @@ export default function TelaahDetailPage() {
                       }
                   )
                 }
+                onDeleted={(removed, commentCount) =>
+                  setPost(
+                    (current) =>
+                      current && {
+                        ...current,
+                        commentCount,
+                        // A deleted thread takes its replies with it
+                        comments: (current.comments ?? []).filter(
+                          (comment) => comment.id !== removed.id && comment.parentId !== removed.id
+                        ),
+                      }
+                  )
+                }
               />
             </div>
           </article>

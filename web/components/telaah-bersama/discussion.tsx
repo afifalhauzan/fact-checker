@@ -2,11 +2,12 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { AlertTriangle, Reply, Send } from "lucide-react";
+import { AlertTriangle, Reply, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmModal } from "@/components/ui/modal";
 import { cn } from "@/utils/utils";
-import { addComment } from "@/lib/telaah-bersama/api";
+import { addComment, deleteComment } from "@/lib/telaah-bersama/api";
 import { formatRelative, type TelaahComment } from "@/lib/telaah-bersama/types";
 import { hasSensitiveData } from "@/langchain/agents/analyzer/redaction";
 import { useLoginPrompt } from "./login-prompt";
@@ -86,7 +87,15 @@ function CommentForm({
   );
 }
 
-function CommentItem({ comment, onReply }: { comment: TelaahComment; onReply: () => void }) {
+function CommentItem({
+  comment,
+  onReply,
+  onDelete,
+}: {
+  comment: TelaahComment;
+  onReply: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -106,14 +115,26 @@ function CommentItem({ comment, onReply }: { comment: TelaahComment; onReply: ()
         </p>
       )}
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{comment.body}</p>
-      <button
-        type="button"
-        onClick={onReply}
-        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
-      >
-        <Reply className="h-3.5 w-3.5" />
-        Balas
-      </button>
+      <div className="mt-2 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onReply}
+          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <Reply className="h-3.5 w-3.5" />
+          Balas
+        </button>
+        {comment.isMine && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Hapus
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -123,15 +144,29 @@ export function Discussion({
   comments,
   viewerName,
   onAdded,
+  onDeleted,
 }: {
   postId: number;
   comments: TelaahComment[];
   // Pseudonym of the signed-in viewer; null for guests.
   viewerName: string | null;
   onAdded: (comment: TelaahComment) => void;
+  // Called with the removed comment and the post's new comment count.
+  onDeleted: (comment: TelaahComment, commentCount: number) => void;
 }) {
   const openLoginPrompt = useLoginPrompt((state) => state.open);
   const [replyingTo, setReplyingTo] = React.useState<number | null>(null);
+  const [pendingDelete, setPendingDelete] = React.useState<TelaahComment | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      const { commentCount } = await deleteComment(postId, pendingDelete.id);
+      onDeleted(pendingDelete, commentCount);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Komentar gagal dihapus.");
+    }
+  };
 
   // Newest threads first; replies under their thread in the order they were written.
   const threads = comments.filter((comment) => comment.parentId === null).reverse();
@@ -182,11 +217,16 @@ export function Discussion({
             const replies = repliesOf(thread.id);
             return (
               <li key={thread.id} className="space-y-2">
-                <CommentItem comment={thread} onReply={() => startReply(thread.id)} />
+                <CommentItem comment={thread} onReply={() => startReply(thread.id)} onDelete={() => setPendingDelete(thread)} />
                 {(replies.length > 0 || replyingTo === thread.id) && (
                   <div className="ml-4 space-y-2 border-l-2 border-border pl-3 sm:ml-6">
                     {replies.map((reply) => (
-                      <CommentItem key={reply.id} comment={reply} onReply={() => startReply(thread.id)} />
+                      <CommentItem
+                        key={reply.id}
+                        comment={reply}
+                        onReply={() => startReply(thread.id)}
+                        onDelete={() => setPendingDelete(reply)}
+                      />
                     ))}
                     {replyingTo === thread.id && viewerName && (
                       <CommentForm
@@ -209,6 +249,21 @@ export function Discussion({
           })}
         </ul>
       )}
+
+      <ConfirmModal
+        isOpen={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Hapus komentar ini?"
+        description={
+          pendingDelete?.parentId === null && comments.some((comment) => comment.parentId === pendingDelete?.id)
+            ? "Komentar beserta balasan-balasannya akan dihapus. Tindakan ini tidak bisa dibatalkan."
+            : "Komentar akan dihapus. Tindakan ini tidak bisa dibatalkan."
+        }
+        confirmText="Hapus"
+        cancelText="Batal"
+        isDestructive
+      />
     </section>
   );
 }
