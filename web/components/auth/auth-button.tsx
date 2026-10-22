@@ -97,9 +97,6 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">{displayName}</p>
                 <p className="text-xs text-muted-foreground break-all">{user.email}</p>
-                {user.pseudonym && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">Tampil di TelaahBareng sebagai {user.pseudonym}</p>
-                )}
               </div>
             </div>
           </div>
