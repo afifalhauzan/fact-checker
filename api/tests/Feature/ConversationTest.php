@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -187,6 +189,62 @@ class ConversationTest extends TestCase
 
         $this->assertDatabaseCount('conversations', 0);
         $this->assertDatabaseCount('messages', 0);
+    }
+
+    public function test_attachments_are_stored_privately_reused_on_resave_and_deleted_with_the_conversation(): void
+    {
+        Storage::fake('local');
+        Sanctum::actingAs($owner = User::factory()->create());
+        $id = (string) Str::uuid();
+        // A real 1x1 PNG: the container has no GD for fake()->image()
+        $poster = UploadedFile::fake()->createWithContent(
+            'poster.png',
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='),
+        );
+        $save = fn () => $this->post("/api/conversations/{$id}/messages", [
+            'payload' => json_encode(['messages' => [[
+                'id' => 'msg-1',
+                'role' => 'user',
+                'content' => 'Cek ini',
+                'meta_data' => ['parts' => [
+                    ['type' => 'text', 'text' => 'Cek ini'],
+                    ['type' => 'file', 'mediaType' => 'image/png', 'filename' => 'poster.png', 'url' => 'upload:0'],
+                    // Inline bytes that were not uploaded are never kept in the row
+                    ['type' => 'file', 'mediaType' => 'image/png', 'filename' => 'lain.png', 'url' => 'data:image/png;base64,AAAA'],
+                ]],
+            ]]]),
+            'files' => [$poster],
+        ], ['Accept' => 'application/json']);
+
+        $save()->assertCreated();
+        $save()->assertOk();
+        $this->assertDatabaseCount('chat_attachments', 1);
+
+        $parts = $this->getJson("/api/conversations/{$id}/messages")->json('data.0.meta_data.parts');
+        $this->assertMatchesRegularExpression("#^/api/chat/attachments/{$id}/[0-9a-f-]{36}$#", $parts[1]['url']);
+        $this->assertSame(['type' => 'text', 'text' => '[Lampiran: lain.png]'], $parts[2]);
+
+        $attachmentId = basename($parts[1]['url']);
+        $this->get("/api/conversations/{$id}/attachments/{$attachmentId}")
+            ->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        Sanctum::actingAs(User::factory()->create());
+        $this->get("/api/conversations/{$id}/attachments/{$attachmentId}")->assertNotFound();
+
+        Sanctum::actingAs($owner);
+        $this->deleteJson("/api/conversations/{$id}")->assertOk();
+        $this->assertDatabaseCount('chat_attachments', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_attachments_of_other_types_are_rejected(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->post('/api/conversations/'.Str::uuid().'/messages', [
+            'payload' => json_encode(['messages' => [['id' => 'msg-1', 'role' => 'user', 'content' => 'x']]]),
+            'files' => [UploadedFile::fake()->create('script.svg', 1, 'image/svg+xml')],
+        ], ['Accept' => 'application/json'])->assertUnprocessable();
     }
 
     public function test_conversations_require_authentication(): void
