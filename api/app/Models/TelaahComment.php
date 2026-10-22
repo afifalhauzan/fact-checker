@@ -13,6 +13,7 @@ class TelaahComment extends Model
     {
         return ['removed_at' => 'datetime'];
     }
+
     public const FLAGS = ['klaim_tanpa_bukti'];
 
     // Accounts younger than this get an "akun baru" badge on their comments (design doc 5.5)
