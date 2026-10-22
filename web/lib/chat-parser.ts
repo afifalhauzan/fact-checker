@@ -9,6 +9,7 @@ interface BackendHistoryMessage {
   role: 'user' | 'assistant'
   content: string
   meta_data?: Record<string, any> | null
+  feedback?: 'baik' | 'buruk' | null
   created_at: string
 }
 
@@ -92,6 +93,8 @@ export function parseHistoryToMessages(rawData: unknown): MetabotUIMessage[] {
           id: message.id,
           role: message.role, // 'user' or 'assistant'
           parts,
+          // The user's earlier rating of this answer, so the thumbs show it again
+          metadata: message.feedback ? { feedback: message.feedback } : undefined,
         }
 
         return uiMessage

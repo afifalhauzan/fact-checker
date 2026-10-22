@@ -27,6 +27,7 @@ import { ActionInsightCard } from "@/components/cards/ActionInsightCard";
 import { SalaryBenefitCard } from "@/components/cards/SalaryBenefitCard";
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 import { BuatPostPrompt, SessionMoveCard, SimilarTelaahCard } from "@/components/telaah-bersama/chat-cards";
+import { MessageFeedback } from "@/components/chat/message-feedback";
 import type { SimilarTelaahPartData, TelaahSharePartData } from "@/types/streaming";
 
 /** What the user picked on a TelaahBareng card in the chat; handled by components/chat.tsx. */
@@ -48,6 +49,8 @@ interface AssistantMessageProps {
   pendingActionId?: UIActionId | null;
   isActionLoading?: boolean;
   onTelaahChoice?: (choice: TelaahChoice) => void;
+  // Set for saved (signed-in) sessions: answers there can be rated for evaluation.
+  feedbackConversationId?: string | null;
 }
 
 interface SectionalAnalysisData {
@@ -170,6 +173,7 @@ export function AssistantMessage({
   pendingActionId = null,
   isActionLoading = false,
   onTelaahChoice,
+  feedbackConversationId = null,
 }: AssistantMessageProps) {
   const fadeUp = {
     initial: { opacity: 0, y: 10 },
@@ -616,6 +620,14 @@ export function AssistantMessage({
         >
           <div className="space-y-3">{renderItems.map((item) => renderItem(item))}</div>
         </div>
+
+        {!isCurrentlyStreaming && feedbackConversationId && (
+          <MessageFeedback
+            conversationId={feedbackConversationId}
+            messageId={message.id}
+            initialRating={(message.metadata as { feedback?: "baik" | "buruk" } | undefined)?.feedback ?? null}
+          />
+        )}
 
         {!isCurrentlyStreaming && !hasInteractiveSteps && (
           <button

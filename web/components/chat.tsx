@@ -595,6 +595,7 @@ export function Chat() {
         pendingActionId={pendingActionId}
         isActionLoading={isLoading}
         onTelaahChoice={handleTelaahChoice}
+        feedbackConversationId={user ? conversationId : null}
       />
     );
   };
