@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatAttachment;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ConversationController extends Controller
 {
@@ -56,13 +61,21 @@ class ConversationController extends Controller
     }
 
     /**
-     * Save messages into a conversation, creating the conversation on first use.
+     * Save messages into a conversation, creating the conversation on first use. With attachments
+     * the request is multipart: a "payload" JSON field whose file parts point at "upload:N", and
+     * the files as files[N].
      */
     public function storeMessages(Request $request, string $conversation): JsonResponse
     {
         abort_unless(Str::isUuid($conversation), 404);
 
-        $data = $request->validate([
+        $files = $request->validate([
+            'files' => ['nullable', 'array', 'max:8'],
+            'files.*' => ['file', 'max:'.ChatAttachment::MAX_KB, 'mimetypes:'.implode(',', ChatAttachment::MIMES)],
+        ])['files'] ?? [];
+        $input = $request->has('payload') ? (json_decode((string) $request->input('payload'), true) ?: []) : $request->all();
+
+        $data = Validator::make($input, [
             'messages' => ['required', 'array', 'min:1', 'max:20'],
             'messages.*.id' => ['required', 'string', 'max:100'],
             'messages.*.role' => ['required', 'in:user,assistant'],
@@ -73,7 +86,7 @@ class ConversationController extends Controller
             // Answers the user replaced (e.g. "telaah sendiri" instead of an offered TelaahBareng post)
             'replaced_ids' => ['nullable', 'array', 'max:5'],
             'replaced_ids.*' => ['string', 'max:100'],
-        ]);
+        ])->validate();
 
         $existing = Conversation::find($conversation);
 
@@ -101,7 +114,7 @@ class ConversationController extends Controller
                 [
                     'role' => $message['role'],
                     'content' => $message['content'] ?? null,
-                    'meta_data' => $message['meta_data'] ?? null,
+                    'meta_data' => $this->withStoredFiles($conversation, $message, $files),
                 ],
             );
         }
@@ -120,9 +133,26 @@ class ConversationController extends Controller
 
         abort_unless($conversation, 404);
 
+        Storage::disk('local')->deleteDirectory("chat-attachments/{$conversation->id}");
         $conversation->delete();
 
         return response()->json(['message' => 'Conversation deleted']);
+    }
+
+    /**
+     * A file the user sent in one of their own conversations. Nobody else can open it.
+     */
+    public function attachment(Request $request, string $conversation, string $attachment): StreamedResponse
+    {
+        $conversation = $this->findOwned($request, $conversation);
+        $file = $conversation && Str::isUuid($attachment) ? $conversation->attachments()->find($attachment) : null;
+        abort_unless($file && Storage::disk('local')->exists($file->path), 404);
+
+        return Storage::disk('local')->response($file->path, $file->filename, [
+            'Content-Type' => $file->mime,
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
     }
 
     /**
@@ -159,6 +189,63 @@ class ConversationController extends Controller
         }
 
         return $request->user()->conversations()->find($id);
+    }
+
+    /**
+     * The message's meta_data with each uploaded file stored and its part pointing at the web
+     * app's download route. Inline file bytes are never kept in a message row.
+     *
+     * @param  array<string, mixed>  $message
+     * @param  array<int|string, UploadedFile>  $files
+     * @return array<string, mixed>|null
+     */
+    private function withStoredFiles(Conversation $conversation, array $message, array $files): ?array
+    {
+        $meta = $message['meta_data'] ?? null;
+        if (! is_array($meta['parts'] ?? null)) {
+            return $meta;
+        }
+
+        foreach ($meta['parts'] as $index => $part) {
+            $url = is_array($part) && ($part['type'] ?? null) === 'file' ? ($part['url'] ?? null) : null;
+            if (! is_string($url) || ! preg_match('/^(upload:|data:)/', $url)) {
+                continue;
+            }
+
+            $upload = preg_match('/^upload:(\d+)$/', $url, $match) ? ($files[$match[1]] ?? null) : null;
+            if (! $upload) {
+                $meta['parts'][$index] = ['type' => 'text', 'text' => '[Lampiran: '.($part['filename'] ?? 'file').']'];
+
+                continue;
+            }
+
+            $stored = $this->storeAttachment($conversation, $message['id'], $upload, $part['filename'] ?? null);
+            // The web app serves it from here (web/app/api/chat/attachments)
+            $meta['parts'][$index]['url'] = "/api/chat/attachments/{$conversation->id}/{$stored->id}";
+        }
+
+        return $meta;
+    }
+
+    private function storeAttachment(Conversation $conversation, string $messageId, UploadedFile $upload, ?string $filename): ChatAttachment
+    {
+        $sha256 = hash_file('sha256', $upload->getRealPath());
+        $existing = $conversation->attachments()->where(['message_client_id' => $messageId, 'sha256' => $sha256])->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $mime = $upload->getMimeType();
+        $path = $upload->storeAs("chat-attachments/{$conversation->id}", Str::uuid().'.'.($upload->guessExtension() ?? 'bin'), 'local');
+
+        return $conversation->attachments()->create([
+            'message_client_id' => $messageId,
+            'path' => $path,
+            'filename' => $filename ? Str::limit($filename, 200, '') : null,
+            'mime' => $mime,
+            'size' => $upload->getSize(),
+            'sha256' => $sha256,
+        ]);
     }
 
     /**

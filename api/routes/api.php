@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->prefix('conversations')->group(function () {
     Route::get('/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::post('/{conversation}/messages', [ConversationController::class, 'storeMessages']);
     Route::put('/{conversation}/messages/{message}/feedback', [ConversationController::class, 'feedback']);
+    Route::get('/{conversation}/attachments/{attachment}', [ConversationController::class, 'attachment']);
     Route::patch('/{conversation}', [ConversationController::class, 'update']);
     Route::delete('/{conversation}', [ConversationController::class, 'destroy']);
 });
