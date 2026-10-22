@@ -627,7 +627,8 @@ export function Chat() {
             {/* Chat Box */}
             <div
               ref={messagesContainerRef}
-              className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 flex flex-col gap-3.5 "
+              // On phones the panel tabs sit in the top corners (SidePanel), so the chat starts below them
+              className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 pt-12 md:pt-4 flex flex-col gap-3.5 "
             >
               {!isAuthReady ? (
                 <div className="flex-1 flex items-center justify-center">

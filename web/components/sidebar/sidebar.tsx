@@ -88,9 +88,10 @@ export function SidePanel({
   const toggleProps = { side, isOpen, label, closedIcon, badge, onToggle };
 
   if (isMobile) {
-    // Closed: the tab sits at the screen edge. Open: tapping outside the overlay closes it.
+    // Closed: both tabs sit in the top corners, a row the chat leaves free (pt-12 in chat.tsx);
+    // a phone has no side margin to hold them. Open: tapping outside the overlay closes it.
     if (!isOpen) {
-      return <EdgeToggle {...toggleProps} className={side === "left" ? "left-1" : "right-1"} />;
+      return <EdgeToggle {...toggleProps} className={side === "left" ? "left-3 top-3 translate-y-0" : "right-3"} />;
     }
     return (
       <>
