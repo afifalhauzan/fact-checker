@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\TelaahComment;
 use App\Models\TelaahPost;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -320,6 +321,68 @@ class TelaahBersamaTest extends TestCase
 
         $this->getJson("/api/telaah-bersama/{$post->id}")->assertNotFound();
         $this->getJson('/api/telaah-bersama')->assertJsonCount(0, 'data');
+    }
+
+    public function test_comments_can_be_liked_by_others_and_the_viewer_sees_their_like(): void
+    {
+        $post = $this->createPost(User::factory()->create());
+        Sanctum::actingAs($author = User::factory()->create());
+        $comment = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Nomornya sama.'])->json('id');
+
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments/{$comment}/like")->assertUnprocessable();
+
+        Sanctum::actingAs($reader = User::factory()->create());
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments/{$comment}/like")
+            ->assertJsonPath('liked', true)->assertJsonPath('likeCount', 1);
+        $this->getJson("/api/telaah-bersama/{$post->id}")
+            ->assertJsonPath('comments.0.likeCount', 1)
+            ->assertJsonPath('comments.0.viewer.liked', true);
+
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments/{$comment}/like")
+            ->assertJsonPath('liked', false)->assertJsonPath('likeCount', 0);
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments/999999/like")->assertNotFound();
+    }
+
+    public function test_comment_reports_follow_the_post_rules(): void
+    {
+        $post = $this->createPost(User::factory()->create());
+        Sanctum::actingAs($author = User::factory()->create());
+        $comment = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Hubungi saya.'])->json('id');
+        $reply = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Balasan.', 'parent_id' => $comment])->json('id');
+        $report = fn (string $type, bool $found) => $this->internal()
+            ->postJson("/api/telaah-bersama/{$post->id}/comments/{$comment}/reports", ['type' => $type, 'sensitive_found' => $found]);
+
+        $report('spam', false)->assertUnprocessable();
+
+        // A new account's report is recorded but counts for nothing
+        Sanctum::actingAs(User::factory()->create());
+        $report('spam', false)->assertOk();
+        $this->assertSame(0, TelaahComment::find($comment)->spam_count);
+
+        Sanctum::actingAs(User::factory()->create(['created_at' => now()->subDays(3)]));
+        $report('spam', false)->assertOk();
+        $report('spam', false)->assertOk();
+        $this->assertSame(1, TelaahComment::find($comment)->spam_count);
+        $this->getJson("/api/telaah-bersama/{$post->id}")->assertJsonPath('comments.0.viewer.reported', true);
+
+        // An unconfirmed personal-data report does not hide it; a confirmed one does, replies stay
+        Sanctum::actingAs(User::factory()->create(['created_at' => now()->subDays(3)]));
+        $report('data_pribadi', false);
+        $this->assertNull(TelaahComment::find($comment)->hidden_at);
+
+        Sanctum::actingAs(User::factory()->create(['created_at' => now()->subDays(3)]));
+        $report('data_pribadi', true);
+        $response = $this->getJson("/api/telaah-bersama/{$post->id}")
+            ->assertJsonPath('comments.0.isHidden', true)
+            ->assertJsonPath('comments.0.body', null)
+            ->assertJsonPath('comments.1.id', $reply);
+        $this->assertStringNotContainsString('Hubungi saya.', $response->getContent());
+        $report('spam', false)->assertNotFound();
+
+        // Its author can still delete it
+        Sanctum::actingAs($author);
+        $this->getJson("/api/telaah-bersama/{$post->id}")->assertJsonPath('comments.0.isMine', true);
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$comment}")->assertOk();
     }
 
     public function test_similar_finds_candidates_by_shared_contact_or_position_and_counts_matches_once_per_viewer(): void
