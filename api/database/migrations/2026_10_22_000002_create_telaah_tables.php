@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -49,13 +48,6 @@ return new class extends Migration
 
             $table->index(['status', 'created_at']);
         });
-
-        // Only Postgres has pgvector; the sqlite test database simply has no embedding column
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
-            DB::statement('ALTER TABLE telaah_posts ADD COLUMN embedding vector(768)');
-            DB::statement('CREATE INDEX telaah_posts_embedding_index ON telaah_posts USING hnsw (embedding vector_cosine_ops)');
-        }
 
         Schema::create('telaah_identifiers', function (Blueprint $table) {
             $table->id();

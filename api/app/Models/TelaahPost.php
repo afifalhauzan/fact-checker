@@ -13,12 +13,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'evidence', 'material_lines', 'links', 'contacts', 'company', 'position', 'location', 'salary',
     'open_date', 'close_date', 'source_platform', 'source_account', 'is_seed', 'analyzed_at', 'share_key',
 ])]
-#[Hidden(['user_id', 'embedding', 'share_key'])]
+#[Hidden(['user_id', 'share_key', 'material_text'])]
 class TelaahPost extends Model
 {
     public const RISK_LEVELS = ['sedang', 'tinggi'];
 
     public const MODUS = ['biaya', 'tugas_deposit', 'data_sensitif', 'tppo', 'impersonasi', 'lainnya'];
+
+    protected static function booted(): void
+    {
+        // Kept in step with the lines, for the trigram "nearly identical text" match
+        static::saving(function (TelaahPost $post) {
+            $post->material_text = implode("\n", $post->material_lines ?? []);
+        });
+    }
 
     protected function casts(): array
     {
