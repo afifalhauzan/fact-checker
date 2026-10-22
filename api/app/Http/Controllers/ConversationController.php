@@ -7,6 +7,7 @@ use App\Models\Message;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ConversationController extends Controller
 {
@@ -124,6 +125,33 @@ class ConversationController extends Controller
         return response()->json(['message' => 'Conversation deleted']);
     }
 
+    /**
+     * The user's rating of one assistant answer ("baik" or "buruk", null to withdraw it), kept
+     * with the message so evaluation can read the answer it was given for.
+     */
+    public function feedback(Request $request, string $conversation, string $message): JsonResponse
+    {
+        $conversation = $this->findOwned($request, $conversation);
+        $message = $conversation?->messages()->where('client_id', $message)->where('role', 'assistant')->first();
+        abort_unless($message, 404);
+
+        $data = $request->validate([
+            'rating' => ['nullable', Rule::in(Message::FEEDBACK)],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+        $rating = $data['rating'] ?? null;
+
+        // Not a new message: the history list stays ordered by the last real activity
+        $message->timestamps = false;
+        $message->update([
+            'feedback' => $rating,
+            'feedback_reason' => $rating === 'buruk' ? ($data['reason'] ?? null) : null,
+            'feedback_at' => $rating ? now() : null,
+        ]);
+
+        return response()->json(['id' => $message->client_id, 'feedback' => $message->feedback]);
+    }
+
     private function findOwned(Request $request, string $id): ?Conversation
     {
         if (! Str::isUuid($id)) {
@@ -155,6 +183,7 @@ class ConversationController extends Controller
             'role' => $message->role,
             'content' => $message->content,
             'meta_data' => $message->meta_data,
+            'feedback' => $message->feedback,
             'created_at' => $message->created_at,
         ];
     }

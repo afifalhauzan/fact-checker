@@ -145,6 +145,35 @@ class ConversationTest extends TestCase
         $this->patchJson("/api/conversations/{$id}", ['pinned' => true])->assertNotFound();
     }
 
+    public function test_the_owner_rates_an_answer_and_the_rating_survives_a_resave(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+        $id = (string) Str::uuid();
+        $messages = [
+            ['id' => 'msg-1', 'role' => 'user', 'content' => 'Cek lowongan ini'],
+            ['id' => 'msg-2', 'role' => 'assistant', 'content' => 'Tingkat risiko: Sedang'],
+        ];
+        $this->postJson("/api/conversations/{$id}/messages", ['messages' => $messages])->assertCreated();
+
+        $this->putJson("/api/conversations/{$id}/messages/msg-2/feedback", ['rating' => 'buruk', 'reason' => 'Penilaian risiko keliru'])
+            ->assertOk()->assertJsonPath('feedback', 'buruk');
+        $this->assertDatabaseHas('messages', ['client_id' => 'msg-2', 'feedback' => 'buruk', 'feedback_reason' => 'Penilaian risiko keliru']);
+
+        // Saving the exchange again (e.g. a regenerated title) keeps the rating
+        $this->postJson("/api/conversations/{$id}/messages", ['messages' => $messages])->assertOk();
+        $this->getJson("/api/conversations/{$id}/messages")->assertJsonPath('data.1.feedback', 'buruk');
+
+        $this->putJson("/api/conversations/{$id}/messages/msg-2/feedback", ['rating' => 'baik', 'reason' => 'x'])->assertOk();
+        $this->assertDatabaseHas('messages', ['client_id' => 'msg-2', 'feedback' => 'baik', 'feedback_reason' => null]);
+
+        // Only answers can be rated, only valid ratings, and only by the owner
+        $this->putJson("/api/conversations/{$id}/messages/msg-1/feedback", ['rating' => 'baik'])->assertNotFound();
+        $this->putJson("/api/conversations/{$id}/messages/msg-2/feedback", ['rating' => 'lumayan'])->assertUnprocessable();
+        Sanctum::actingAs(User::factory()->create());
+        $this->putJson("/api/conversations/{$id}/messages/msg-2/feedback", ['rating' => 'buruk'])->assertNotFound();
+    }
+
     public function test_owner_can_delete_a_conversation(): void
     {
         Sanctum::actingAs(User::factory()->create());
