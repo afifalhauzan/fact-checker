@@ -88,41 +88,43 @@ export function HeroSection() {
   );
 
   return (
-    <section className="mx-auto mb-20 w-full max-w-[1440px] px-4 text-center sm:mb-28 sm:px-8">
-      <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        Analisis risiko lowongan kerja digital
-      </div>
+    <section className="min-h-[80dvh] flex py-10 justify-center mx-auto w-full text-center sm:px-8">
+      <div>
+        <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-[#5a6a76] motion-safe:animate-[fadeUp_600ms_cubic-bezier(0.22,1,0.36,1)_both]">
+          Analisis risiko lowongan kerja digital
+        </div>
 
-      <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        Cek Risiko Lowongan Kerja
-        <span className="block italic font-medium text-[#2b6f95]">sebelum anda daftar.</span>
-      </h1>
+        <h1 className="mx-auto max-w-5xl font-regular text-4xl leading-[0.9] tracking-normal text-[#17232c] md:text-[4rem] motion-safe:animate-[fadeUp_760ms_cubic-bezier(0.22,1,0.36,1)_both]">
+          Cek Risiko Lowongan Kerja
+          <span className="block italic font-medium text-[#2b6f95]">sebelum anda daftar.</span>
+        </h1>
 
-      <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-md">
-          Unggah poster, screenshot, teks, atau link lowongan kerja. Sistem akan membantu membedah red flag,
-          validitas perusahaan, risiko link/kontak, dan langkah aman sebelum kamu kirim data atau melakukan pembayaran.
-        </p>
-
-        <Composer
-          input={input}
-          setInput={setInput}
-          onSubmit={handleSubmit}
-          isLoading={isPreparingAttachments}
-          attachments={attachments}
-          onSelectFiles={(files) => void handleSelectFiles(files)}
-          onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((item) => item.id !== id))}
-          autoFocus={false}
-          className="shadow-[0_18px_45px_rgba(23,35,44,0.08)]"
-        />
-
-        {attachmentNotice && (
-          <p role="alert" className="mt-2 text-xs text-[#a34d3c]">
-            {attachmentNotice}
+        <div className="mx-auto mt-6 max-w-3xl sm:mt-7 motion-safe:animate-[fadeUp_880ms_cubic-bezier(0.22,1,0.36,1)_both]">
+          <p className="mx-auto mb-6 max-w-2xl text-base leading-relaxed text-[#5a6a76] sm:text-md">
+            Unggah poster, screenshot, teks, atau link lowongan kerja. Sistem akan membantu membedah red flag,
+            validitas perusahaan, risiko link/kontak, dan langkah aman sebelum kamu kirim data atau melakukan pembayaran.
           </p>
-        )}
 
-        <RecentSessions />
+          <Composer
+            input={input}
+            setInput={setInput}
+            onSubmit={handleSubmit}
+            isLoading={isPreparingAttachments}
+            attachments={attachments}
+            onSelectFiles={(files) => void handleSelectFiles(files)}
+            onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((item) => item.id !== id))}
+            autoFocus={false}
+            className="shadow-[0_18px_45px_rgba(23,35,44,0.08)]"
+          />
+
+          {attachmentNotice && (
+            <p role="alert" className="mt-2 text-xs text-[#a34d3c]">
+              {attachmentNotice}
+            </p>
+          )}
+
+          <RecentSessions />
+        </div>
       </div>
 
     </section>

@@ -61,6 +61,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Tests
+playwright-report/
+test-results/
+
 # =========================
 # 🧪 DATASET EVALUASI AI
 # =========================
