@@ -1,3 +1,4 @@
+import { findLookalikeDomains, type LookalikeDomain } from "./lookalike";
 import { RISK_LEVEL_LABELS, type RiskLevel, type RiskType } from "./schema";
 
 /**
@@ -23,7 +24,8 @@ export type SignalId =
   | "paid_task"
   | "institution_impersonation"
   | "moderate_combination"
-  | "new_domain";
+  | "new_domain"
+  | "lookalike_domain";
 
 export type SignalSeverity = "strong" | "moderate";
 
@@ -490,8 +492,26 @@ export function detectSignals(text: string): DetectedSignal[] {
   if (combination) {
     signals.push(combination);
   }
+  const lookalikes = findLookalikeDomains(text);
+  if (lookalikes.length) {
+    signals.push(lookalikeDomainSignal(lookalikes));
+  }
 
   return signals;
+}
+
+function lookalikeDomainSignal(lookalikes: LookalikeDomain[]): DetectedSignal {
+  const [{ domain, brand, official }] = lookalikes;
+  return {
+    id: "lookalike_domain",
+    label: "Domain meniru nama perusahaan atau instansi",
+    severity: "strong",
+    riskType: "suspicious_contact",
+    floor: "tinggi",
+    floorReason: "Domainnya memakai nama perusahaan atau instansi besar, tetapi bukan domain resmi mereka.",
+    description: `Domain ${domain} memakai nama ${brand} dengan tambahan kata atau ejaan berbeda, padahal domain resmi ${brand} adalah ${official.join(" atau ")}. Penipu sering membuat domain seperti ini agar terlihat resmi.`,
+    evidence: lookalikes.map((item) => item.domain).slice(0, MAX_EVIDENCE_PER_SIGNAL),
+  };
 }
 
 /** From the domain registry rather than the text: the posting's site was registered only recently. */

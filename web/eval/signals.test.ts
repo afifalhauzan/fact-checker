@@ -281,3 +281,35 @@ describe("unverified_claim: klaim penilaian lembaga di dalam materi bukan bukti"
     assert.equal(ruleBasedRiskLevel(signals), "tinggi");
   });
 });
+
+describe("lookalike_domain: nama perusahaan atau instansi dengan tambahan kata, angka, atau salah ketik", () => {
+  fires("lookalike_domain", [
+    "Pendaftaran rekrutmen BUMN 2026 di www.rekrutmen-pertamina.com paling lambat Jumat.",
+    "Kirim berkas ke hrd@karirbri2026.id untuk seleksi administrasi.",
+    "Info lengkap: pertamlna-career.com",
+    "Daftar Program Magang Nasional di maganghub-kemnaker.com",
+    "Seleksi CPNS 2026 dibuka di cpns2026.com",
+    "Lowongan pos-indonesia-karir.com untuk kurir",
+    "Lamar sekarang di linkedln-jobs.com",
+    "Formulir di rekrutmen-pertamina.vercel.app",
+  ]);
+
+  silent("lookalike_domain", [
+    "Daftar resmi hanya di career.pertamina.com dan e-recruitment.pln.co.id",
+    "Program Magang Nasional melalui maganghub.kemnaker.go.id",
+    "Info rekrutmen: pertamina.co.id",
+    "PT Astra Otoparts membuka lowongan, kunjungi astra-otoparts.com",
+    "GarudaFood membuka lowongan di garudafood.com",
+    "Kirim CV ke hrd@karyamandiri.co.id",
+    "Toko Fabrikasi Baja, info di fabrikasibaja.com",
+    "Lowongan di id.jobstreet.com dan glints.com",
+  ]);
+
+  test("menaikkan risiko ke tinggi dan menyebut domain resminya", () => {
+    const signal = detectSignals("Daftar di rekrutmen-pertamina.com").find((item) => item.id === "lookalike_domain");
+    assert.equal(signal?.floor, "tinggi");
+    assert.match(signal?.description ?? "", /pertamina\.com/);
+    const government = detectSignals("Daftar di kemnaker-loker.com").find((item) => item.id === "lookalike_domain");
+    assert.match(government?.description ?? "", /\.go\.id/);
+  });
+});
