@@ -459,6 +459,7 @@ Semua bagian MVP sudah berjalan end-to-end (Postgres + pgvector, Laravel, rute N
 |---|---|
 | 5.3 Laporan | Hanya **data pribadi** dan **spam**. Tanggapan "lowongan ini asli" dihapus atas keputusan tim; halaman Rujukan juga dihapus |
 | 6.2 Ambang | `cosine ≥ 0,92`, atau ada pengenal yang sama dengan `cosine ≥ 0,6`. Pengaman lowongan resmi diperluas: materi punya situs resmi sendiri yang berbeda dari situs di Telaah, dan tidak ada kontak yang sama → dibatalkan, walaupun Telaah tidak menyebut nama perusahaan (kasus pencatutan kementerian) |
+| 6.2 Batas waktu | **6 detik**, bukan 2. Embedding + kueri kandidat biasanya ~1,2 detik, tetapi melewati 2,5 detik saat server baru menyala; pada uji 22 Okt, kecocokan nyata (cosine 0,933) gagal tampil hanya karena batas waktu |
 | 6.6 Judul | Model hanya mengekstrak atribut. Judul **disusun di kode** dari atribut (perusahaan · posisi · lokasi · periode), karena keluaran terstruktur Gemini sempat merusak karakter "·" dan "–" |
 | 6.11 Router | Prompt router lama **tidak diubah**. Pemeriksaan lanjutan vs lowongan baru adalah klasifikasi terpisah (`classifyNewMaterial`) yang hanya dipanggil jika router sudah memutuskan "materi" dan sesi sudah punya telaah |
 | 7.5 Data awal | **Tidak ada data awal**: aplikasi dimulai kosong. 6 Telaah fiktif (`api/database/seeders/data/telaah-seed.json`) hanya dipakai untuk uji pencocokan lokal |

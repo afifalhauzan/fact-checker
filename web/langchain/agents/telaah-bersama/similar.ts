@@ -20,7 +20,9 @@ const SHARED_CONTACT_BONUS = 0.3;
 const PERIOD_BONUS = 0.05;
 const PERIOD_MARGIN_DAYS = 14;
 const DEFAULT_PERIOD_DAYS = 60;
-const SIMILAR_TIMEOUT_MS = 2_500;
+// Embedding plus the candidate query usually takes about 1.2 s but spikes past 2.5 s on a cold
+// start; the analysis it can skip takes 10-40 s, so a generous budget still pays off.
+const SIMILAR_TIMEOUT_MS = 6_000;
 
 const SHARED_LABELS: Record<IdentifierKind, string> = {
   phone: "Nomor WA/HP sama",
