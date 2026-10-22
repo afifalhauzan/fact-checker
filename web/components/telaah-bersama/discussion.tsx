@@ -2,7 +2,7 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { AlertTriangle, Reply, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Reply, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmModal } from "@/components/ui/modal";
@@ -13,6 +13,7 @@ import { hasSensitiveData } from "@/langchain/agents/analyzer/redaction";
 import { useLoginPrompt } from "./login-prompt";
 
 const MAX_COMMENT_LENGTH = 1000;
+const MAX_INDENT_DEPTH = 4;
 
 function CommentForm({
   postId,
@@ -176,16 +177,73 @@ export function Discussion({
     }
   };
 
-  // Newest threads first; replies under their thread in the order they were written.
-  const threads = comments.filter((comment) => comment.parentId === null).reverse();
-  const repliesOf = (threadId: number) => comments.filter((comment) => comment.parentId === threadId);
+  // Replies nest to any depth. Top-level comments and their direct replies are always shown;
+  // deeper levels start folded and open one level at a time.
+  const [expanded, setExpanded] = React.useState<Set<number>>(new Set());
+  const childrenOf = React.useMemo(() => {
+    const map = new Map<number | null, TelaahComment[]>();
+    for (const comment of comments) {
+      map.set(comment.parentId, [...(map.get(comment.parentId) ?? []), comment]);
+    }
+    return map;
+  }, [comments]);
+  // Newest threads first; replies in the order they were written.
+  const threads = [...(childrenOf.get(null) ?? [])].reverse();
 
-  const startReply = (threadId: number) => {
+  const expand = (id: number) => setExpanded((current) => new Set(current).add(id));
+
+  const startReply = (comment: TelaahComment, depth: number) => {
     if (!viewerName) {
       openLoginPrompt("Masuk untuk membalas diskusi di Telaah ini.");
       return;
     }
-    setReplyingTo(threadId);
+    if (depth >= 1) expand(comment.id);
+    setReplyingTo(comment.id);
+  };
+
+  const renderNode = (comment: TelaahComment, depth: number): React.ReactNode => {
+    const children = childrenOf.get(comment.id) ?? [];
+    const isOpen = depth === 0 || expanded.has(comment.id);
+    const isReplying = replyingTo === comment.id && !!viewerName;
+
+    return (
+      <li key={comment.id} className="space-y-2">
+        <CommentItem comment={comment} onReply={() => startReply(comment, depth)} onDelete={() => setPendingDelete(comment)} />
+        {children.length > 0 && !isOpen && (
+          <button
+            type="button"
+            onClick={() => expand(comment.id)}
+            className="ml-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline sm:ml-6"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            Lihat {children.length} balasan
+          </button>
+        )}
+        {((isOpen && children.length > 0) || isReplying) && (
+          // Indentation stops growing after a few levels so deep threads stay readable on a phone
+          <ul className={cn("space-y-2 border-l-2 border-border", depth < MAX_INDENT_DEPTH ? "ml-4 pl-3 sm:ml-6" : "pl-3")}>
+            {isOpen && children.map((child) => renderNode(child, depth + 1))}
+            {isReplying && viewerName && (
+              <li>
+                <CommentForm
+                  postId={postId}
+                  parentId={comment.id}
+                  viewerName={viewerName}
+                  placeholder={comment.author ? `Balas ${comment.author}` : "Tulis balasan"}
+                  autoFocus
+                  onAdded={(added) => {
+                    onAdded(added);
+                    expand(comment.id);
+                    setReplyingTo(null);
+                  }}
+                  onCancel={() => setReplyingTo(null)}
+                />
+              </li>
+            )}
+          </ul>
+        )}
+      </li>
+    );
   };
 
   return (
@@ -223,42 +281,7 @@ export function Discussion({
           Belum ada diskusi. Jadilah yang pertama bercerita.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {threads.map((thread) => {
-            const replies = repliesOf(thread.id);
-            return (
-              <li key={thread.id} className="space-y-2">
-                <CommentItem comment={thread} onReply={() => startReply(thread.id)} onDelete={() => setPendingDelete(thread)} />
-                {(replies.length > 0 || replyingTo === thread.id) && (
-                  <div className="ml-4 space-y-2 border-l-2 border-border pl-3 sm:ml-6">
-                    {replies.map((reply) => (
-                      <CommentItem
-                        key={reply.id}
-                        comment={reply}
-                        onReply={() => startReply(thread.id)}
-                        onDelete={() => setPendingDelete(reply)}
-                      />
-                    ))}
-                    {replyingTo === thread.id && viewerName && (
-                      <CommentForm
-                        postId={postId}
-                        parentId={thread.id}
-                        viewerName={viewerName}
-                        placeholder={thread.author ? `Balas ${thread.author}` : "Tulis balasan"}
-                        autoFocus
-                        onAdded={(comment) => {
-                          onAdded(comment);
-                          setReplyingTo(null);
-                        }}
-                        onCancel={() => setReplyingTo(null)}
-                      />
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <ul className="space-y-3">{threads.map((thread) => renderNode(thread, 0))}</ul>
       )}
 
       <ConfirmModal
@@ -267,7 +290,7 @@ export function Discussion({
         onConfirm={handleConfirmDelete}
         title="Hapus komentar ini?"
         description={
-          pendingDelete?.parentId === null && comments.some((comment) => comment.parentId === pendingDelete?.id)
+          comments.some((comment) => comment.parentId === pendingDelete?.id)
             ? "Isi dan namamu akan dihapus. Balasan dari orang lain tetap tampil di bawah tulisan \"Komentar telah dihapus\"."
             : "Komentar akan dihapus. Tindakan ini tidak bisa dibatalkan."
         }

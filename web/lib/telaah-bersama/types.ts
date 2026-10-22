@@ -28,7 +28,7 @@ export interface TelaahAttachment {
 
 export interface TelaahComment {
   id: number;
-  // The top-level comment this replies to; replies are one level deep.
+  // The comment this replies to; replies can nest to any depth.
   parentId: number | null;
   // A deleted comment that still has replies: no author or text, only a placeholder.
   isDeleted: boolean;
