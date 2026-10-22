@@ -30,11 +30,9 @@ class TelaahInteractionController extends Controller
             'parent_id' => ['nullable', 'integer'],
         ]);
 
-        // Replies stay one level deep: replying to a reply joins its thread
+        // Replies nest to any depth; the web app folds the deeper levels
         if (! empty($data['parent_id'])) {
-            $parent = $post->comments()->find($data['parent_id']);
-            abort_unless($parent, 422, 'Komentar yang dibalas tidak ditemukan.');
-            $data['parent_id'] = $parent->parent_id ?? $parent->id;
+            abort_unless($post->comments()->whereKey($data['parent_id'])->exists(), 422, 'Komentar yang dibalas tidak ditemukan.');
         }
 
         $comment = DB::transaction(function () use ($request, $post, $data) {
@@ -68,9 +66,11 @@ class TelaahInteractionController extends Controller
             } else {
                 $parent = $comment->parent_id ? TelaahComment::find($comment->parent_id) : null;
                 $comment->delete();
-                // The last reply under a placeholder takes the placeholder with it
-                if ($parent?->removed_at && ! TelaahComment::where('parent_id', $parent->id)->exists()) {
+                // A placeholder left without replies goes too, up the chain of placeholders
+                while ($parent?->removed_at && ! TelaahComment::where('parent_id', $parent->id)->exists()) {
+                    $grandparent = $parent->parent_id ? TelaahComment::find($parent->parent_id) : null;
                     $parent->delete();
+                    $parent = $grandparent;
                 }
             }
             // comment_count counts visible comments; a placeholder was already uncounted

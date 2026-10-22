@@ -207,7 +207,7 @@ class TelaahBersamaTest extends TestCase
             ->assertJsonPath('viewer.reacted', true);
     }
 
-    public function test_replies_stay_one_level_deep_and_the_owner_is_marked_but_cannot_react(): void
+    public function test_replies_nest_and_the_owner_is_marked_but_cannot_react(): void
     {
         $owner = User::factory()->create();
         $post = $this->createPost($owner);
@@ -224,7 +224,7 @@ class TelaahBersamaTest extends TestCase
 
         Sanctum::actingAs($reader);
         $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Terima kasih.', 'parent_id' => $answer])
-            ->assertCreated()->assertJsonPath('parentId', $question);
+            ->assertCreated()->assertJsonPath('parentId', $answer);
         $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'x', 'parent_id' => 999999])
             ->assertUnprocessable();
 
@@ -267,6 +267,23 @@ class TelaahBersamaTest extends TestCase
         Sanctum::actingAs($owner);
         $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$reply}")
             ->assertOk()->assertJsonPath('commentCount', 0);
+        $this->assertDatabaseCount('telaah_comments', 0);
+    }
+
+    public function test_deleting_the_last_leaf_clears_a_chain_of_placeholders(): void
+    {
+        $post = $this->createPost(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create());
+
+        $top = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Satu'])->json('id');
+        $middle = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Dua', 'parent_id' => $top])->json('id');
+        $leaf = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Tiga', 'parent_id' => $middle])->json('id');
+
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$top}")->assertJsonPath('commentCount', 2);
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$middle}")->assertJsonPath('commentCount', 1);
+        $this->assertDatabaseCount('telaah_comments', 3);
+
+        $this->internal()->deleteJson("/api/telaah-bersama/{$post->id}/comments/{$leaf}")->assertJsonPath('commentCount', 0);
         $this->assertDatabaseCount('telaah_comments', 0);
     }
 

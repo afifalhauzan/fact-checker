@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('telaah_comments', function (Blueprint $table) {
-            // Replies are one level deep: always the top-level comment of the thread
+            // The comment this replies to; replies can nest to any depth
             $table->foreignId('parent_id')->nullable()->after('post_id')->constrained('telaah_comments')->cascadeOnDelete();
         });
     }
