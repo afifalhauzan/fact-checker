@@ -73,6 +73,12 @@ export const deleteComment = (id: number, commentId: number) =>
 export const reportPost = (id: number, type: ReportType) =>
   request<{ reported: boolean }>(`/api/telaah-bersama/${id}/reports`, json("POST", { type }));
 
+export const toggleCommentLike = (id: number, commentId: number) =>
+  request<{ liked: boolean; likeCount: number }>(`/api/telaah-bersama/${id}/comments/${commentId}/like`, json("POST"));
+
+export const reportComment = (id: number, commentId: number, type: ReportType) =>
+  request<{ reported: boolean }>(`/api/telaah-bersama/${id}/comments/${commentId}/reports`, json("POST", { type }));
+
 export interface PostEdit {
   title: string;
   story: string;

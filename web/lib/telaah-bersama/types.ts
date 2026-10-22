@@ -32,6 +32,12 @@ export interface TelaahComment {
   parentId: number | null;
   // A deleted comment that still has replies: no author or text, only a placeholder.
   isDeleted: boolean;
+  // Hidden after a personal-data report the redaction scan confirmed: also only a placeholder.
+  isHidden: boolean;
+  likeCount: number;
+  // Counted spam reports, shown as a label; they never hide the comment.
+  spamReports: number;
+  viewer: { liked: boolean; reported: boolean };
   author: string | null;
   isPostAuthor: boolean;
   // Written by the signed-in viewer, who may delete it.
