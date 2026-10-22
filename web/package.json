@@ -18,7 +18,8 @@
     "test:redaction": "jiti eval/redaction.test.ts",
     "test:identifiers": "jiti eval/identifiers.test.ts",
     "test:telaah": "jiti eval/telaah-share.test.ts",
-    "test:search-query": "jiti eval/search-query.test.ts"
+    "test:search-query": "jiti eval/search-query.test.ts",
+    "test:web-checks": "jiti eval/web-checks.test.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.148",

@@ -42,6 +42,15 @@ export const LEGIBILITY_LEVELS = ["jelas", "sebagian", "tidak_terbaca"] as const
 export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
 export type Legibility = (typeof LEGIBILITY_LEVELS)[number];
 
+// ok: nothing found; warning: a finding; info: worth knowing, not a finding; skipped: could not run.
+export const CHECK_STATUSES = ["ok", "warning", "info", "skipped"] as const;
+
+export const CheckSchema = z.object({
+  label: z.string(),
+  status: z.enum(CHECK_STATUSES),
+  detail: z.string(),
+});
+
 export const CitationSchema = z.object({
   id: z.string(),
   label: z.string().optional(),
@@ -202,8 +211,12 @@ export const AnalysisSchema = z.object({
           urls: z.array(z.string()).default([]),
         })
         .optional(),
+      // Shortlink destinations and the linked page, read before the analysis; reused by follow-ups.
+      linkEvidence: z.string().optional(),
     })
     .optional(),
+  // Every check the pipeline ran, in plain words, shown so the verdict's basis is visible.
+  checks: z.array(CheckSchema).optional(),
 });
 
 /**
@@ -336,6 +349,7 @@ export const LLMFollowUpOutputSchema = z.object({
     .describe("2-3 pertanyaan lanjutan singkat dari sudut pandang pengguna kepada TelaahKarier."),
 });
 
+export type Check = z.infer<typeof CheckSchema>;
 export type Claim = z.infer<typeof ClaimSchema>;
 export type Risk = z.infer<typeof RiskSchema>;
 export type Reasoning = z.infer<typeof ReasoningSchema>;
