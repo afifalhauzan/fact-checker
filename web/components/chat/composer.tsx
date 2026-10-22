@@ -116,8 +116,22 @@ export function Composer({
   React.useLayoutEffect(() => {
     const element = textareaRef.current;
     if (!element) return;
-    element.style.height = "auto";
-    element.style.height = `${Math.min(element.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+    const fit = () => {
+      element.style.height = "auto";
+      element.style.height = `${Math.min(element.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+    };
+    fit();
+
+    // Refit when the width changes: on a phone the first layout is the desktop one, with the
+    // history panel squeezing this box, so the height measured then is far too tall.
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth === width) return;
+      width = element.clientWidth;
+      fit();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [input, textareaRef]);
 
   // Desktop keeps the cursor in the box; on touch screens this would pop the keyboard open.
