@@ -27,7 +27,15 @@ class TelaahInteractionController extends Controller
             // Redacted on the web server before it gets here
             'body' => ['required', 'string', 'max:1000'],
             'flag' => ['nullable', Rule::in(TelaahComment::FLAGS)],
+            'parent_id' => ['nullable', 'integer'],
         ]);
+
+        // Replies stay one level deep: replying to a reply joins its thread
+        if (! empty($data['parent_id'])) {
+            $parent = $post->comments()->find($data['parent_id']);
+            abort_unless($parent, 422, 'Komentar yang dibalas tidak ditemukan.');
+            $data['parent_id'] = $parent->parent_id ?? $parent->id;
+        }
 
         $comment = DB::transaction(function () use ($request, $post, $data) {
             $post->increment('comment_count');
@@ -39,12 +47,14 @@ class TelaahInteractionController extends Controller
             ]);
         });
 
-        return response()->json($comment->load('user')->present(), 201);
+        return response()->json($comment->load('user')->present($post->user_id), 201);
     }
 
     public function toggleReaction(Request $request, TelaahPost $post): JsonResponse
     {
         abort_unless($post->status === 'visible', 404);
+        // "I received this too" only counts other people
+        abort_if($post->user_id === $request->user()->id, 422, 'Kamu tidak bisa menandai Telaah milikmu sendiri.');
 
         $reacted = DB::transaction(function () use ($request, $post) {
             $deleted = $post->reactions()->where('user_id', $request->user()->id)->delete();

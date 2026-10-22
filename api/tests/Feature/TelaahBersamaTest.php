@@ -207,6 +207,33 @@ class TelaahBersamaTest extends TestCase
             ->assertJsonPath('viewer.reacted', true);
     }
 
+    public function test_replies_stay_one_level_deep_and_the_owner_is_marked_but_cannot_react(): void
+    {
+        $owner = User::factory()->create();
+        $post = $this->createPost($owner);
+
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/reactions")->assertUnprocessable();
+
+        Sanctum::actingAs($reader = User::factory()->create());
+        $question = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Nomornya sama?'])
+            ->assertCreated()->assertJsonPath('parentId', null)->assertJsonPath('isPostAuthor', false)->json('id');
+
+        Sanctum::actingAs($owner);
+        $answer = $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Iya sama.', 'parent_id' => $question])
+            ->assertCreated()->assertJsonPath('parentId', $question)->assertJsonPath('isPostAuthor', true)->json('id');
+
+        Sanctum::actingAs($reader);
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'Terima kasih.', 'parent_id' => $answer])
+            ->assertCreated()->assertJsonPath('parentId', $question);
+        $this->internal()->postJson("/api/telaah-bersama/{$post->id}/comments", ['body' => 'x', 'parent_id' => 999999])
+            ->assertUnprocessable();
+
+        $this->getJson("/api/telaah-bersama/{$post->id}")
+            ->assertJsonCount(3, 'comments')
+            ->assertJsonPath('comments.1.isPostAuthor', true)
+            ->assertJsonPath('commentCount', 3);
+    }
+
     public function test_reports_count_only_from_older_accounts_and_hide_only_confirmed_personal_data(): void
     {
         $post = $this->createPost(User::factory()->create());

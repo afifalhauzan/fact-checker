@@ -96,7 +96,7 @@ class TelaahPostController extends Controller
 
         return response()->json([
             ...$post->present($state($post)),
-            'comments' => $post->comments->map(fn (TelaahComment $comment) => $comment->present())->values(),
+            'comments' => $post->comments->map(fn (TelaahComment $comment) => $comment->present($post->user_id))->values(),
         ]);
     }
 
