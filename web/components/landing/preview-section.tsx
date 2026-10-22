@@ -1,10 +1,10 @@
-import { ArrowRight, BookOpen, Gauge, Quote } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, CheckCircle, CheckCircle2, Gauge, Quote } from "lucide-react";
 
 export function PreviewSection() {
   return (
     <section
       id="produk"
-      className="mx-auto mb-24 grid w-full max-w-[1200px] grid-cols-1 items-center gap-10 px-4 sm:mb-32 sm:px-8 md:grid-cols-12 md:gap-10"
+      className="flex flex-col mx-auto mb-24 grid w-full max-w-[1200px] items-center gap-10 px-4 sm:mb-32 sm:px-8 md:grid-cols-12 md:gap-10"
     >
       <div className="relative md:col-span-7">
         <div className="relative z-10 ml-auto max-w-xl rounded-lg border border-[#17232c]/10 bg-white p-5 shadow-[0_18px_45px_rgba(23,35,44,0.08)] sm:p-6">

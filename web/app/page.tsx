@@ -1,4 +1,5 @@
 import { HeroSection } from "@/components/landing/hero-section";
+import { ReasoningFlow } from "@/components/landing/reasoning-flow";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { PreviewSection } from "@/components/landing/preview-section";
 import { SmoothScroll } from "@/components/landing/smooth-scroll";
@@ -16,6 +17,7 @@ export default function HomePage() {
       <main className="relative overflow-hidden pb-6 pt-14 sm:pt-8">
         <HeroSection />
         <PreviewSection />
+        <ReasoningFlow />
         <TrendingSection />
         <StepsSection />
         <SourcesSection />
