@@ -121,15 +121,17 @@ export function findPostingContext(messages: LooseMessage[], fromIndex: number):
       // Attachments were already transcribed during the analysis: reuse that text and only send
       // the originals to the model again when the transcript is known to be incomplete.
       const transcript = analysis.material?.transcript;
+      // Shortlink destinations and the linked page were also read once, during the analysis
+      const withLinks = (text: string) => [text, analysis.material?.linkEvidence].filter(Boolean).join("\n\n");
       if (transcript?.trim()) {
         return {
-          postingText: composeMaterialText(textOf(messages[j]), transcript),
+          postingText: withLinks(composeMaterialText(textOf(messages[j]), transcript)),
           images: analysis.material?.legibility === "sebagian" ? imagesOf(messages[j]) : [],
           analysis,
           analysisIndex: i,
         };
       }
-      return { postingText: textOf(messages[j]), images: imagesOf(messages[j]), analysis, analysisIndex: i };
+      return { postingText: withLinks(textOf(messages[j])), images: imagesOf(messages[j]), analysis, analysisIndex: i };
     }
     return { postingText: "", images: [], analysis, analysisIndex: i };
   }

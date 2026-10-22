@@ -34,10 +34,14 @@ import {
   strongestFloor,
   type DetectedSignal,
 } from "./signals";
+import { buildChecks, newDomainSignals } from "./checks";
+import { describeDomainAgesForProgress, lookupDomainAges, type DomainAge } from "./tools/domain-age";
+import { checkLinks, describeLinksForProgress, pageBlock, shortlinkLines, type LinkChecks } from "./tools/link-checks";
 import {
   GUIDANCE_REFERENCES,
   buildVerificationQuery,
   describeSearchForProgress,
+  employerDomains,
   normalizeSourceId,
   searchWeb,
   sourceToCitation,
@@ -86,6 +90,9 @@ export interface AnalysisRunMeta {
   };
   signals: Array<Pick<DetectedSignal, "id" | "severity">>;
   search: { status: WebSearchStatus | "disabled"; retrievedCount: number; sourceCount: number };
+  // Unset when the web checks are disabled. pageRead is null when there was no page to read.
+  links?: { shortlinks: number; resolved: number; pageRead: boolean | null };
+  domainAges?: Array<{ domain: string; registeredAt: string | null }>;
   riskFloorApplied: boolean;
   // A "tinggi" verdict resting only on a manipulation attempt was lowered to "sedang".
   manipulationCapApplied: boolean;
@@ -93,7 +100,7 @@ export interface AnalysisRunMeta {
   droppedSourceIds: number;
   // Evidence quotes that do not appear in the posting text (fabricated quotes), removed.
   droppedEvidence: number;
-  timingsMs: { search: number; llm: number; total: number };
+  timingsMs: { links?: number; search: number; llm: number; total: number };
   tokenUsage?: TokenUsage;
 }
 
@@ -109,6 +116,8 @@ const MAX_RISKS = 6;
 const MAX_MODEL_STEPS = 5;
 const MAX_SUGGESTED_QUESTIONS = 4;
 const MIN_FALLBACK_VERDICT_LENGTH = 80;
+// The top of a job page, where the company is named before any "similar jobs" list.
+const PAGE_QUERY_CHARS = 1500;
 // A displayed "100%" reads as an absolute verdict, which the product deliberately never gives.
 const MAX_CONFIDENCE = 0.95;
 
@@ -455,7 +464,8 @@ function buildAttachmentNoticeResult(message: string): AnalysisResult {
 function describeMaterialRead(
   userText: string,
   attachmentCount: number,
-  material: ExtractedMaterial | undefined
+  material: ExtractedMaterial | undefined,
+  linkEvidence: string
 ): AnalysisResult["material"] {
   let source: "text" | "attachment" | "text_and_attachment" = "text";
   if (attachmentCount > 0) {
@@ -469,6 +479,7 @@ function describeMaterialRead(
     attachments: material?.attachments ?? [],
     visualCues: material?.visualCues ?? [],
     entities: material?.entities,
+    linkEvidence: linkEvidence || undefined,
   };
 }
 
@@ -511,9 +522,10 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
   };
 
   let material: ExtractedMaterial | undefined;
+  let linkEvidence = "";
   const finish = (result: AnalysisResult): AnalysisRun => {
     result.reasoning = [{ intent: PROGRESS_INTENT, steps: [...steps] }];
-    result.material = describeMaterialRead(userText, attachments.length, material);
+    result.material = describeMaterialRead(userText, attachments.length, material, linkEvidence);
     meta.timingsMs.total = Date.now() - startedAt;
     return { result: AnalysisSchema.parse(result), meta };
   };
@@ -566,20 +578,59 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
     // On "error" the attachments go straight to the analysis call, as without this stage.
   }
 
+  // Links are opened before the rules run, so a shortlink is judged by where it really leads.
+  let links: LinkChecks | null = null;
+  // Without the linked page: its "similar jobs" section names other companies and sites.
+  let ownText = materialText;
+  if (useSearch) {
+    const linksStartedAt = Date.now();
+    links = await checkLinks(materialText);
+    ownText = [materialText, shortlinkLines(links)].filter(Boolean).join("\n\n");
+    linkEvidence = [shortlinkLines(links), pageBlock(links)].filter(Boolean).join("\n\n");
+    if (linkEvidence) {
+      materialText = `${materialText}\n\n${linkEvidence}`;
+    }
+    meta.timingsMs.links = Date.now() - linksStartedAt;
+    meta.links = {
+      shortlinks: links.shortlinks.length,
+      resolved: links.shortlinks.filter((item) => item.destination).length,
+      pageRead: links.page ? !!links.page.text : null,
+    };
+    const linkStep = describeLinksForProgress(links);
+    if (linkStep) {
+      addStep(linkStep);
+    }
+  }
+
   const signals = useRules ? detectSignals(materialText) : [];
-  meta.signals = signals.map(({ id, severity }) => ({ id, severity }));
   if (useRules) {
     addStep(describeSignalsForProgress(signals));
   }
 
   let search: WebSearchResult = { status: "skipped_no_query", retrievedCount: 0, sources: [] };
+  let domainAges: DomainAge[] = [];
   if (useSearch) {
     const searchStartedAt = Date.now();
-    search = await searchWeb(buildVerificationQuery(preprocessJobInput(materialText)));
+    const ownInput = preprocessJobInput(ownText);
+    // A bare job link names its company only on the page, near the top
+    const target =
+      buildVerificationQuery(ownInput) ??
+      (links?.page?.text ? buildVerificationQuery(preprocessJobInput(links.page.text.slice(0, PAGE_QUERY_CHARS))) : null);
+    [search, domainAges] = await Promise.all([searchWeb(target), lookupDomainAges(employerDomains(ownInput))]);
     meta.timingsMs.search = Date.now() - searchStartedAt;
     meta.search = { status: search.status, retrievedCount: search.retrievedCount, sourceCount: search.sources.length };
+    meta.domainAges = domainAges.map(({ domain, registeredAt }) => ({ domain, registeredAt }));
     addStep(describeSearchForProgress(search));
+
+    const ageStep = describeDomainAgesForProgress(domainAges);
+    if (ageStep) {
+      addStep(ageStep);
+    }
+    if (useRules) {
+      signals.push(...newDomainSignals(domainAges));
+    }
   }
+  meta.signals = signals.map(({ id, severity }) => ({ id, severity }));
 
   let result: AnalysisResult | null = null;
 
@@ -634,6 +685,16 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
       meta.riskFloorApplied = true;
       steps.push(floorStep);
     }
+  }
+
+  // Only under a verdict: without a posting to judge, the list would describe nothing
+  if (result.claims.length) {
+    result.checks = buildChecks({
+      signals: useRules ? signals : null,
+      links,
+      search: useSearch ? search : null,
+      domainAges,
+    });
   }
 
   return finish(result);
