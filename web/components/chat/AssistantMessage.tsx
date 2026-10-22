@@ -1,6 +1,6 @@
 import React from "react";
 import { type MetabotUIMessage, type MetabotUIMessagePart, type SummaryPartData } from "@/types/streaming";
-import { Check, ChevronDown, Copy } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { PreviewMessage } from "@/components/message";
 import { useInteractionStore } from "@/lib/interaction-store";
@@ -30,6 +30,8 @@ import { SalaryBenefitCard } from "@/components/cards/SalaryBenefitCard";
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 import { BuatPostPrompt, SessionMoveCard, SimilarTelaahCard } from "@/components/telaah-bersama/chat-cards";
 import { MessageFeedback } from "@/components/chat/message-feedback";
+import { MessageActions } from "@/components/chat/MessageActions";
+import type { SourceFile } from "@/lib/analysis-export/build";
 import type { SimilarTelaahPartData, TelaahSharePartData } from "@/types/streaming";
 
 /** What the user picked on a TelaahBareng card in the chat; handled by components/chat.tsx. */
@@ -53,6 +55,11 @@ interface AssistantMessageProps {
   onTelaahChoice?: (choice: TelaahChoice) => void;
   // Set for saved (signed-in) sessions: answers there can be rated for evaluation.
   feedbackConversationId?: string | null;
+  // What the user sent before this answer; goes into the exported document and PDF.
+  sourceText?: string;
+  sourceFiles?: SourceFile[];
+  // Signed-in user's name, used in the line that goes with a shared PDF.
+  userName?: string | null;
 }
 
 interface SectionalAnalysisData {
@@ -178,6 +185,9 @@ export function AssistantMessage({
   isActionLoading = false,
   onTelaahChoice,
   feedbackConversationId = null,
+  sourceText,
+  sourceFiles,
+  userName,
 }: AssistantMessageProps) {
   const fadeUp = {
     initial: { opacity: 0, y: 10 },
@@ -188,8 +198,6 @@ export function AssistantMessage({
   const isCurrentlyStreaming = isStreaming && isLastMessage;
   const { targetMessageId } = useInteractionStore();
   const isHighlighted = targetMessageId === message.id;
-
-  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(null);
 
   const mountedRef = React.useRef(true);
   const shouldAnimate = mountedRef.current;
@@ -398,27 +406,6 @@ export function AssistantMessage({
 
     return items;
   }, [analysisData, availableReasoning, hasInterleavedFlow, message.id, parts]);
-
-  const getMessageContent = (): string => {
-    return parts
-      .filter((part) => part.type === "text")
-      .map((part) => (part.type === "text" ? part.text : ""))
-      .join("\n\n");
-  };
-
-  const handleCopyMessage = async () => {
-    const content = getMessageContent();
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopiedMessageId(message.id);
-
-      setTimeout(() => {
-        setCopiedMessageId(null);
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to copy message:", err);
-    }
-  };
 
   const renderItem = (item: RenderItem) => {
     if (item.kind === "preview-full") {
@@ -642,6 +629,10 @@ export function AssistantMessage({
           <div className="space-y-3">{renderItems.map((item) => renderItem(item))}</div>
         </div>
 
+        {!isCurrentlyStreaming && !hasInteractiveSteps && (
+          <MessageActions parts={parts} sourceText={sourceText} sourceFiles={sourceFiles} userName={userName} />
+        )}
+
         {!isCurrentlyStreaming && feedbackConversationId && (
           <MessageFeedback
             conversationId={feedbackConversationId}
@@ -650,25 +641,6 @@ export function AssistantMessage({
           />
         )}
 
-        {!isCurrentlyStreaming && !hasInteractiveSteps && (
-          <button
-            onClick={handleCopyMessage}
-            className="absolute -bottom-6 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-card rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            title={copiedMessageId === message.id ? "Copied!" : "Copy message"}
-          >
-            {copiedMessageId === message.id ? (
-              <>
-                <Check className="w-3 h-3 inline mr-1 text-green-600" />
-                <span className="text-green-600">Disalin</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3 inline mr-1" />
-                Salin
-              </>
-            )}
-          </button>
-        )}
       </div>
     </div>
   );

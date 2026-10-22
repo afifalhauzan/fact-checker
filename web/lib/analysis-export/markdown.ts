@@ -1,6 +1,5 @@
 // A small Markdown reader for the answers TelaahKarier produces (headings, lists, quotes, bold,
-// italic, links, images). The PDF is drawn from its blocks, and the WhatsApp/Telegram copies are
-// written from them, so all three exports read the same text.
+// italic, links, images). The PDF is drawn from its blocks.
 
 export interface Inline {
   text: string;
@@ -19,8 +18,6 @@ export type Block =
   | { type: "image"; alt: string; src: string }
   | { type: "code"; text: string }
   | { type: "rule" };
-
-export type ChatTarget = "whatsapp" | "telegram";
 
 const TOKEN = /\*\*(.+?)\*\*|__(.+?)__|`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\s]+)\)|\*([^*\s][^*\n]*?)\*|_([^_\s][^_\n]*?)_/g;
 const IS_WORD = /[\p{L}\p{N}]/u;
@@ -172,53 +169,4 @@ export function parseMarkdown(markdown: string): Block[] {
 /** The copy of an export that has no pictures: an image line becomes a note naming the file. */
 export function toPlainMarkdown(markdown: string): string {
   return markdown.replace(/^!\[([^\]]*)\]\(attachment:\d+\)[ \t]*$/gm, (_, alt: string) => `[Lampiran: ${alt || "file"}]`);
-}
-
-// WhatsApp and Telegram want the marker hugging the text, so spaces move outside it
-function mark(text: string, open: string, close = open): string {
-  const parts = text.match(/^(\s*)([\s\S]*?)(\s*)$/) as RegExpMatchArray;
-  return parts[2] ? `${parts[1]}${open}${parts[2]}${close}${parts[3]}` : text;
-}
-
-function chatInline(spans: Inline[], target: ChatTarget): string {
-  return spans
-    .map((span) => {
-      let text = span.text;
-      if (span.code) return `\`${text}\``;
-      if (span.href) text = span.text === span.href ? span.href : `${span.text} (${span.href})`;
-      // WhatsApp: *bold* _italic_. Telegram: **bold** __italic__.
-      if (span.bold) text = target === "whatsapp" ? mark(text, "*") : mark(text, "**");
-      if (span.italic) text = target === "whatsapp" ? mark(text, "_") : mark(text, "__");
-      return text;
-    })
-    .join("");
-}
-
-/**
- * The export as text for a chat app, which formats its own way rather than reading Markdown.
- * Text only: no link of ours is added.
- */
-export function toChatText(markdown: string, target: ChatTarget): string {
-  const bold = (text: string) => (target === "whatsapp" ? mark(text, "*") : mark(text, "**"));
-
-  return parseMarkdown(markdown)
-    .map((block) => {
-      switch (block.type) {
-        case "heading":
-          return bold(plainText(block.spans));
-        case "paragraph":
-          return chatInline(block.spans, target);
-        case "list":
-          return block.items.map((item, index) => `${block.ordered ? `${index + 1}.` : "•"} ${chatInline(item, target)}`).join("\n");
-        case "quote":
-          return block.lines.map((line) => `> ${chatInline(line, target)}`.trimEnd()).join("\n");
-        case "image":
-          return `[Lampiran: ${block.alt || "file"}]`;
-        case "code":
-          return `\`\`\`\n${block.text}\n\`\`\``;
-        case "rule":
-          return "———";
-      }
-    })
-    .join("\n\n");
 }

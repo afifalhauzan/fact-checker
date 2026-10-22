@@ -1,13 +1,12 @@
 /**
- * Checks the document built for copy, PDF and the WhatsApp/Telegram copies
- * (lib/analysis-export).
+ * Checks the document built for copy, PDF and sharing (lib/analysis-export).
  *
  *   pnpm test:export
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildAnalysisExport, type ExportPart } from "../lib/analysis-export/build";
-import { parseInline, parseMarkdown, toChatText, toPlainMarkdown } from "../lib/analysis-export/markdown";
+import { buildAnalysisExport, exportFilename, shareMessage, type ExportPart } from "../lib/analysis-export/build";
+import { parseInline, parseMarkdown, toPlainMarkdown } from "../lib/analysis-export/markdown";
 import { pdfSafe } from "../lib/analysis-export/pdf-text";
 
 const NOW = new Date("2026-10-22T10:00:00Z");
@@ -148,23 +147,23 @@ test("blocks: wrapped list items, quotes keep their lines, tables fall back to c
   assert.equal(blocks[2].type, "code");
 });
 
-test("WhatsApp and Telegram get their own bold, and no link of ours", () => {
-  const markdown = "# Judul\n\n**Penting** dan [OSS](https://oss.go.id)\n\n- satu\n- dua\n\n![p.png](attachment:0)";
-
-  const whatsapp = toChatText(markdown, "whatsapp");
-  assert.equal(whatsapp, "*Judul*\n\n*Penting* dan OSS (https://oss.go.id)\n\n• satu\n• dua\n\n[Lampiran: p.png]");
-
-  const telegram = toChatText(markdown, "telegram");
-  assert.ok(telegram.startsWith("**Judul**\n\n**Penting** dan OSS (https://oss.go.id)"));
-
-  const full = toChatText(buildAnalysisExport(streamed, { exportedAt: NOW })!.markdown, "whatsapp");
-  assert.ok(!/telaahkarier\.(com|id|app)|https?:\/\/telaah/i.test(full));
-  assert.ok(!full.includes("**") && !full.includes("##"));
-});
-
 test("PDF text keeps what Helvetica can draw and drops the rest", () => {
   assert.equal(pdfSafe("Gaji “Rp9 juta” – tidak wajar… •"), "Gaji “Rp9 juta” – tidak wajar… •");
   assert.equal(pdfSafe("Bahaya ⚠️ → hati-hati ✅").trim(), "Bahaya -> hati-hati");
   assert.equal(pdfSafe("a b​c"), "a bc");
   assert.equal(pdfSafe("Café Ñandú"), "Café Ñandú");
+});
+
+test("the shared message names the user, and still reads well for a guest", () => {
+  assert.equal(shareMessage("Siti Rahmawati"), "Analisis Lowongan untuk Siti Rahmawati, cek di sini!");
+  assert.equal(shareMessage("  Siti  "), "Analisis Lowongan untuk Siti, cek di sini!");
+  assert.equal(shareMessage(undefined), "Analisis Lowongan TelaahKarier, cek di sini!");
+  assert.equal(shareMessage("   "), "Analisis Lowongan TelaahKarier, cek di sini!");
+});
+
+test("the PDF file name is a safe slug with the date", () => {
+  const date = new Date("2026-10-22T10:00:00Z");
+  assert.equal(exportFilename("Hasil Telaah Lowongan", date), "telaahkarier-hasil-telaah-lowongan-2026-10-22.pdf");
+  assert.equal(exportFilename("Cek Kewajaran Gaji & Benefit!", date), "telaahkarier-cek-kewajaran-gaji-benefit-2026-10-22.pdf");
+  assert.equal(exportFilename("???", date), "telaahkarier-telaah-2026-10-22.pdf");
 });

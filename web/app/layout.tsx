@@ -2,6 +2,7 @@ import "./globals.css";
 import { Geist, Instrument_Serif } from "next/font/google";
 import { cn } from "@/utils/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppToaster } from "@/components/app-toaster";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
     >
       <body className={cn(geist.className, "font-sans antialiased")}>
         <TooltipProvider>{children}</TooltipProvider>
+        <AppToaster />
       </body>
     </html>
   );

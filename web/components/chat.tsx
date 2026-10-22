@@ -25,7 +25,7 @@ import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/stream
 import { ChevronDown, List } from "lucide-react";
 import { openSession } from "@/components/sidebar/session-history";
 import { ContextPanel, collectSessionContext, countSessionContext } from "@/components/sidebar/context-panel";
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import React from "react";
 import { useStreaming } from "@/contexts/StreamingContext";
 import { HistoryPanel, SidePanel } from "@/components/sidebar/sidebar";
@@ -567,6 +567,27 @@ export function Chat() {
     if (isMobile) setIsSidebarOpen(false);
   };
 
+  // The user message an answer responds to: its text and attachments go into the answer's export
+  const findSourceMaterial = (answerIndex: number) => {
+    for (let i = answerIndex - 1; i >= 0; i -= 1) {
+      if (messages[i].role !== "user") continue;
+
+      const parts = (messages[i].parts || []) as MetabotUIMessagePart[];
+      return {
+        sourceText: parts
+          .map((part) => (part.type === "text" ? part.text : ""))
+          .filter(Boolean)
+          .join("\n")
+          .trim(),
+        sourceFiles: parts.flatMap((part) =>
+          part.type === "file" && part.url ? [{ mediaType: part.mediaType, filename: part.filename, url: part.url }] : []
+        ),
+      };
+    }
+
+    return {};
+  };
+
   const renderMessage = (message: MetabotUIMessage, index: number) => {
     const isUser = message.role === "user";
     const isLastMessage = index === messages.length - 1;
@@ -596,6 +617,8 @@ export function Chat() {
         isActionLoading={isLoading}
         onTelaahChoice={handleTelaahChoice}
         feedbackConversationId={user ? conversationId : null}
+        userName={user?.name}
+        {...findSourceMaterial(index)}
       />
     );
   };
@@ -622,7 +645,6 @@ export function Chat() {
           {/* On phones the panel tabs get a row of their own (SidePanel), so nothing scrolls under them */}
           <section className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background pt-11 md:max-w-3xl md:pt-0 lg:w-full">
 
-            <Toaster />
             <LoginPromptHost />
 
             {/* Chat Box */}

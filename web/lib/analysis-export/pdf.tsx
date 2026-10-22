@@ -8,6 +8,7 @@ import { parseMarkdown, type Block, type Inline } from "./markdown";
 import { pdfSafe } from "./pdf-text";
 
 const BRAND = "#2b6f95";
+const SITE_URL = "https://telaahkarier.com/";
 const INK = "#17232c";
 const MUTED = "#5a6a76";
 const LINE = "#d5dde3";
@@ -23,25 +24,31 @@ const CONTENT_WIDTH = 595 - 2 * 44;
 const IMAGE_MAX_HEIGHT = 300;
 // Posters are photographed at far more pixels than a PDF page shows
 const IMAGE_MAX_PX = 1400;
+// The header logo is drawn at this height (pt); the PNG made from the SVG has 3x the pixels
+const LOGO_HEIGHT = 24;
+const LOGO_PIXEL_SCALE = 3;
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 48, paddingBottom: 56, paddingHorizontal: 44, fontFamily: "Helvetica", fontSize: 10, color: INK, lineHeight: 1.45 },
+  page: { paddingTop: 48, paddingBottom: 56, paddingHorizontal: 44, fontFamily: "Helvetica", fontSize: 10, color: INK },
   brandRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: LINE },
   brand: { fontFamily: "Helvetica-Bold", fontSize: 12, color: BRAND },
+  logo: { height: LOGO_HEIGHT },
   brandNote: { fontSize: 8.5, color: MUTED },
   h1: { fontFamily: "Helvetica-Bold", fontSize: 20, lineHeight: 1.2, marginBottom: 4 },
   h2: { fontFamily: "Helvetica-Bold", fontSize: 13, marginTop: 16, marginBottom: 6, paddingBottom: 3, borderBottomWidth: 0.75, borderBottomColor: LINE },
   h3: { fontFamily: "Helvetica-Bold", fontSize: 10.5, marginTop: 8, marginBottom: 2 },
-  paragraph: { marginBottom: 6 },
+  // Line heights are set per style: one on the page itself would make the fixed footer disappear
+  paragraph: { marginBottom: 6, lineHeight: 1.4 },
   muted: { color: MUTED, fontSize: 9 },
   listItem: { flexDirection: "row", marginBottom: 3 },
   marker: { width: 14, color: MUTED },
-  listBody: { flex: 1 },
+  listBody: { flex: 1, lineHeight: 1.4 },
   quote: { borderLeftWidth: 3, borderLeftColor: LINE, backgroundColor: "#f4f7fa", paddingVertical: 6, paddingHorizontal: 10, marginBottom: 8 },
   code: { fontFamily: "Courier", fontSize: 8.5, backgroundColor: "#f4f7fa", padding: 6, marginBottom: 8 },
   rule: { borderBottomWidth: 0.75, borderBottomColor: LINE, marginVertical: 10 },
   imageBox: { borderWidth: 0.75, borderColor: LINE, padding: 4, marginBottom: 8, alignSelf: "flex-start" },
-  footer: { position: "absolute", left: 44, right: 44, bottom: 24, flexDirection: "row", justifyContent: "space-between", fontSize: 8, color: MUTED },
+  footerLeft: { position: "absolute", left: 44, bottom: 24, fontSize: 8, color: MUTED },
+  footerRight: { position: "absolute", left: 44, right: 44, bottom: 24, fontSize: 8, color: MUTED, textAlign: "right" },
 });
 
 export interface PdfImage {
@@ -122,7 +129,7 @@ function BlockView({ block, level, isVerdictQuote, images }: { block: Block; lev
                 {" "}
               </Text>
             ) : (
-              <Text key={index} style={tint ? { fontFamily: "Helvetica-Bold", color: tint.ink } : {}}>
+              <Text key={index} style={tint ? { fontFamily: "Helvetica-Bold", color: tint.ink, lineHeight: 1.4 } : { lineHeight: 1.4 }}>
                 <Spans spans={line} />
               </Text>
             )
@@ -147,7 +154,7 @@ function BlockView({ block, level, isVerdictQuote, images }: { block: Block; lev
   }
 }
 
-export function AnalysisPdf({ title, markdown, verdictLevel, images }: { title: string; markdown: string; verdictLevel: RiskLevel | null; images: Array<PdfImage | null> }) {
+export function AnalysisPdf({ title, markdown, verdictLevel, images, logo = null }: { title: string; markdown: string; verdictLevel: RiskLevel | null; images: Array<PdfImage | null>; logo?: PdfImage | null }) {
   const blocks = parseMarkdown(markdown);
   // The line under the verdict heading is the advice; it takes the verdict's colour
   const verdictIndex = blocks.findIndex((block) => block.type === "heading" && /^tingkat risiko:/i.test(block.spans.map((span) => span.text).join("")));
@@ -156,7 +163,7 @@ export function AnalysisPdf({ title, markdown, verdictLevel, images }: { title: 
     <Document title={pdfSafe(title)} author="TelaahKarier" creator="TelaahKarier">
       <Page size="A4" style={styles.page}>
         <View style={styles.brandRow}>
-          <Text style={styles.brand}>TelaahKarier</Text>
+          {logo ? <Image src={logo.src} style={[styles.logo, { width: Math.round((LOGO_HEIGHT * logo.width) / logo.height) }]} /> : <Text style={styles.brand}>TelaahKarier</Text>}
           <Text style={styles.brandNote}>Telaah risiko lowongan kerja</Text>
         </View>
 
@@ -164,10 +171,13 @@ export function AnalysisPdf({ title, markdown, verdictLevel, images }: { title: 
           <BlockView key={index} block={block} level={verdictLevel} isVerdictQuote={index === verdictIndex + 1 && verdictIndex >= 0} images={images} />
         ))}
 
-        <View style={styles.footer} fixed>
-          <Text>TelaahKarier</Text>
-          <Text render={({ pageNumber, totalPages }) => `Halaman ${pageNumber} dari ${totalPages}`} />
-        </View>
+        <Text style={styles.footerLeft} fixed>
+          Dibuat dengan TelaahKarier, coba sekarang!{" "}
+          <Link src={SITE_URL} style={{ color: BRAND, textDecoration: "underline" }}>
+            {SITE_URL}
+          </Link>
+        </Text>
+        <Text style={styles.footerRight} fixed render={({ pageNumber, totalPages }) => `Halaman ${pageNumber} dari ${totalPages}`} />
       </Page>
     </Document>
   );
@@ -204,9 +214,34 @@ async function toPdfImage(file: SourceFile): Promise<PdfImage | null> {
   }
 }
 
+// react-pdf cannot draw SVG, so the logo is painted onto a canvas and used as a PNG (which keeps
+// its transparency). Without a logo the header falls back to the brand name.
+async function toPdfLogo(): Promise<PdfImage | null> {
+  try {
+    const { LOGO } = await import("./logo");
+    const width = LOGO.width * LOGO_PIXEL_SCALE;
+    const height = LOGO.height * LOGO_PIXEL_SCALE;
+
+    const image = new window.Image();
+    image.src = LOGO.src;
+    await image.decode();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    context.drawImage(image, 0, 0, width, height);
+
+    return { src: canvas.toDataURL("image/png"), width, height };
+  } catch {
+    return null;
+  }
+}
+
 export async function renderAnalysisPdf(analysis: AnalysisExport): Promise<Blob> {
-  const images = await Promise.all(analysis.attachments.map(toPdfImage));
-  return pdf(<AnalysisPdf title={analysis.title} markdown={analysis.markdown} verdictLevel={analysis.verdictLevel} images={images} />).toBlob();
+  const [images, logo] = await Promise.all([Promise.all(analysis.attachments.map(toPdfImage)), toPdfLogo()]);
+  return pdf(<AnalysisPdf title={analysis.title} markdown={analysis.markdown} verdictLevel={analysis.verdictLevel} images={images} logo={logo} />).toBlob();
 }
 
 export async function downloadAnalysisPdf(analysis: AnalysisExport, filename: string): Promise<void> {

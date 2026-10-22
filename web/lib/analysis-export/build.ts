@@ -99,7 +99,7 @@ export function buildAnalysisExport(parts: ExportPart[], options: ExportOptions 
   // The streamed sections win; the final data-analysis part is the fallback for saved sessions
   const summaryData = lastData(parts, "data-summary");
   const summary: string = (typeof summaryData === "string" ? summaryData : summaryData?.text) ?? analysis?.summary ?? "";
-  const claims = nonEmpty(lastData(parts, "data-claims") ?? analysis?.claims);
+  const claims = nonEmpty<{ text: string; riskLevel?: RiskLevel }>(lastData(parts, "data-claims") ?? analysis?.claims);
   const salary = lastData(parts, "data-salary-benefit") ?? analysis?.salaryBenefit;
   const risks = nonEmpty(lastData(parts, "data-risks") ?? analysis?.risks);
   const checks = nonEmpty(lastData(parts, "data-checks") ?? analysis?.checks);
@@ -123,7 +123,7 @@ export function buildAnalysisExport(parts: ExportPart[], options: ExportOptions 
   const date = new Intl.DateTimeFormat("id-ID", { dateStyle: "long" }).format(exportedAt);
 
   const attachments = kind === "analysis" ? (options.sourceFiles ?? []).filter((file) => !!file.url) : [];
-  const sections: string[] = [`# ${title}`, `_Diekspor ${date} · TelaahKarier_`];
+  const sections: string[] = [`# ${title}`, `Diekspor ${date}`];
 
   // What the answer is about. An action chip's label is not material, so it is left out.
   if (kind === "analysis" && (attachments.length > 0 || options.sourceText?.trim())) {
@@ -209,4 +209,19 @@ export function buildAnalysisExport(parts: ExportPart[], options: ExportOptions 
   sections.push(`---\n\n_${DISCLAIMER}_`);
 
   return { title, markdown: `${sections.join("\n\n")}\n`, verdictLevel, attachments };
+}
+
+/** The line that goes with the PDF when it is shared. */
+export function shareMessage(name?: string | null): string {
+  const who = name?.trim();
+  return who ? `Analisis Lowongan untuk ${who}, cek di sini!` : "Analisis Lowongan TelaahKarier, cek di sini!";
+}
+
+export function exportFilename(title: string, date: Date = new Date()): string {
+  const slug = title
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `telaahkarier-${slug || "telaah"}-${date.toISOString().slice(0, 10)}.pdf`;
 }
