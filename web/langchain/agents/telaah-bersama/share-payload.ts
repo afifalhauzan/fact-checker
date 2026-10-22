@@ -105,7 +105,10 @@ export function buildSharePayload({
   const claim = analysis.claims[0];
   if (!claim || (claim.riskLevel !== "sedang" && claim.riskLevel !== "tinggi")) return null;
 
-  const materialText = composeMaterialText(userText, analysis.material?.transcript);
+  // The verdict covered the earlier stages of the posting too, so the post shows them as well
+  const materialText = [analysis.material?.earlierMaterial, composeMaterialText(userText, analysis.material?.transcript)]
+    .filter(Boolean)
+    .join("\n");
   const { contacts, identifiers } = findContacts(materialText);
   const kinds = analysis.material?.attachments ?? [];
 
