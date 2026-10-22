@@ -22,7 +22,8 @@ export type SignalId =
   | "unofficial_domain"
   | "paid_task"
   | "institution_impersonation"
-  | "moderate_combination";
+  | "moderate_combination"
+  | "new_domain";
 
 export type SignalSeverity = "strong" | "moderate";
 
@@ -491,6 +492,20 @@ export function detectSignals(text: string): DetectedSignal[] {
   }
 
   return signals;
+}
+
+/** From the domain registry rather than the text: the posting's site was registered only recently. */
+export function newDomainSignal(domain: string, days: number): DetectedSignal {
+  return {
+    id: "new_domain",
+    label: "Domain situs baru didaftarkan",
+    severity: "moderate",
+    riskType: "suspicious_contact",
+    floor: "sedang",
+    floorReason: "Situs rekrutmen yang baru dibuat beberapa minggu belum punya rekam jejak yang bisa diperiksa.",
+    description: `Domain ${domain} baru didaftarkan ${days} hari lalu. Situs penipuan lowongan umumnya dibuat sesaat sebelum disebarkan, sedangkan situs perusahaan biasanya sudah berumur tahunan.`,
+    evidence: [domain],
+  };
 }
 
 export function compareRiskLevels(a: RiskLevel, b: RiskLevel): number {
