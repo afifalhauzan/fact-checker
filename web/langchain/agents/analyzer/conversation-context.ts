@@ -21,6 +21,9 @@ export interface LooseMessage {
 /** The posting under discussion: the latest analysis that reached a verdict, plus its source message. */
 export interface PostingContext {
   postingText: string;
+  // All material of this posting sent so far (earlier stages included), without the link
+  // evidence; a later stage of the same posting is analyzed together with it.
+  material: string;
   images: AnalyzeImage[];
   analysis: Partial<AnalysisResult>;
   // Index of the assistant message that holds the analysis.
@@ -121,19 +124,18 @@ export function findPostingContext(messages: LooseMessage[], fromIndex: number):
       // Attachments were already transcribed during the analysis: reuse that text and only send
       // the originals to the model again when the transcript is known to be incomplete.
       const transcript = analysis.material?.transcript;
-      // Shortlink destinations and the linked page were also read once, during the analysis
-      const withLinks = (text: string) => [text, analysis.material?.linkEvidence].filter(Boolean).join("\n\n");
-      if (transcript?.trim()) {
-        return {
-          postingText: withLinks(composeMaterialText(textOf(messages[j]), transcript)),
-          images: analysis.material?.legibility === "sebagian" ? imagesOf(messages[j]) : [],
-          analysis,
-          analysisIndex: i,
-        };
-      }
-      return { postingText: withLinks(textOf(messages[j])), images: imagesOf(messages[j]), analysis, analysisIndex: i };
+      const ownMaterial = transcript?.trim() ? composeMaterialText(textOf(messages[j]), transcript) : textOf(messages[j]);
+      const material = [analysis.material?.earlierMaterial, ownMaterial].filter(Boolean).join("\n\n");
+      return {
+        // Shortlink destinations and the linked page were also read once, during the analysis
+        postingText: [material, analysis.material?.linkEvidence].filter(Boolean).join("\n\n"),
+        material,
+        images: !transcript?.trim() || analysis.material?.legibility === "sebagian" ? imagesOf(messages[j]) : [],
+        analysis,
+        analysisIndex: i,
+      };
     }
-    return { postingText: "", images: [], analysis, analysisIndex: i };
+    return { postingText: "", material: "", images: [], analysis, analysisIndex: i };
   }
 
   return null;

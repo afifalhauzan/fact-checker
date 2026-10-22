@@ -49,6 +49,7 @@ async function main() {
     const session = SESSIONS[testCase.session];
     const context: PostingContext = {
       postingText: session.postingText,
+      material: session.postingText,
       images: [],
       analysis: { summary: session.summary },
       analysisIndex: 0,

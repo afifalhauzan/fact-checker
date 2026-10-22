@@ -213,6 +213,8 @@ export const AnalysisSchema = z.object({
         .optional(),
       // Shortlink destinations and the linked page, read before the analysis; reused by follow-ups.
       linkEvidence: z.string().optional(),
+      // Earlier material of the same posting in this session, analyzed together with this message.
+      earlierMaterial: z.string().optional(),
     })
     .optional(),
   // Every check the pipeline ran, in plain words, shown so the verdict's basis is visible.
