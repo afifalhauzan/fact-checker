@@ -64,8 +64,8 @@ export const getPost = (id: number | string) => request<TelaahPost>(`/api/telaah
 export const toggleReaction = (id: number) =>
   request<{ reacted: boolean; reactionCount: number }>(`/api/telaah-bersama/${id}/reactions`, json("POST"));
 
-export const addComment = (id: number, body: string) =>
-  request<TelaahComment>(`/api/telaah-bersama/${id}/comments`, json("POST", { body }));
+export const addComment = (id: number, body: string, parentId?: number) =>
+  request<TelaahComment>(`/api/telaah-bersama/${id}/comments`, json("POST", { body, parentId }));
 
 export const reportPost = (id: number, type: ReportType) =>
   request<{ reported: boolean }>(`/api/telaah-bersama/${id}/reports`, json("POST", { type }));

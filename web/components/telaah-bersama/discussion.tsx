@@ -2,9 +2,10 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { AlertTriangle, Send } from "lucide-react";
+import { AlertTriangle, Reply, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/utils/utils";
 import { addComment } from "@/lib/telaah-bersama/api";
 import { formatRelative, type TelaahComment } from "@/lib/telaah-bersama/types";
 import { hasSensitiveData } from "@/langchain/agents/analyzer/redaction";
@@ -12,12 +13,88 @@ import { useLoginPrompt } from "./login-prompt";
 
 const MAX_COMMENT_LENGTH = 1000;
 
-function CommentItem({ comment }: { comment: TelaahComment }) {
+function CommentForm({
+  postId,
+  parentId,
+  viewerName,
+  placeholder,
+  autoFocus,
+  onAdded,
+  onCancel,
+}: {
+  postId: number;
+  parentId?: number;
+  viewerName: string;
+  placeholder: string;
+  autoFocus?: boolean;
+  onAdded: (comment: TelaahComment) => void;
+  onCancel?: () => void;
+}) {
+  const [draft, setDraft] = React.useState("");
+  const [isSending, setIsSending] = React.useState(false);
+  const trimmed = draft.trim();
+  const hasSensitive = hasSensitiveData(draft);
+  const fieldId = parentId ? `reply-${parentId}` : "comment";
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!trimmed || isSending) return;
+    setIsSending(true);
+    try {
+      onAdded(await addComment(postId, trimmed, parentId));
+      setDraft("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Komentar gagal dikirim.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-border bg-card p-3">
+      <label htmlFor={fieldId} className="text-xs text-muted-foreground">
+        {parentId ? "Membalas" : "Berkomentar"} sebagai <span className="font-medium text-foreground">{viewerName}</span>
+      </label>
+      <Textarea
+        id={fieldId}
+        value={draft}
+        autoFocus={autoFocus}
+        maxLength={MAX_COMMENT_LENGTH}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder={placeholder}
+        className={cn("resize-y", parentId ? "min-h-16" : "min-h-20")}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className={hasSensitive ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
+          {hasSensitive
+            ? "Komentarmu tampaknya memuat NIK atau kode OTP. Bagian itu akan disensor otomatis saat dikirim."
+            : "Jangan menulis NIK, OTP, atau data pribadimu."}
+        </p>
+        <div className="flex gap-2">
+          {onCancel && (
+            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+              Batal
+            </Button>
+          )}
+          <Button type="submit" size="sm" disabled={!trimmed || isSending}>
+            <Send />
+            {isSending ? "Mengirim…" : "Kirim"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function CommentItem({ comment, onReply }: { comment: TelaahComment; onReply: () => void }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium text-foreground">{comment.author}</span>
-        {comment.isNewAccount && (
+        {comment.isPostAuthor && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Pembuat</span>
+        )}
+        {comment.isNewAccount && !comment.isPostAuthor && (
           <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">akun baru</span>
         )}
         <span className="text-muted-foreground">{formatRelative(comment.createdAt)}</span>
@@ -29,7 +106,15 @@ function CommentItem({ comment }: { comment: TelaahComment }) {
         </p>
       )}
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{comment.body}</p>
-    </li>
+      <button
+        type="button"
+        onClick={onReply}
+        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+      >
+        <Reply className="h-3.5 w-3.5" />
+        Balas
+      </button>
+    </div>
   );
 }
 
@@ -46,23 +131,18 @@ export function Discussion({
   onAdded: (comment: TelaahComment) => void;
 }) {
   const openLoginPrompt = useLoginPrompt((state) => state.open);
-  const [draft, setDraft] = React.useState("");
-  const [isSending, setIsSending] = React.useState(false);
-  const trimmed = draft.trim();
-  const hasSensitive = hasSensitiveData(draft);
+  const [replyingTo, setReplyingTo] = React.useState<number | null>(null);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!trimmed || isSending) return;
-    setIsSending(true);
-    try {
-      onAdded(await addComment(postId, trimmed));
-      setDraft("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Komentar gagal dikirim.");
-    } finally {
-      setIsSending(false);
+  // Newest threads first; replies under their thread in the order they were written.
+  const threads = comments.filter((comment) => comment.parentId === null).reverse();
+  const repliesOf = (threadId: number) => comments.filter((comment) => comment.parentId === threadId);
+
+  const startReply = (threadId: number) => {
+    if (!viewerName) {
+      openLoginPrompt("Masuk untuk membalas diskusi di Telaah ini.");
+      return;
     }
+    setReplyingTo(threadId);
   };
 
   return (
@@ -84,41 +164,49 @@ export function Discussion({
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-border bg-card p-3">
-          <label htmlFor="comment" className="text-xs text-muted-foreground">
-            Berkomentar sebagai <span className="font-medium text-foreground">{viewerName}</span>
-          </label>
-          <Textarea
-            id="comment"
-            value={draft}
-            maxLength={MAX_COMMENT_LENGTH}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Ceritakan pengalamanmu: apakah kamu menerima lowongan atau chat yang sama? Apa yang terjadi setelahnya?"
-            className="min-h-20 resize-y"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className={hasSensitive ? "text-xs text-red-700" : "text-xs text-muted-foreground"}>
-              {hasSensitive
-                ? "Komentarmu tampaknya memuat NIK atau kode OTP. Bagian itu akan disensor otomatis saat dikirim."
-                : "Jangan menulis NIK, OTP, atau data pribadimu."}
-            </p>
-            <Button type="submit" size="sm" disabled={!trimmed || isSending}>
-              <Send />
-              {isSending ? "Mengirim…" : "Kirim"}
-            </Button>
-          </div>
-        </form>
+        <CommentForm
+          postId={postId}
+          viewerName={viewerName}
+          placeholder="Ceritakan pengalamanmu: apakah kamu menerima lowongan atau chat yang sama? Apa yang terjadi setelahnya?"
+          onAdded={onAdded}
+        />
       )}
 
-      {comments.length === 0 ? (
+      {threads.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           Belum ada diskusi. Jadilah yang pertama bercerita.
         </p>
       ) : (
-        <ul className="space-y-2">
-          {[...comments].reverse().map((comment) => (
-            <CommentItem key={comment.id} comment={comment} />
-          ))}
+        <ul className="space-y-3">
+          {threads.map((thread) => {
+            const replies = repliesOf(thread.id);
+            return (
+              <li key={thread.id} className="space-y-2">
+                <CommentItem comment={thread} onReply={() => startReply(thread.id)} />
+                {(replies.length > 0 || replyingTo === thread.id) && (
+                  <div className="ml-4 space-y-2 border-l-2 border-border pl-3 sm:ml-6">
+                    {replies.map((reply) => (
+                      <CommentItem key={reply.id} comment={reply} onReply={() => startReply(thread.id)} />
+                    ))}
+                    {replyingTo === thread.id && viewerName && (
+                      <CommentForm
+                        postId={postId}
+                        parentId={thread.id}
+                        viewerName={viewerName}
+                        placeholder={`Balas ${thread.author}`}
+                        autoFocus
+                        onAdded={(comment) => {
+                          onAdded(comment);
+                          setReplyingTo(null);
+                        }}
+                        onCancel={() => setReplyingTo(null)}
+                      />
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

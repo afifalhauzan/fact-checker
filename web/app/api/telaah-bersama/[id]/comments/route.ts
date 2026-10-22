@@ -21,7 +21,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       method: "POST",
       token,
       headers: internalKeyHeader(),
-      body: JSON.stringify({ body: redactSensitive(text), flag: flagComment(text) }),
+      body: JSON.stringify({
+        body: redactSensitive(text),
+        flag: flagComment(text),
+        parent_id: Number.isInteger(body?.parentId) ? body.parentId : null,
+      }),
     });
     return relay(response);
   } catch (error) {

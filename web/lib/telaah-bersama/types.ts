@@ -28,7 +28,10 @@ export interface TelaahAttachment {
 
 export interface TelaahComment {
   id: number;
+  // The top-level comment this replies to; replies are one level deep.
+  parentId: number | null;
   author: string;
+  isPostAuthor: boolean;
   isNewAccount: boolean;
   body: string;
   flag: "klaim_tanpa_bukti" | null;
