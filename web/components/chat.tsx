@@ -619,7 +619,8 @@ export function Chat() {
         </SidePanel>
 
         <div className="flex min-h-0 w-full min-w-0 flex-1 items-stretch justify-center">
-          <section className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background md:max-w-3xl lg:w-full">
+          {/* On phones the panel tabs get a row of their own (SidePanel), so nothing scrolls under them */}
+          <section className="relative z-10 flex min-w-0 flex-1 shrink-0 flex-col bg-background pt-11 md:max-w-3xl md:pt-0 lg:w-full">
 
             <Toaster />
             <LoginPromptHost />
@@ -627,8 +628,7 @@ export function Chat() {
             {/* Chat Box */}
             <div
               ref={messagesContainerRef}
-              // On phones the panel tabs sit in the top corners (SidePanel), so the chat starts below them
-              className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 pt-12 md:pt-4 flex flex-col gap-3.5 "
+              className="no-scrollbar flex-1 bg-background overflow-y-auto p-4 pt-1 md:pt-4 flex flex-col gap-3.5 "
             >
               {!isAuthReady ? (
                 <div className="flex-1 flex items-center justify-center">
@@ -684,6 +684,7 @@ export function Chat() {
               />
             </div>
 
+            <div className="relative shrink-0">
             <ChatFooter
               input={input}
               setInput={setInput}
@@ -696,9 +697,9 @@ export function Chat() {
             inputRef={composerRef}
             />
 
-            {/* Scroll to Bottom FAB */}
+            {/* Scroll to Bottom FAB: just above the footer, whatever height the composer has */}
             {!isAtBottom && (
-              <div className="absolute bottom-30 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+              <div className="absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 pointer-events-auto">
                 <button
                   onClick={scrollToBottom}
                   className="flex items-center justify-center h-8 px-[6px] bg-white border border-border text-gray-800 rounded-full shadow-lg hover:bg-primary/90 hover:text-primary-foreground transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in zoom-in-75 duration-200"
@@ -708,6 +709,7 @@ export function Chat() {
                 </button>
               </div>
             )}
+            </div>
 
             {/* <ConfirmModal
             isOpen={showResetModal}

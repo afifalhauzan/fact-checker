@@ -21,8 +21,9 @@ const SUGGESTIONS: Suggestion[] = [
 
 export function ChatStart({ onSuggestionClick, isLoading }: ChatStartProps) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-12 antialiased">
-      <section className="relative mb-12 flex w-full max-w-xl flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-700">
+    // Compact on phones so the greeting and the suggestions fit without scrolling
+    <div className="flex flex-col items-center justify-center px-2 py-2 antialiased md:min-h-[60vh] md:px-6 md:py-12">
+      <section className="relative mb-6 flex w-full max-w-xl flex-col items-start animate-in fade-in slide-in-from-bottom-4 duration-700 md:mb-12">
         <div className="relative">
           <div
             className="
