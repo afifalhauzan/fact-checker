@@ -4,7 +4,6 @@ import { backendUnavailable, errorResponse, relay, signInRequired } from "@/lib/
 import { SOURCE_PLATFORMS } from "@/lib/telaah-bersama/types";
 import { redactSensitive } from "@/langchain/agents/analyzer/redaction";
 import { hasValidAttributes, type DraftAttributes } from "@/langchain/agents/telaah-bersama/draft";
-import { embedText, embeddingTextFor } from "@/langchain/agents/telaah-bersama/embeddings";
 import { findContacts } from "@/langchain/agents/telaah-bersama/identifiers";
 import { isSubsequence, readSignedShare, sha256OfBytes, shareKeyOf } from "@/langchain/agents/telaah-bersama/share-payload";
 
@@ -124,7 +123,6 @@ export async function POST(req: NextRequest) {
       analyzed_at: payload.analyzedAt,
       share_key: shareKeyOf(share.signature as string),
       attachments,
-      embedding: await embedText(embeddingTextFor(materialLines)),
     })
   );
 

@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { backendFetch, getAccessToken, internalKeyHeader } from "@/lib/server-auth";
 import { backendUnavailable, errorResponse, relay, signInRequired } from "@/lib/telaah-bersama/proxy";
-import type { TelaahPost } from "@/lib/telaah-bersama/types";
 import { hasSensitiveData, redactSensitive } from "@/langchain/agents/analyzer/redaction";
-import { embedText, embeddingTextFor } from "@/langchain/agents/telaah-bersama/embeddings";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,14 +39,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   try {
-    const current = await backendFetch(`/telaah-bersama/${id}`, { token, cache: "no-store" });
-    if (!current.ok) return relay(current);
-    const post = (await current.json()) as TelaahPost;
-
     const title = redactSensitive(body.title.trim());
     const story = typeof body.story === "string" ? redactSensitive(body.story.trim()).slice(0, MAX_STORY_LENGTH) : "";
     const materialLines: string[] = body.materialLines.filter((line: unknown) => typeof line === "string");
-    const linesChanged = materialLines.join("\n") !== post.materialLines.join("\n");
 
     const response = await backendFetch(`/telaah-bersama/${id}`, {
       method: "PATCH",
@@ -61,7 +54,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         links: Array.isArray(body.links) ? body.links : [],
         attachment_ids: Array.isArray(body.attachmentIds) ? body.attachmentIds : [],
         still_sensitive: hasSensitiveData([title, story, ...materialLines].join("\n")),
-        embedding: linesChanged ? await embedText(embeddingTextFor(materialLines)) : null,
       }),
     });
     return relay(response);
