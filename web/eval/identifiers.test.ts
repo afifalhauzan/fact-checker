@@ -39,6 +39,11 @@ test("domains drop www and paths, but shortlinks keep their path", () => {
   assert.deepEqual(valuesOf("grup t.me/tugasharian_resmi", "domain"), ["t.me/tugasharian_resmi"]);
 });
 
+test("social media handles are not domains", () => {
+  assert.deepEqual(valuesOf("Info dari IG @loker.bumn.id dan @rekrutmen.terbaru", "domain"), []);
+  assert.deepEqual(findLinks("Follow @loker.bumn.id"), []);
+});
+
 test("amounts are not domains", () => {
   assert.deepEqual(valuesOf("Gaji Rp1.350.000 per bulan", "domain"), []);
 });

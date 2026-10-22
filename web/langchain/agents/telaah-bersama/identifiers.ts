@@ -28,7 +28,8 @@ const PATH_IDENTIFIES = new Set(["bit.ly", "s.id", "tinyurl.com", "linktr.ee", "
 
 const PHONE = /(?<![\d+])(?:\+?62|0)[\s.-]?8\d(?:[\s.-]?\d){6,11}(?!\d)/g;
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
-const URL = /\b(?:https?:\/\/)?(?:www\.)?((?:[a-z0-9-]+\.)+[a-z]{2,})(\/[^\s,;)"']*)?/gi;
+// Not right after "@": "@loker.bumn.id" is a social media handle, not a website.
+const URL = /(?<![@\w.-])(?:https?:\/\/)?(?:www\.)?((?:[a-z0-9-]+\.)+[a-z]{2,})(\/[^\s,;)"']*)?/gi;
 const BANKS = "BRI|BCA|BNI|Mandiri|BSI|CIMB(?: Niaga)?|Danamon|Permata|BTN|Jago|SeaBank|Muamalat|DANA|OVO|GoPay|ShopeePay";
 const ACCOUNT = new RegExp(`\\b(${BANKS})\\b[^\\d\\n]{0,25}((?:\\d[\\s.-]?){7,18}\\d)`, "gi");
 
