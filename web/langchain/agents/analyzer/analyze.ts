@@ -74,6 +74,9 @@ export interface AnalyzeOptions {
   // Attachments the chat route already read (for the TelaahBareng check), so they are not read
   // twice. Must come from extractAttachments on the same images. The evaluation never sets it.
   extraction?: ExtractionRun;
+  // Material the session already sent about the same posting (an earlier poster, the first chat
+  // with the recruiter). The new message is a later stage of it, so both are judged together.
+  earlierMaterial?: string;
 }
 
 export interface AnalysisRunMeta {
@@ -118,6 +121,9 @@ const MAX_SUGGESTED_QUESTIONS = 4;
 const MIN_FALLBACK_VERDICT_LENGTH = 80;
 // The top of a job page, where the company is named before any "similar jobs" list.
 const PAGE_QUERY_CHARS = 1500;
+const MAX_EARLIER_MATERIAL_CHARS = 6000;
+export const EARLIER_MATERIAL_HEADER = "[Materi sebelumnya dari lowongan yang sama]";
+export const NEW_MATERIAL_HEADER = "[Materi baru]";
 // A displayed "100%" reads as an absolute verdict, which the product deliberately never gives.
 const MAX_CONFIDENCE = 0.95;
 
@@ -523,9 +529,14 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
 
   let material: ExtractedMaterial | undefined;
   let linkEvidence = "";
-  const finish = (result: AnalysisResult): AnalysisRun => {
+  // Kept to the start of the earlier material: the first poster names the company and channels.
+  const earlierMaterial = options.earlierMaterial?.trim().slice(0, MAX_EARLIER_MATERIAL_CHARS) ?? "";
+  const finish =(result: AnalysisResult): AnalysisRun => {
     result.reasoning = [{ intent: PROGRESS_INTENT, steps: [...steps] }];
     result.material = describeMaterialRead(userText, attachments.length, material, linkEvidence);
+    if (earlierMaterial) {
+      result.material!.earlierMaterial = earlierMaterial;
+    }
     meta.timingsMs.total = Date.now() - startedAt;
     return { result: AnalysisSchema.parse(result), meta };
   };
@@ -576,6 +587,11 @@ export async function runAnalysis({ input, images = [] }: AnalyzeInput, options:
       analysisAttachments = [];
     }
     // On "error" the attachments go straight to the analysis call, as without this stage.
+  }
+
+  if (earlierMaterial) {
+    materialText = `${EARLIER_MATERIAL_HEADER}\n${earlierMaterial}\n\n${NEW_MATERIAL_HEADER}\n${materialText}`;
+    addStep("Menggabungkan dengan materi sebelumnya dari lowongan yang sama di sesi ini");
   }
 
   // Links are opened before the rules run, so a shortlink is judged by where it really leads.

@@ -334,6 +334,8 @@ export async function POST(req: NextRequest) {
           {
             onProgress: (reasoning) => writer.write({ type: "data-reasoning", id: reasoningPartId, data: reasoning }),
             extraction,
+            // Reaching here with a context means this is a later stage of the session's posting
+            earlierMaterial: context?.material,
           }
         );
         // Metadata only: never log the posting or the analysis text.
