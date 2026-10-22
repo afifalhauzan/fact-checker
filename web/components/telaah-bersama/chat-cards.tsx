@@ -136,7 +136,7 @@ export function SimilarTelaahCard({
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
           <Button size="sm" asChild>
-            <Link href={`/telaah-bersama/${post.id}`}>Baca Telaah</Link>
+            <Link href={`/telaah-bersama/${post.id}`}>Baca postingan</Link>
           </Button>
           <Button size="sm" variant="outline" onClick={onSelfAnalyze} disabled={disabled}>
             Tetap telaah sendiri
