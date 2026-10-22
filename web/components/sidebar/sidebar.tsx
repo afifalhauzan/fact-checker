@@ -96,7 +96,8 @@ export function SidePanel({
     }
     return (
       <>
-        <button type="button" aria-label={`Tutup ${label}`} onClick={onToggle} className="absolute inset-0 z-20 bg-black/20" />
+        {/* Above the other panel's tab (z-20), so only one panel can be open at a time */}
+        <button type="button" aria-label={`Tutup ${label}`} onClick={onToggle} className="absolute inset-0 z-[25] bg-black/20" />
         <aside
           aria-label={label}
           className={cn(
