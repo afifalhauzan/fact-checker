@@ -76,7 +76,7 @@ export function PreviewSection() {
       </div>
 
       <div className="md:col-span-5 motion-safe:animate-[fadeUp_1000ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        <h2 className="mb-5 font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:mb-6 sm:text-5xl">
+        <h2 className="mb-5 mt-10 sm:mt-0 font-[var(--font-instrument-serif)] text-[2.45rem] leading-[0.98] text-[#17232c] sm:mb-6 sm:text-5xl">
           Risiko dibuat terlihat, langkah aman dibuat jelas.
         </h2>
         <p className="mb-7 text-base leading-relaxed text-[#5a6a76] sm:mb-8 sm:text-lg">
