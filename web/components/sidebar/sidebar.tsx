@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { History, MessageSquareText, Pin, Search, SquarePen, X } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, History, MessageSquareText, Pin, Search, SquarePen, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/utils";
 import { ConfirmModal } from "@/components/ui/modal";
@@ -12,9 +12,55 @@ import { SessionList, openSession } from "@/components/sidebar/session-history";
 const RAIL_WIDTH = "w-14";
 
 /**
+ * Round open/close tab sitting on the panel's border, so toggling needs no toolbar row of its own.
+ * The left panel shows » / «; the right one shows its own icon (and a count) while closed.
+ */
+function EdgeToggle({
+  side,
+  isOpen,
+  label,
+  closedIcon,
+  badge,
+  onToggle,
+  className,
+}: {
+  side: "left" | "right";
+  isOpen: boolean;
+  label: string;
+  closedIcon?: React.ReactNode;
+  badge?: number;
+  onToggle: () => void;
+  className?: string;
+}) {
+  const opensTowardRight = side === "left" ? !isOpen : isOpen;
+  const chevron = opensTowardRight ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />;
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={isOpen}
+      aria-label={isOpen ? `Tutup ${label}` : `Buka ${label}`}
+      title={isOpen ? `Tutup ${label}` : `Buka ${label}`}
+      className={cn(
+        "absolute top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className
+      )}
+    >
+      {!isOpen && closedIcon ? closedIcon : chevron}
+      {!isOpen && !!badge && (
+        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-primary px-1 text-[10px] font-medium leading-4 tabular-nums text-primary-foreground">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/**
  * A panel beside the chat. On desktop it slides open in the layout, and a panel with `hasRail`
- * keeps a narrow icon column when closed; on phones it overlays the chat. Its open/close toggle
- * lives in the chat toolbar, so the toggle never moves.
+ * keeps a narrow icon column when closed; on phones it overlays the chat. Its toggle is a tab on
+ * the panel's border, so it moves with the edge and never needs space of its own.
  */
 export function SidePanel({
   side,
@@ -22,7 +68,9 @@ export function SidePanel({
   isMobile,
   label,
   hasRail = false,
-  onClose,
+  closedIcon,
+  badge,
+  onToggle,
   children,
 }: {
   side: "left" | "right";
@@ -30,14 +78,21 @@ export function SidePanel({
   isMobile: boolean;
   label: string;
   hasRail?: boolean;
-  onClose: () => void;
+  closedIcon?: React.ReactNode;
+  badge?: number;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const toggleProps = { side, isOpen, label, closedIcon, badge, onToggle };
+
   if (isMobile) {
-    if (!isOpen) return null;
+    // Closed: the tab sits at the screen edge. Open: tapping outside the overlay closes it.
+    if (!isOpen) {
+      return <EdgeToggle {...toggleProps} className={side === "left" ? "left-1" : "right-1"} />;
+    }
     return (
       <>
-        <button type="button" aria-label={`Tutup ${label}`} onClick={onClose} className="absolute inset-0 z-20 bg-black/20" />
+        <button type="button" aria-label={`Tutup ${label}`} onClick={onToggle} className="absolute inset-0 z-20 bg-black/20" />
         <aside
           aria-label={label}
           className={cn(
@@ -54,25 +109,33 @@ export function SidePanel({
   const showsRail = hasRail && !isOpen;
 
   return (
-    <aside
-      aria-label={label}
-      aria-hidden={!isOpen && !hasRail}
-      className={cn(
-        "relative h-full shrink-0 overflow-hidden bg-muted/40 transition-[width] duration-300 ease-out",
-        side === "left" ? "border-r" : "border-l",
-        isOpen ? "w-[280px] border-border" : showsRail ? `${RAIL_WIDTH} border-border` : "w-0 border-transparent"
-      )}
-    >
-      <div
+    // The aside clips its content while it animates; the tab lives outside it so it is not clipped.
+    <div className="relative z-20 h-full shrink-0">
+      <aside
+        aria-label={label}
+        aria-hidden={!isOpen && !hasRail}
         className={cn(
-          "flex h-full flex-col overflow-y-auto",
-          showsRail ? `${RAIL_WIDTH} items-center px-2 py-4` : "w-[280px] p-4",
-          !isOpen && !hasRail && "invisible"
+          "h-full overflow-hidden bg-muted/40 transition-[width] duration-300 ease-out",
+          side === "left" ? "border-r" : "border-l",
+          isOpen ? "w-[280px] border-border" : showsRail ? `${RAIL_WIDTH} border-border` : "w-0 border-transparent"
         )}
       >
-        {children}
-      </div>
-    </aside>
+        <div
+          className={cn(
+            "flex h-full flex-col overflow-y-auto",
+            showsRail ? `${RAIL_WIDTH} items-center px-2 pb-4 pt-12` : "w-[280px] p-4",
+            !isOpen && !hasRail && "invisible"
+          )}
+        >
+          {children}
+        </div>
+      </aside>
+      {/* A closed panel without a rail has no visible border, so its tab moves fully into view */}
+      <EdgeToggle
+        {...toggleProps}
+        className={side === "left" ? (isOpen || hasRail ? "-right-3.5" : "-right-9") : isOpen || hasRail ? "-left-3.5" : "-left-9"}
+      />
+    </div>
   );
 }
 

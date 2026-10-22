@@ -22,7 +22,7 @@ import {
   type LandingChatDraft,
 } from "@/lib/landing-chat-handoff";
 import { type MetabotUIMessage, type MetabotUIMessagePart } from "@/types/streaming";
-import { ChevronDown, List, PanelLeft, SquarePen } from "lucide-react";
+import { ChevronDown, List } from "lucide-react";
 import { openSession } from "@/components/sidebar/session-history";
 import { ContextPanel, collectSessionContext, countSessionContext } from "@/components/sidebar/context-panel";
 import toast, { Toaster } from 'react-hot-toast';
@@ -33,9 +33,6 @@ import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
 import { AnalysisSchema } from "@/langchain/agents/analyzer/schema";
 import type { FileUIPart } from "ai";
 import type { AnalysisAction, UIActionId, UIActionPayload } from "@/types/ui-actions";
-
-const TOOLBAR_BUTTON =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 function mapReferencesToSidebarSources(
   references: Array<{ title?: string; url?: string; citations?: Array<{ id?: string }> }>
@@ -604,50 +601,14 @@ export function Chat() {
 
   return (
     <div className="flex h-full w-full flex-col bg-background">
-      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border px-2 sm:px-3">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={toggleHistory}
-            className={TOOLBAR_BUTTON}
-            aria-expanded={isSidebarOpen}
-            aria-label={isSidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
-            title={isSidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
-          {/* Phones have no icon rail, so the closed sidebar's "new" button lives here */}
-          {isMobile && !isSidebarOpen && (
-            <button type="button" onClick={() => openSession()} className={TOOLBAR_BUTTON} title="TelaahLoker baru">
-              <SquarePen className="h-4 w-4" />
-              <span>TelaahLoker Baru</span>
-            </button>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={toggleContext}
-          className={TOOLBAR_BUTTON}
-          aria-expanded={isContextOpen}
-          aria-label={isContextOpen ? "Tutup konteks sesi" : "Buka konteks sesi"}
-          title={isContextOpen ? "Tutup konteks sesi" : "Buka konteks sesi"}
-        >
-          <span>Konteks</span>
-          {contextCount > 0 && (
-            <span className="rounded-full bg-primary/10 px-1.5 text-[11px] font-medium tabular-nums text-primary">{contextCount}</span>
-          )}
-          <List className="h-4 w-4" />
-        </button>
-      </div>
-
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <SidePanel
           side="left"
           isOpen={isSidebarOpen}
           isMobile={isMobile}
-          label="Riwayat telaah"
+          label="sidebar"
           hasRail
-          onClose={() => setIsSidebarOpen(false)}
+          onToggle={toggleHistory}
         >
           <HistoryPanel
             activeConversationId={conversationId}
@@ -763,8 +724,10 @@ export function Chat() {
           side="right"
           isOpen={isContextOpen}
           isMobile={isMobile}
-          label="Konteks sesi"
-          onClose={() => setIsContextOpen(false)}
+          label="konteks sesi"
+          closedIcon={<List className="h-3.5 w-3.5" />}
+          badge={contextCount}
+          onToggle={toggleContext}
         >
           <h2 className="mb-4 text-sm font-semibold text-foreground">Konteks sesi</h2>
           <ContextPanel context={sessionContext} sources={sidebarSources} />
