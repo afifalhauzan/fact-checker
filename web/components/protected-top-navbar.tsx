@@ -10,7 +10,7 @@ import Logo from "@/assets/logo.svg";
 import { TelaahNav } from "@/components/telaah-bersama/telaah-nav";
 
 /**
- * The one top bar of the site. The homepage keeps it minimal (logo, "Buka Telaah", account) and the
+ * The one top bar of the site. The homepage keeps it minimal (logo, "Mulai Telaah", account) and the
  * TelaahLoker / TelaahBareng links only appear once the visitor is inside the app.
  */
 export function ProtectedTopNavbar() {
@@ -34,7 +34,7 @@ export function ProtectedTopNavbar() {
                 <div className="col-start-3 flex items-center gap-2 justify-self-end">
                     {isLanding && (
                         <Button asChild className="h-10 rounded-lg px-4">
-                            <Link href="/chat">Buka Telaah</Link>
+                            <Link href="/chat">Mulai Telaah</Link>
                         </Button>
                     )}
                     <AuthButton logoutRedirectTo="/" />

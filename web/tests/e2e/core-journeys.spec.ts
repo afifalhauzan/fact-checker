@@ -5,7 +5,7 @@ test("landing page presents the main service and chat composer", async ({ page }
 
   await expect(page.getByRole("heading", { name: /Cek Risiko Lowongan Kerja/i })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Pesan" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Buka Telaah" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Mulai Telaah" })).toBeVisible();
 });
 
 test("TelaahBareng navigation opens the public community page", async ({ page }) => {
