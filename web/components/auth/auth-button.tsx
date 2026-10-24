@@ -6,6 +6,7 @@ import { FileText, LogOut, User } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
+import { QuotaBar } from "@/components/auth/quota-bar";
 
 interface AuthButtonProps {
   onLogoutClick?: () => void;
@@ -110,6 +111,7 @@ export function AuthButton({ onLogoutClick, logoutRedirectTo, guestFallback }: A
               <FileText className="w-4 h-4" />
               Post saya
             </Link>
+            <QuotaBar />
             <button
               onClick={handleLogoutClick}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-md transition-colors"
