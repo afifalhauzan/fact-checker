@@ -40,6 +40,15 @@ export function internalKeyHeader(): Record<string, string> {
   return { 'X-Internal-Key': key };
 }
 
+/**
+ * The visitor's IP for Laravel, which only sees this server's address. Caddy appends the real
+ * client to X-Forwarded-For, so the last entry is the one a visitor cannot forge.
+ */
+export function clientIpHeader(req: NextRequest): Record<string, string> {
+  const ip = req.headers.get('x-forwarded-for')?.split(',').pop()?.trim() || req.headers.get('x-real-ip')?.trim();
+  return ip ? { 'X-Client-IP': ip } : {};
+}
+
 // Same cookie shape proxy.ts checks; httpOnly keeps the token away from client JS
 export function setAuthCookie(res: NextResponse, token: string, tokenType = 'Bearer') {
   res.cookies.set(

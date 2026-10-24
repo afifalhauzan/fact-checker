@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { backendFetch, setAuthCookie } from '@/lib/server-auth';
+import { backendFetch, clientIpHeader, internalKeyHeader, setAuthCookie } from '@/lib/server-auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,6 +7,8 @@ export async function POST(req: NextRequest) {
 
     const response = await backendFetch('/auth/register', {
       method: 'POST',
+      // Laravel limits sign-ups per visitor, so it needs the visitor's IP (believed with the key only)
+      headers: { ...internalKeyHeader(), ...clientIpHeader(req) },
       body: JSON.stringify({
         name,
         email,
@@ -19,7 +21,9 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const error =
-        response.status === 422 && data.errors?.email
+        response.status === 429
+          ? 'Terlalu banyak pendaftaran akun dari jaringan ini. Coba lagi nanti.'
+          : response.status === 422 && data.errors?.email
           ? 'Email sudah terdaftar atau tidak valid'
           : response.status === 422
             ? 'Data pendaftaran tidak valid. Periksa lagi isian kamu.'
