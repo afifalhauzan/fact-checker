@@ -17,14 +17,26 @@ export interface ContactFinding {
   identifiers: Identifier[];
 }
 
-// Free mail, shorteners, and chat links say nothing about who runs them on their own.
+// Job boards host everyone's postings: the posting is the path (glints.com/id/opportunities/jobs/<id>).
+const JOB_BOARDS = new Set([
+  "glints.com", "jobstreet.co.id", "id.jobstreet.com", "jobstreet.com", "linkedin.com", "id.linkedin.com", "kalibrr.id",
+  "kalibrr.com", "indeed.com", "id.indeed.com", "karirhub.kemnaker.go.id", "loker.id", "karir.com", "dealls.com",
+]);
+// Free mail, shorteners, chat links, and job boards say nothing about who runs them on their own.
 const GENERIC_DOMAINS = new Set([
   "gmail.com", "yahoo.com", "yahoo.co.id", "hotmail.com", "outlook.com", "ymail.com", "icloud.com", "proton.me",
   "bit.ly", "s.id", "tinyurl.com", "linktr.ee", "forms.gle", "docs.google.com", "wa.me", "t.me", "chat.whatsapp.com",
   "instagram.com", "facebook.com", "tiktok.com", "x.com", "twitter.com", "youtube.com", "google.com",
+  ...JOB_BOARDS,
 ]);
-// For these, the path is what identifies the scam (bit.ly/daftar-xyz, t.me/grupnya).
-const PATH_IDENTIFIES = new Set(["bit.ly", "s.id", "tinyurl.com", "linktr.ee", "forms.gle", "wa.me", "t.me", "chat.whatsapp.com"]);
+// For these, the path is what identifies the scam (bit.ly/daftar-xyz, t.me/grupnya) or the posting.
+const PATH_IDENTIFIES = new Set(["bit.ly", "s.id", "tinyurl.com", "linktr.ee", "forms.gle", "wa.me", "t.me", "chat.whatsapp.com", ...JOB_BOARDS]);
+
+/** A link to one posting on a job board (the normalized value from findContacts). */
+export function isJobBoardPosting(value: string): boolean {
+  const [host, ...path] = value.split("/");
+  return JOB_BOARDS.has(host) && path.length > 0;
+}
 
 const PHONE = /(?<![\d+])(?:\+?62|0)[\s.-]?8\d(?:[\s.-]?\d){6,11}(?!\d)/g;
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
@@ -44,7 +56,11 @@ export function isGenericDomain(host: string): boolean {
 
 function normalizeLink(host: string, path: string | undefined): string {
   const cleanHost = host.toLowerCase().replace(/^www\./, "");
-  const cleanPath = stripUrlQuery(path ?? "").replace(/\/+$/, "").toLowerCase();
+  const cleanPath = stripUrlQuery(path ?? "")
+    .replace(/\/+$/, "")
+    // "…/jobs/<id>/share/<sharer>": the same posting, whoever shared it
+    .replace(/\/share\/[^/]+$/i, "")
+    .toLowerCase();
   return PATH_IDENTIFIES.has(cleanHost) && cleanPath ? `${cleanHost}${cleanPath}` : cleanHost;
 }
 
@@ -77,7 +93,10 @@ export function findContacts(text: string): ContactFinding {
   for (const match of withoutEmails.matchAll(URL)) {
     // Skip decimals and amounts like "Rp1.350.000" that look like hosts with digit labels.
     if (/^[\d.]+$/.test(match[1].replace(/\.[a-z]{2,}$/i, ""))) continue;
-    add("domain", match[0], normalizeLink(match[1], match[2]));
+    const value = normalizeLink(match[1], match[2]);
+    // A bare "glints.com" or "instagram.com" is shared by unrelated postings
+    if (isGenericDomain(value)) continue;
+    add("domain", match[0], value);
   }
 
   return { contacts, identifiers };
