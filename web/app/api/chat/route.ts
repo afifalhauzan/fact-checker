@@ -9,6 +9,7 @@ import {
   findPostingContext,
   recentTurns,
   toMessageList,
+  type LooseMessage,
   type PostingContext,
 } from "@/langchain/agents/analyzer/conversation-context";
 import {
@@ -149,12 +150,21 @@ const QUOTA_MESSAGES: Record<QuotaBlock, string> = {
 const SESSION_MOVE_MESSAGE =
   "Sepertinya ini lowongan lain dari yang sedang dibahas. Supaya konteksnya tidak tercampur, pindahkan ke sesi baru? Pesanmu belum dianalisis.";
 
+const SESSION_NAME_LENGTH = 60;
+
 /** Short name of the posting a session is about, for the "move to a new session" card. */
-function describeSessionPosting(context: PostingContext): string {
+function describeSessionPosting(context: PostingContext, messages: LooseMessage[]): string {
+  // The session's title, as the history list shows it; guests' sessions are not titled
+  const titlePart = messages.flatMap((message) => message.parts ?? []).find((part) => part.type === "data-session-title");
+  const title = (titlePart?.data as { title?: unknown } | undefined)?.title;
+  if (typeof title === "string" && title.trim()) return title.trim();
+
   const company = context.analysis.material?.entities?.companyNames?.[0];
   if (company) return company;
+  // The summary's opening, cut at a word so it never ends mid-word
   const firstSentence = (context.analysis.summary ?? context.postingText).split(/(?<=[.!?])\s/)[0] ?? "";
-  return firstSentence.length > 90 ? `${firstSentence.slice(0, 90)}…` : firstSentence || "lowongan sebelumnya";
+  if (firstSentence.length <= SESSION_NAME_LENGTH) return firstSentence || "lowongan sebelumnya";
+  return `${firstSentence.slice(0, SESSION_NAME_LENGTH).replace(/\s+\S*$/, "")}…`;
 }
 
 /** Counts a match once per viewer per day without storing who the viewer is. */
@@ -329,7 +339,7 @@ export async function POST(req: NextRequest) {
           console.info("[chat] posting check", JSON.stringify(continuation));
           if (continuation.isNewPosting) {
             await streamTextBlock({ writer, text: SESSION_MOVE_MESSAGE, id: `session-move-${Date.now()}` });
-            writer.write({ type: "data-session-move", data: { previousTitle: describeSessionPosting(context) } });
+            writer.write({ type: "data-session-move", data: { previousTitle: describeSessionPosting(context, messages) } });
             return;
           }
         }
