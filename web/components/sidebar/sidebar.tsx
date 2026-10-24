@@ -8,6 +8,7 @@ import { cn } from "@/utils/utils";
 import { ConfirmModal } from "@/components/ui/modal";
 import { useChatSessions, type ChatSession } from "@/hooks/use-chat-sessions";
 import { SessionList, openSession } from "@/components/sidebar/session-history";
+import { useConversationStore } from "@/lib/conversation-store";
 
 const RAIL_WIDTH = "w-14";
 
@@ -158,14 +159,25 @@ export function SidePanel({
   );
 }
 
-function RailButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function RailButton({
+  label,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
     >
       {children}
     </button>
@@ -186,6 +198,9 @@ export function HistoryPanel({
   onExpand: () => void;
 }) {
   const { sessions, isGuest, isLoading, remove, setPinned } = useChatSessions();
+  // The open session is still empty, so a new one would be the same blank page again
+  const isEmptySession = !useConversationStore((state) => state.hasMessages);
+  const newSessionLabel = isEmptySession ? "Sesi ini masih kosong" : "TelaahLoker baru";
   const [query, setQuery] = React.useState("");
   const [pendingDelete, setPendingDelete] = React.useState<ChatSession | null>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
@@ -232,7 +247,7 @@ export function HistoryPanel({
         >
           <Search className="h-4 w-4" />
         </RailButton>
-        <RailButton label="TelaahLoker baru" onClick={() => openSession()}>
+        <RailButton label={newSessionLabel} onClick={() => openSession()} disabled={isEmptySession}>
           <SquarePen className="h-4 w-4" />
         </RailButton>
         {hasPinned && (
@@ -275,7 +290,9 @@ export function HistoryPanel({
       <button
         type="button"
         onClick={() => openSession()}
-        className="mb-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        disabled={isEmptySession}
+        title={isEmptySession ? newSessionLabel : undefined}
+        className="mb-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
       >
         <SquarePen className="h-4 w-4" />
         TelaahLoker Baru

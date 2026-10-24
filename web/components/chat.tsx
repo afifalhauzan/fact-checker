@@ -27,6 +27,10 @@ import { openSession } from "@/components/sidebar/session-history";
 import { ContextPanel, collectSessionContext, countSessionContext } from "@/components/sidebar/context-panel";
 import toast from 'react-hot-toast';
 import React from "react";
+import Link from "next/link";
+import { SESSION_WARNING_SHARE, notifyBlocked, sessionShare, sessionsLeft, useQuotaStore } from "@/lib/quota-store";
+import { buildCompactSeed } from "@/lib/compact-session";
+import { persistLatestExchange } from "@/lib/chat-persistence";
 import { useStreaming } from "@/contexts/StreamingContext";
 import { HistoryPanel, SidePanel } from "@/components/sidebar/sidebar";
 import { type SidebarSourceItem } from "@/components/sidebar/SourceItem";
@@ -170,6 +174,7 @@ export function Chat() {
   const router = useRouter();
   const { user } = useCurrentUser();
   const openLoginPrompt = useLoginPrompt((state) => state.open);
+  const { quota, refresh: refreshQuota } = useQuotaStore();
 
   // === Initialization Engine ===
   const {
@@ -364,6 +369,50 @@ export function Chat() {
   const sessionContext = React.useMemo(() => collectSessionContext(messages), [messages]);
   const contextCount = countSessionContext(sessionContext, sidebarSources);
 
+  // Fetched once per session; the chat stream keeps it current after every answer
+  React.useEffect(() => {
+    if (conversationId) void refreshQuota(conversationId);
+  }, [conversationId, user?.id, refreshQuota]);
+
+  // One line above the composer: why a new session cannot start, or how full this one is
+  const quotaNotice = (() => {
+    const isNewSession = messages.length === 0;
+    const left = sessionsLeft(quota);
+    const share = sessionShare(quota);
+
+    if (isNewSession && left === 0) {
+      return `Kuota sesi hari ini habis (${quota?.sessionsUsed}/${quota?.sessionsLimit}). Direset pukul 00.00 WIB.`;
+    }
+    if (isNewSession && quota?.guest && quota.guestSessionId && quota.guestSessionId !== conversationId) {
+      return (
+        <>
+          Kamu sudah memakai satu sesi tanpa akun.{" "}
+          <Link href="/login?from=/chat" className="font-medium text-primary underline-offset-2 hover:underline">
+            Masuk untuk lanjut
+          </Link>
+        </>
+      );
+    }
+    if (share >= 1) {
+      return (
+        <>
+          Sesi ini sudah penuh.{" "}
+          <button type="button" onClick={() => void continueInNewSession()} className="font-medium text-primary underline-offset-2 hover:underline">
+            Lanjutkan di sesi baru
+          </button>
+        </>
+      );
+    }
+    if (share > 0) {
+      return (
+        <span className={share >= SESSION_WARNING_SHARE ? "text-amber-700" : undefined}>
+          Sesi ini terpakai {Math.round(share * 100)}%
+        </span>
+      );
+    }
+    return null;
+  })();
+
   const completedStepSelections = React.useMemo(() => {
     const completed = new Map<string, string>();
 
@@ -514,6 +563,34 @@ export function Chat() {
     });
   };
 
+  /**
+   * A full session goes on in a new one that starts from its latest analysis (the "compact"). The
+   * new session is saved before it opens, so its history loads with the analysis in place.
+   */
+  const continueInNewSession = async () => {
+    if (!user) {
+      openLoginPrompt("Masuk untuk melanjutkan di sesi baru.");
+      return;
+    }
+    if (sessionsLeft(quota) === 0) {
+      notifyBlocked("daily_limit");
+      return;
+    }
+
+    const seed = buildCompactSeed(messages);
+    if (!seed) {
+      openSession();
+      return;
+    }
+    try {
+      const { id } = await fetch("/api/conversation/init", { method: "POST" }).then((response) => response.json());
+      await persistLatestExchange(id, seed);
+      openSession(id);
+    } catch {
+      toast.error("Sesi baru gagal dibuat. Coba lagi sebentar lagi.");
+    }
+  };
+
   const handleTelaahChoice = (choice: TelaahChoice) => {
     if (choice.kind === "share") {
       if (!user) {
@@ -531,6 +608,8 @@ export function Chat() {
       regenerateWith(choice.messageId, { skip_similar: true });
     } else if (choice.kind === "same-posting") {
       regenerateWith(choice.messageId, { same_posting: true });
+    } else if (choice.kind === "continue-session") {
+      void continueInNewSession();
     } else {
       // The new session sends the moved message on its own, like a message started on the landing page.
       const question = questionBefore(messages, choice.messageId);
@@ -708,6 +787,7 @@ export function Chat() {
 
             <div className="relative shrink-0">
             <ChatFooter
+              notice={quotaNotice}
               input={input}
               setInput={setInput}
               onSubmit={handleSubmit}

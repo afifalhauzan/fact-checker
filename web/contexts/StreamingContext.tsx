@@ -8,6 +8,7 @@ import { useConversationStore } from "@/lib/conversation-store";
 import { extractMessageContent } from "@/utils/iframe-parser";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import { persistLatestExchange } from "@/lib/chat-persistence";
+import { notifyBlocked, useQuotaStore } from "@/lib/quota-store";
 import { type MetabotUIMessage } from "@/types/streaming";
 import type { UIActionPayload } from "@/types/ui-actions";
 
@@ -87,7 +88,13 @@ export function StreamingProvider({ children, chatId }: StreamingProviderProps) 
     id: activeConversationId || chatId, // Use conversation ID as the chat ID
     transport: new DefaultChatTransport({
       api: '/api/chat',
+      // The chat route meters usage per session (lib/quota.ts)
+      body: () => ({ conversation_id: activeConversationIdRef.current }),
     }),
+    onData: (part: { type: string; data?: any }) => {
+      if (part.type === 'data-quota-state') useQuotaStore.getState().apply(part.data);
+      if (part.type === 'data-quota') notifyBlocked(part.data.reason);
+    },
     onError: (error: Error) => {
       console.error('Chat error:', error);
       setIsUserSending(false); // Reset loading on error

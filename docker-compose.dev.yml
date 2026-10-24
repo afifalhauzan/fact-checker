@@ -31,6 +31,8 @@ services:
       DB_PASSWORD: secret
       # One PHP process answers one request at a time; the web app loads profile and history in parallel
       PHP_CLI_SERVER_WORKERS: 4
+      # Locally every guest comes from the web container's IP, so the per-IP guest cap would trip
+      QUOTA_GUEST_SESSIONS_PER_IP: 1000
     ports:
       - "8000:8000"
     volumes:

@@ -9,6 +9,7 @@ import {
   findPostingContext,
   recentTurns,
   toMessageList,
+  type LooseMessage,
   type PostingContext,
 } from "@/langchain/agents/analyzer/conversation-context";
 import {
@@ -31,6 +32,8 @@ import { DEFAULT_ANALYSIS_ACTIONS, UIActionPayloadSchema, type UIActionPayload }
 import { generateSessionTitle } from "@/langchain/agents/session-title";
 import { getAccessToken } from "@/lib/server-auth";
 import { loadStoredAttachments } from "@/lib/stored-attachments";
+import { chargeSession, GUEST_COOKIE, guestCookieOptions, openSession, type QuotaBlock } from "@/lib/quota";
+import type { TokenUsage } from "@/langchain/agents/analyzer/llm";
 
 const STREAM_CHUNK_DELAY_MS = 28;
 const SECTION_STEP_DELAY_MS = 220;
@@ -136,15 +139,32 @@ async function streamTextBlock({
 
 const SIMILAR_FOUND_MESSAGE =
   "Lowongan seperti ini **sudah pernah ditelaah dan dibagikan** di TelaahBareng. Kamu bisa membaca Telaah itu beserta diskusinya, atau tetap menelaah pesanmu sendiri.";
+// Shown instead of an answer; the card under it (data-quota) offers the way on
+const QUOTA_MESSAGES: Record<QuotaBlock, string> = {
+  guest_limit: "Kamu sudah memakai satu sesi TelaahLoker tanpa akun. **Masuk atau daftar** untuk lanjut dengan kuota harian akun.",
+  guest_ip_limit: "Batas sesi tanpa akun dari jaringan ini sudah tercapai hari ini. **Masuk atau daftar** untuk lanjut.",
+  daily_limit: "Kuota sesi TelaahLoker kamu hari ini sudah habis. Kuota direset pukul **00.00 WIB**.",
+  session_full:
+    "Sesi ini sudah mencapai batasnya. Lanjutkan di sesi baru: hasil telaah terakhir dibawa sebagai ringkasan, jadi kamu tidak perlu mengirim ulang lowongannya.",
+};
 const SESSION_MOVE_MESSAGE =
   "Sepertinya ini lowongan lain dari yang sedang dibahas. Supaya konteksnya tidak tercampur, pindahkan ke sesi baru? Pesanmu belum dianalisis.";
 
+const SESSION_NAME_LENGTH = 60;
+
 /** Short name of the posting a session is about, for the "move to a new session" card. */
-function describeSessionPosting(context: PostingContext): string {
+function describeSessionPosting(context: PostingContext, messages: LooseMessage[]): string {
+  // The session's title, as the history list shows it; guests' sessions are not titled
+  const titlePart = messages.flatMap((message) => message.parts ?? []).find((part) => part.type === "data-session-title");
+  const title = (titlePart?.data as { title?: unknown } | undefined)?.title;
+  if (typeof title === "string" && title.trim()) return title.trim();
+
   const company = context.analysis.material?.entities?.companyNames?.[0];
   if (company) return company;
+  // The summary's opening, cut at a word so it never ends mid-word
   const firstSentence = (context.analysis.summary ?? context.postingText).split(/(?<=[.!?])\s/)[0] ?? "";
-  return firstSentence.length > 90 ? `${firstSentence.slice(0, 90)}…` : firstSentence || "lowongan sebelumnya";
+  if (firstSentence.length <= SESSION_NAME_LENGTH) return firstSentence || "lowongan sebelumnya";
+  return `${firstSentence.slice(0, SESSION_NAME_LENGTH).replace(/\s+\S*$/, "")}…`;
 }
 
 /** Counts a match once per viewer per day without storing who the viewer is. */
@@ -195,12 +215,17 @@ export async function POST(req: NextRequest) {
     // Only signed-in sessions are saved, so only they need a title, and only once.
     const shouldTitleSession = toMessageList(body?.messages).length === 1 && !!getAccessToken(req);
 
-    const stream = createUIMessageStream({
-      execute: async ({ writer }) => {
+    // Checked before any model call; what the calls use is charged to the session afterwards
+    const conversationId = typeof body?.conversation_id === "string" ? body.conversation_id : undefined;
+    const quota = await openSession(req, conversationId);
+    const usages: Array<TokenUsage | undefined> = [];
+
+    const answer = async (writer: any) => {
         if (actionPayload) {
           const openingTextId = `action-opening-${Date.now()}`;
           const closingTextId = `action-closing-${Date.now()}`;
           const result = await handleUIAction(actionPayload, body?.messages);
+          usages.push(result.tokenUsage);
 
           await streamTextBlock({
             writer,
@@ -259,6 +284,7 @@ export async function POST(req: NextRequest) {
         if (decision.mode === "follow_up") {
           const turns = recentTurns(messages, context ? context.analysisIndex + 1 : 0, latestIndex, MAX_FOLLOW_UP_TURNS);
           const { result, meta } = await answerFollowUp({ question: input, context, turns });
+          usages.push(meta.tokenUsage);
           console.info("[chat] follow-up run", JSON.stringify({ route: decision.reason, ...meta }));
 
           await streamTextBlock({ writer, text: result.answer, id: `follow-up-${Date.now()}` });
@@ -303,6 +329,8 @@ export async function POST(req: NextRequest) {
           if (attachments.length) {
             extraction = await extractAttachments(limitAttachments(attachments).usable);
             materialText = composeMaterialText(input, extraction.material?.transcript);
+            // Charged here: the turn may end before the analysis (moved session, earlier post)
+            usages.push(extraction.tokenUsage);
           }
         }
 
@@ -311,7 +339,7 @@ export async function POST(req: NextRequest) {
           console.info("[chat] posting check", JSON.stringify(continuation));
           if (continuation.isNewPosting) {
             await streamTextBlock({ writer, text: SESSION_MOVE_MESSAGE, id: `session-move-${Date.now()}` });
-            writer.write({ type: "data-session-move", data: { previousTitle: describeSessionPosting(context) } });
+            writer.write({ type: "data-session-move", data: { previousTitle: describeSessionPosting(context, messages) } });
             return;
           }
         }
@@ -341,6 +369,8 @@ export async function POST(req: NextRequest) {
             earlierMaterial: context?.material,
           }
         );
+        // The reading done above was already charged; runAnalysis reports it again in its meta
+        usages.push(meta.tokenUsage, extraction ? undefined : meta.extraction.tokenUsage);
         // Metadata only: never log the posting or the analysis text.
         console.info("[chat] analysis run", JSON.stringify({ route: decision.reason, ...meta }));
 
@@ -447,13 +477,32 @@ export async function POST(req: NextRequest) {
             [analysis.claims[0]?.text, analysis.summary, analysis.conversationText].filter(Boolean).join("\n")
           );
         }
+    };
+
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        if (quota.blocked) {
+          await streamTextBlock({ writer, text: QUOTA_MESSAGES[quota.blocked], id: `quota-${Date.now()}` });
+          writer.write({ type: "data-quota", data: { reason: quota.blocked, state: quota.state } });
+          return;
+        }
+
+        await answer(writer);
+        const state = await chargeSession(req, conversationId, quota.state, usages);
+        // Transient: it updates the quota display and is not kept in the message
+        if (state) writer.write({ type: "data-quota-state", data: state, transient: true });
       },
 
       onError: (error) => (error instanceof Error ? error.message : "Unknown stream error"),
     });
 
+    const response = createUIMessageStreamResponse({ stream });
+    if (!quota.guestCookie) return response;
 
-    return createUIMessageStreamResponse({ stream });
+    // A guest's one session: later sessions in this browser are refused (lib/quota.ts)
+    const withCookie = new NextResponse(response.body, { status: response.status, headers: response.headers });
+    withCookie.cookies.set(GUEST_COOKIE, quota.guestCookie, guestCookieOptions());
+    return withCookie;
   } catch (error) {
     return NextResponse.json(
       {

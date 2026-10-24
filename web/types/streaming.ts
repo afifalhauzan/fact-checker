@@ -17,6 +17,7 @@ import type {
 } from '@/langchain/agents/analyzer/schema';
 import type { ChartEmbedData } from '@/types/chart';
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
+import type { QuotaBlock, QuotaState } from "@/lib/quota";
 
 export interface InteractiveStepPart {
   stepId: string;
@@ -100,6 +101,10 @@ export type MetabotUIMessagePart =
   | { type: 'data-similar-telaah'; data: SimilarTelaahPartData }
   | { type: 'data-session-move'; data: SessionMovePartData }
   | { type: 'data-session-title'; data: { title: string } }
+  // A turn the quota did not let through (lib/quota.ts); the card offers the way on
+  | { type: 'data-quota'; data: { reason: QuotaBlock; state: QuotaState | null } }
+  // Transient, after every answer: never stored in a message
+  | { type: 'data-quota-state'; data: QuotaState }
   | {
       type: 'data-notification';
       data: {

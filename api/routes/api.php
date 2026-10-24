@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\QuotaController;
 use App\Http\Controllers\TelaahInteractionController;
 use App\Http\Controllers\TelaahMatchController;
 use App\Http\Controllers\TelaahPostController;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
     Route::middleware('throttle:auth')->group(function () {
-        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
         Route::post('/login', [AuthController::class, 'login']);
     });
 
@@ -47,6 +48,15 @@ Route::prefix('telaah-bersama')->group(function () {
     });
 
     Route::get('/{post}', [TelaahPostController::class, 'show'])->whereNumber('post');
+});
+
+Route::prefix('quota')->group(function () {
+    Route::get('/', [QuotaController::class, 'show'])->middleware('auth:sanctum');
+    // Called by the web app's chat route around each model call; guests have no token
+    Route::middleware('internal')->group(function () {
+        Route::post('/sessions/{conversation}/start', [QuotaController::class, 'start']);
+        Route::post('/sessions/{conversation}/usage', [QuotaController::class, 'usage']);
+    });
 });
 
 Route::middleware('auth:sanctum')->prefix('conversations')->group(function () {

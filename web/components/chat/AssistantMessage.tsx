@@ -30,6 +30,8 @@ import { SalaryBenefitCard } from "@/components/cards/SalaryBenefitCard";
 import type { AnalysisAction, UIActionId } from "@/types/ui-actions";
 import { BuatPostPrompt, SessionMoveCard, SimilarTelaahCard } from "@/components/telaah-bersama/chat-cards";
 import { MessageFeedback } from "@/components/chat/message-feedback";
+import { QuotaNotice } from "@/components/chat/quota-notice";
+import type { QuotaBlock } from "@/lib/quota";
 import { MessageActions } from "@/components/chat/MessageActions";
 import type { SourceFile } from "@/lib/analysis-export/build";
 import type { SimilarTelaahPartData, TelaahSharePartData } from "@/types/streaming";
@@ -39,7 +41,9 @@ export type TelaahChoice =
   | { kind: "share"; messageId: string; share: TelaahSharePartData }
   | { kind: "self-analyze"; messageId: string }
   | { kind: "move-session"; messageId: string }
-  | { kind: "same-posting"; messageId: string };
+  | { kind: "same-posting"; messageId: string }
+  // The session is full: carry its latest analysis into a new one (lib/compact-session.ts)
+  | { kind: "continue-session"; messageId: string };
 
 interface AssistantMessageProps {
   message: MetabotUIMessage;
@@ -103,7 +107,8 @@ type RenderItem =
   | { kind: "suggested-questions"; key: string; questions: string[] }
   | { kind: "telaah-share"; key: string; share: TelaahSharePartData }
   | { kind: "similar-telaah"; key: string; data: SimilarTelaahPartData }
-  | { kind: "session-move"; key: string; previousTitle: string };
+  | { kind: "session-move"; key: string; previousTitle: string }
+  | { kind: "quota"; key: string; reason: QuotaBlock };
 
 function extractAnalysisFromParts(parts: MetabotUIMessagePart[]): AnalysisResult | null {
   const analysisPart = parts.find((part) => part.type === "data-analysis");
@@ -168,7 +173,8 @@ function hasInterleavableDataPart(part: MetabotUIMessagePart): boolean {
     part.type === "data-reasoning" ||
     part.type === "data-telaah-share" ||
     part.type === "data-similar-telaah" ||
-    part.type === "data-session-move"
+    part.type === "data-session-move" ||
+    part.type === "data-quota"
   );
 }
 
@@ -333,6 +339,10 @@ export function AssistantMessage({
 
         if (part.type === "data-session-move") {
           items.push({ kind: "session-move", key, previousTitle: part.data.previousTitle });
+        }
+
+        if (part.type === "data-quota") {
+          items.push({ kind: "quota", key, reason: part.data.reason });
         }
       });
 
@@ -593,6 +603,18 @@ export function AssistantMessage({
             data={item.data}
             disabled={!canChoose}
             onSelfAnalyze={() => onTelaahChoice?.({ kind: "self-analyze", messageId: message.id })}
+          />
+        </motion.div>
+      );
+    }
+
+    if (item.kind === "quota") {
+      return (
+        <motion.div key={item.key} {...fadeUp}>
+          <QuotaNotice
+            reason={item.reason}
+            disabled={!canChoose}
+            onContinue={() => onTelaahChoice?.({ kind: "continue-session", messageId: message.id })}
           />
         </motion.div>
       );

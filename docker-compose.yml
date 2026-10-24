@@ -35,6 +35,9 @@ services:
       DB_USERNAME: ${DB_USERNAME:-gemastik}
       DB_PASSWORD: ${DB_PASSWORD}
       TELAAH_INTERNAL_KEY: ${TELAAH_INTERNAL_KEY:?set TELAAH_INTERNAL_KEY in .env}
+      # Optional; see api/config/services.php for the rest of the quota settings
+      QUOTA_DAILY_SESSIONS: ${QUOTA_DAILY_SESSIONS:-5}
+      QUOTA_EXEMPT_EMAILS: ${QUOTA_EXEMPT_EMAILS:-}
     # Only reached by web over the compose network
     expose:
       - "8000"

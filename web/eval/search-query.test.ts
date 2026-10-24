@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { preprocessJobInput } from "../langchain/agents/analyzer/preprocessor";
-import { buildVerificationQuery } from "../langchain/agents/analyzer/tools/tavily-search";
+import { buildVerificationQuery, stripSourceIds } from "../langchain/agents/analyzer/tools/tavily-search";
 
 const queryFor = (text: string) => buildVerificationQuery(preprocessJobInput(text))?.query ?? null;
 
@@ -32,6 +32,12 @@ test("a site without the company's name, such as a job blog, is not searched as 
   const target = buildVerificationQuery(preprocessJobInput("PT Nutrifood Indonesia membuka lowongan. Daftar di lokerblog.com/nutrifood"));
   assert.equal(target?.query, '"PT Nutrifood Indonesia" lowongan kerja');
   assert.equal(target?.siteDomain, undefined);
+});
+
+test("source IDs written into the text are removed, a degree in parentheses is not", () => {
+  assert.equal(stripSourceIds("Jejak digitalnya jelas di LinkedIn dan Glints (S1, S2, S3)."), "Jejak digitalnya jelas di LinkedIn dan Glints.");
+  assert.equal(stripSourceIds("Perusahaan terdaftar [S1] dan aktif [S2, S4]."), "Perusahaan terdaftar dan aktif.");
+  assert.equal(stripSourceIds("Syarat: minimal Sarjana (S1) jurusan informatika."), "Syarat: minimal Sarjana (S1) jurusan informatika.");
 });
 
 test("job boards are not taken for the employer's site", () => {

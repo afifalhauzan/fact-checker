@@ -44,6 +44,17 @@ it("does not treat social media handles as domains", () => {
   expect(findLinks("Follow @loker.bumn.id")).toEqual([]);
 });
 
+it("tells job-board postings apart by their path, whoever shared them", () => {
+  const first = "https://glints.com/id/opportunities/jobs/243fb988-cb24/share/a46b52a1";
+  expect(valuesOf(first, "domain")).toEqual(["glints.com/id/opportunities/jobs/243fb988-cb24"]);
+  expect(valuesOf("https://glints.com/id/opportunities/jobs/243fb988-cb24/share/99ffee00", "domain")).toEqual(valuesOf(first, "domain"));
+  expect(valuesOf("https://glints.com/id/opportunities/jobs/1eb4b6ad-4644", "domain")).not.toEqual(valuesOf(first, "domain"));
+});
+
+it("does not treat a bare job board or social site as an identifier", () => {
+  expect(valuesOf("Lowongan dari glints.com dan instagram.com", "domain")).toEqual([]);
+});
+
 it("does not treat amounts as domains", () => {
   expect(valuesOf("Gaji Rp1.350.000 per bulan", "domain")).toEqual([]);
 });

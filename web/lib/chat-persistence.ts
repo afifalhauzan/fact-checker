@@ -47,10 +47,11 @@ export async function persistLatestExchange(
 
   // A "move to a new session?" warning waits for the user's choice (design doc 6.11): moving
   // discards the pair, and staying regenerates the answer, which is then saved as usual.
-  const awaitsSessionMove = exchange.some((message) =>
-    ((message.parts || []) as any[]).some((part) => part?.type === 'data-session-move')
+  // A turn the quota refused is not kept either: it would open a session that never ran
+  const isUnsaved = exchange.some((message) =>
+    ((message.parts || []) as any[]).some((part) => part?.type === 'data-session-move' || part?.type === 'data-quota')
   )
-  if (awaitsSessionMove) return
+  if (isUnsaved) return
 
   // The chat route names a session on its first exchange (data-session-title); the backend stores it.
   const titlePart = exchange

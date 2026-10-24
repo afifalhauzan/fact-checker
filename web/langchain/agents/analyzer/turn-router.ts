@@ -9,13 +9,13 @@ import {
 } from "./prompts";
 import { preprocessJobInput } from "./preprocessor";
 import type { PostingContext } from "./conversation-context";
-import { findContacts } from "../telaah-bersama/identifiers";
+import { findContacts, findLinks, isJobBoardPosting } from "../telaah-bersama/identifiers";
 
 export type TurnMode = "analysis" | "follow_up";
 
 export interface TurnDecision {
   mode: TurnMode;
-  reason: "image" | "empty_text" | "long_text" | "not_substantive" | "classifier" | "classifier_fallback";
+  reason: "image" | "empty_text" | "long_text" | "link" | "not_substantive" | "classifier" | "classifier_fallback";
 }
 
 // Anything longer is pasted material (a posting or a recruiter chat), not a question.
@@ -48,6 +48,11 @@ export async function decideTurnMode({
   if (trimmed.length > MAX_QUESTION_LENGTH) {
     return { mode: "analysis", reason: "long_text" };
   }
+  // A link to a page is material to read, even with a question around it ("<link> apakah aman?");
+  // answered as a question, the reply would wrongly say the link cannot be opened
+  if (findLinks(trimmed).length) {
+    return { mode: "analysis", reason: "link" };
+  }
   // With nothing under discussion, trivial messages ("halo") get the analysis path's cheap reply.
   if (!context && !preprocessJobInput(trimmed).hasSubstantiveContent) {
     return { mode: "analysis", reason: "not_substantive" };
@@ -74,7 +79,7 @@ export async function decideTurnMode({
 
 export interface ContinuationDecision {
   isNewPosting: boolean;
-  reason: "shared_contact" | "classifier" | "classifier_fallback";
+  reason: "shared_contact" | "different_posting_link" | "classifier" | "classifier_fallback";
 }
 
 const ContinuationSchema = z.object({ hubungan: z.enum(["materi_lanjutan", "lowongan_baru"]) });
@@ -94,9 +99,18 @@ export async function classifyNewMaterial({
   context: PostingContext;
 }): Promise<ContinuationDecision> {
   // A number, account, email, or link the session posting also has settles it without a model call.
-  const sessionValues = new Set(findContacts(context.postingText).identifiers.map((item) => `${item.kind}|${item.value}`));
-  if (findContacts(materialText).identifiers.some((item) => sessionValues.has(`${item.kind}|${item.value}`))) {
+  const sessionIdentifiers = findContacts(context.postingText).identifiers;
+  const sessionValues = new Set(sessionIdentifiers.map((item) => `${item.kind}|${item.value}`));
+  const newIdentifiers = findContacts(materialText).identifiers;
+  if (newIdentifiers.some((item) => sessionValues.has(`${item.kind}|${item.value}`))) {
     return { isNewPosting: false, reason: "shared_contact" };
+  }
+
+  // So does a link to another job-board posting when the session came from one: a bare link gives
+  // the classifier nothing to compare, and it leans toward "same posting"
+  const isPostingLink = (item: { kind: string; value: string }) => item.kind === "domain" && isJobBoardPosting(item.value);
+  if (newIdentifiers.some(isPostingLink) && sessionIdentifiers.some(isPostingLink)) {
+    return { isNewPosting: true, reason: "different_posting_link" };
   }
 
   const session = [context.analysis.summary, context.postingText].filter(Boolean).join("\n").slice(0, SESSION_DESCRIPTION_LENGTH);

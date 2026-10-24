@@ -39,6 +39,8 @@ export interface WebSearchResult {
 
 const SEARCH_TIMEOUT_MS = 8000;
 const MAX_RESULTS = 5;
+// Across the queries of one search, so the prompt stays short
+const MAX_SOURCES = 8;
 const PROMPT_SNIPPET_LENGTH = 400;
 const UI_SNIPPET_LENGTH = 180;
 
@@ -228,8 +230,11 @@ export async function searchWeb(target: SearchTarget | null): Promise<WebSearchR
   const { query, entity, siteDomain } = target;
 
   try {
-    const [main, site] = await Promise.all([
+    const [main, byName, site] = await Promise.all([
       tavilySearch(apiKey, { query }),
+      // "lowongan kerja" finds a big company's career pages but steers a small company's search to
+      // job pages of other companies; the name alone finds its LinkedIn and job-board profiles
+      entity.kind === "company" ? tavilySearch(apiKey, { query: `"${entity.name}"` }).catch(() => []) : [],
       siteDomain
         ? // The site search is extra evidence: its failure must not lose the main results
           tavilySearch(apiKey, { query: `${entity.name} lowongan karir`, include_domains: [siteDomain] }).catch(() => [])
@@ -237,7 +242,7 @@ export async function searchWeb(target: SearchTarget | null): Promise<WebSearchR
     ]);
 
     const retrieved: Array<Omit<SearchSource, "id">> = [];
-    for (const item of [...main, ...site]) {
+    for (const item of [...main, ...byName, ...site]) {
       if (!retrieved.some((source) => source.url === item.url)) {
         retrieved.push(item);
       }
@@ -247,6 +252,7 @@ export async function searchWeb(target: SearchTarget | null): Promise<WebSearchR
     // IDs are assigned after filtering so the model only ever sees S1..Sn of relevant sources.
     const sources: SearchSource[] = retrieved
       .filter((item) => mentionsEntity({ id: "", ...item }, entity) || onSite(item.url))
+      .slice(0, MAX_SOURCES)
       .map((item, index) => ({ id: `S${index + 1}`, ...item }));
 
     return {
@@ -293,6 +299,14 @@ async function tavilySearch(apiKey: string, params: { query: string; include_dom
       url: item.url,
       snippet: truncate(cleanText(item.content), PROMPT_SNIPPET_LENGTH),
     }));
+}
+
+// Source IDs written into the text, "(S1, S2, S3)" or "[S1]"; citations are shown as numbered badges.
+// A lone "(S1)" stays: it is also the bachelor's degree ("Minimal Sarjana (S1)").
+const SOURCE_ID_LIST = /\s*(?:\[\s*S\d+(?:\s*[,;]\s*S\d+)*\s*\]|\(\s*S\d+(?:\s*[,;]\s*S\d+)+\s*\))/gi;
+
+export function stripSourceIds(text: string): string {
+  return text.replace(SOURCE_ID_LIST, "").trim();
 }
 
 /** Accepts the forms models produce for a source ID ("S1", "s1", "[S1]", "1") and returns "S1". */

@@ -56,7 +56,7 @@ TEMUAN OTOMATIS
 <temuan_otomatis> berisi pola yang dideteksi sistem berbasis aturan. Periksa kebenarannya pada materi: jika benar, masukkan ke risks; jika salah deteksi (misalnya kalimat "tidak dipungut biaya"), abaikan.
 
 SUMBER DAN SITASI
-- Bukti eksternal hanya boleh berasal dari <sumber_pencarian>. Rujuk dengan ID-nya (misalnya "S1") di summarySourceIds.
+- Bukti eksternal hanya boleh berasal dari <sumber_pencarian>. Rujuk dengan ID-nya (misalnya "S1") di summarySourceIds saja; JANGAN menulis ID sumber seperti "(S1, S2)" di dalam teks summary atau field lain, karena sistem menampilkan rujukannya sendiri.
 - Kutip sebuah sumber HANYA jika isinya benar-benar mendukung kalimat di ringkasan tentang perusahaan atau lowongan ini. Sumber yang hanya membahas topik umum tidak boleh dikutip.
 - DILARANG menyebut URL, nama situs, atau sumber yang tidak ada di <sumber_pencarian>.
 - Sumber dari domain yang dicantumkan materi itu sendiri hanya membuktikan situs tersebut ada dan memuat halaman itu, BUKAN bahwa situs tersebut milik resmi perusahaan; penipu juga membuat situs sendiri. Anggap situs itu resmi hanya jika sumber lain mengaitkannya dengan perusahaan.

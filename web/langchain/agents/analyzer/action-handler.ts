@@ -1,4 +1,4 @@
-import { getLLMModel, LLM_TIMEOUT_MS } from "./llm";
+import { getLLMModel, LLM_TIMEOUT_MS, readTokenUsage, type TokenUsage } from "./llm";
 import { ACTION_TITLES, actionSystemPrompt, buildActionUserPrompt, withCurrentDate } from "./prompts";
 import {
   LLMActionOutputSchema,
@@ -17,6 +17,8 @@ export interface UIActionResult {
   closingText: string;
   references?: Reference[];
   salaryBenefit?: SalaryBenefitAssessment;
+  // For the session's token budget (lib/quota.ts)
+  tokenUsage?: TokenUsage;
 }
 
 interface ActionContext {
@@ -114,7 +116,7 @@ export async function handleUIAction(payload: UIActionPayload, messages: unknown
       ? [{ type: "text", text: prompt }, ...context.images.map((image) => ({ type: "image_url", image_url: image.url }))]
       : prompt;
 
-    const { parsed } = await structuredLlm.invoke(
+    const { parsed, raw } = await structuredLlm.invoke(
       [
         { role: "system", content: withCurrentDate(actionSystemPrompt) },
         { role: "user", content: userContent },
@@ -140,6 +142,7 @@ export async function handleUIAction(payload: UIActionPayload, messages: unknown
       closingText: CLOSING_TEXT,
       references: searchReferences.length ? searchReferences : undefined,
       salaryBenefit,
+      tokenUsage: readTokenUsage(raw),
     };
   } catch (error) {
     console.error("[ActionHandler] Model action failed, using static guidance:", error instanceof Error ? error.message : error);
