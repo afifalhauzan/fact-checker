@@ -301,6 +301,14 @@ async function tavilySearch(apiKey: string, params: { query: string; include_dom
     }));
 }
 
+// Source IDs written into the text, "(S1, S2, S3)" or "[S1]"; citations are shown as numbered badges.
+// A lone "(S1)" stays: it is also the bachelor's degree ("Minimal Sarjana (S1)").
+const SOURCE_ID_LIST = /\s*(?:\[\s*S\d+(?:\s*[,;]\s*S\d+)*\s*\]|\(\s*S\d+(?:\s*[,;]\s*S\d+)+\s*\))/gi;
+
+export function stripSourceIds(text: string): string {
+  return text.replace(SOURCE_ID_LIST, "").trim();
+}
+
 /** Accepts the forms models produce for a source ID ("S1", "s1", "[S1]", "1") and returns "S1". */
 export function normalizeSourceId(id: string): string {
   const match = id.toUpperCase().match(/S?\s*(\d+)/);

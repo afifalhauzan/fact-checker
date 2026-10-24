@@ -46,6 +46,7 @@ import {
   searchWeb,
   sourceToCitation,
   sourcesToReferences,
+  stripSourceIds,
   type WebSearchResult,
   type WebSearchStatus,
 } from "./tools/tavily-search";
@@ -261,7 +262,7 @@ function mapModelOutput(
   const seenRisks = new Set<string>();
   const risks: AnalysisResult["risks"] = [];
   for (const risk of output.risks ?? []) {
-    const description = risk.description?.trim();
+    const description = stripSourceIds(risk.description ?? "");
     const key = `${risk.type}:${description}`;
     if (!description || seenRisks.has(key)) {
       continue;
@@ -286,7 +287,7 @@ function mapModelOutput(
       ? [
           {
             riskLevel: assessment.riskLevel,
-            text: composeClaimText(assessment.riskLevel, assessment.text ?? ""),
+            text: composeClaimText(assessment.riskLevel, stripSourceIds(assessment.text ?? "")),
             confidence: Math.max(0, Math.min(MAX_CONFIDENCE, assessment.confidence ?? 0)),
           },
         ]
@@ -297,9 +298,10 @@ function mapModelOutput(
         ? { title: SALARY_BENEFIT_TITLE, ...output.salaryBenefit }
         : undefined,
     risks: risks.slice(0, MAX_RISKS),
-    summary: output.summary?.trim() ?? "",
+    // Cited through summarySourceIds and shown as badges; IDs written into the prose are removed
+    summary: stripSourceIds(output.summary ?? ""),
     summaryCitations: citedSources.map((source) => sourceToCitation(source, search.sources)),
-    explanations: output.explanations ?? [],
+    explanations: (output.explanations ?? []).map((item) => ({ ...item, explanation: stripSourceIds(item.explanation) })),
     suggestedQuestions: (output.suggestedQuestions ?? []).slice(0, MAX_SUGGESTED_QUESTIONS),
     references: search.sources.length ? sourcesToReferences(search.sources) : GUIDANCE_REFERENCES,
     mode: "ai",
